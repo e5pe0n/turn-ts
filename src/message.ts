@@ -1,27 +1,24 @@
-const classRecord = {
-	0b00: "request",
-	0b01: "indication",
-	0b10: "success response",
-	0b11: "error response",
+export const classRecord = {
+	request: 0b00,
+	indication: 0b01,
+	successResponse: 0b10,
+	errorResponse: 0b11,
 } as const;
 
-export type Class = keyof typeof classRecord;
-type ClassName = (typeof classRecord)[keyof typeof classRecord];
+export type Class = (typeof classRecord)[keyof typeof classRecord];
 
 function isClass(x: number): x is Class {
-	return x in classRecord;
+	return Object.values(classRecord).includes(x as Class);
 }
 
-const methodRecord = {
-	0x0001: "Binding",
-	0x0101: "Allocate",
+export const methodRecord = {
+	binding: 0x0001,
 } as const;
 
-export type Method = keyof typeof methodRecord;
-type MethodName = (typeof methodRecord)[keyof typeof methodRecord];
+export type Method = (typeof methodRecord)[keyof typeof methodRecord];
 
 function isMethod(x: number): x is Method {
-	return x in methodRecord;
+	return Object.values(methodRecord).includes(x as Method);
 }
 
 const magicCookie = 0x2112a442 as const;

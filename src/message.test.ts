@@ -1,25 +1,37 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it, test } from "vitest";
-import { readClassAndMethod, readHeader, type Header } from "./message.js";
+import {
+	classRecord,
+	methodRecord,
+	readClassAndMethod,
+	readHeader,
+	type Header,
+} from "./message.js";
 
 describe("readClassAndMethod", () => {
 	test.each([
 		[
 			{
 				arg: 0b000000_00000001,
-				expected: { method: 0x0001, cls: 0b00 },
+				expected: { method: methodRecord.binding, cls: classRecord.request },
 				methodName: "Binding",
 				className: "request",
 			},
 			{
 				arg: 0b000001_00000001,
-				expected: { method: 0x0001, cls: 0b10 },
+				expected: {
+					method: methodRecord.binding,
+					cls: classRecord.successResponse,
+				},
 				methodName: "Binding",
 				className: "success response",
 			},
 			{
 				arg: 0b000001_00010001,
-				expected: { method: 0x0001, cls: 0b11 },
+				expected: {
+					method: methodRecord.binding,
+					cls: classRecord.errorResponse,
+				},
 				methodName: "Binding",
 				className: "error response",
 			},
@@ -89,8 +101,8 @@ describe("readHeader", () => {
 		]);
 		const res = readHeader(buf);
 		expect(res).toEqual({
-			cls: 0b00, // request
-			method: 0x0001, // Binding
+			cls: classRecord.request,
+			method: methodRecord.binding,
 			length: 0x1011,
 			magicCookie: 0x2112a442,
 			trxId,
