@@ -54,8 +54,8 @@ describe("readHeader", () => {
 		const buf = Buffer.from([
 			0x00, // STUN Message Type
 			0x01,
-			0x00, // Message Length
-			0x00,
+			0x10, // Message Length
+			0x11,
 			0x00, // Magic Cookie
 			// Transaction ID
 			...range(6).flatMap(() => [0x00]),
@@ -64,6 +64,7 @@ describe("readHeader", () => {
 		expect(res).toMatchObject({
 			cls: 0b00, // request
 			method: 0x0001, // Binding
+			length: 0x1011,
 		} satisfies Header);
 	});
 });
