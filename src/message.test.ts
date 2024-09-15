@@ -44,11 +44,29 @@ describe("readHeader", () => {
 			0x01,
 			0x00, // Message Length
 			0x00,
-			0x00, // Magic Cookie
+			0x21, // Magic Cookie
+			0x12,
+			0xa4,
+			0x41,
 			// Transaction ID
 			...range(6).flatMap(() => [0x00]),
 		]);
 		expect(() => readHeader(buf)).toThrowError(/first 2 bits must be zeros/);
+	});
+	it("throws error if STUN message header does not include valid magic cookie", () => {
+		const buf = Buffer.from([
+			0x00, // STUN Message Type
+			0x01,
+			0x10, // Message Length
+			0x11,
+			0x21, // Magic Cookie
+			0x12,
+			0xa4,
+			0x41,
+			// Transaction ID
+			...range(6).flatMap(() => [0x00]),
+		]);
+		expect(() => readHeader(buf)).toThrowError(/invalid magic cookie/);
 	});
 	it("reads STUN message header", () => {
 		const buf = Buffer.from([
@@ -56,7 +74,10 @@ describe("readHeader", () => {
 			0x01,
 			0x10, // Message Length
 			0x11,
-			0x00, // Magic Cookie
+			0x21, // Magic Cookie
+			0x12,
+			0xa4,
+			0x42,
 			// Transaction ID
 			...range(6).flatMap(() => [0x00]),
 		]);
@@ -65,6 +86,7 @@ describe("readHeader", () => {
 			cls: 0b00, // request
 			method: 0x0001, // Binding
 			length: 0x1011,
+			magicCookie: 0x2112a442,
 		} satisfies Header);
 	});
 });

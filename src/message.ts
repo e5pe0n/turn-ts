@@ -24,10 +24,13 @@ function isMethod(x: number): x is Method {
 	return x in methodRecord;
 }
 
+const magicCookie = 0x2112a442 as const;
+
 export type Header = {
 	cls: Class;
 	method: Method;
 	length: number; // bytes
+	magicCookie: typeof magicCookie;
 };
 
 export function readClassAndMethod(n: number): {
@@ -92,7 +95,13 @@ export function readHeader(buf: Buffer): Header {
 	}
 	const { method, cls } = readClassAndMethod(fst16bits);
 	const length = buf.subarray(2, 4).readUint16BE();
-	return { method, cls, length };
+	const maybeMagicCookie = buf.subarray(4, 8).readUint32BE();
+	if (maybeMagicCookie !== magicCookie) {
+		throw new Error(
+			`invalid magic cookie; magic cookie must be '${magicCookie}'. the given value is '0x${maybeMagicCookie.toString(16)}'`,
+		);
+	}
+	return { method, cls, length, magicCookie };
 }
 
 export function readMessage(buf: Buffer) {}
