@@ -31,6 +31,7 @@ export type Header = {
 	method: Method;
 	length: number; // bytes
 	magicCookie: typeof magicCookie;
+	trxId: Buffer;
 };
 
 export function readClassAndMethod(n: number): {
@@ -101,7 +102,8 @@ export function readHeader(buf: Buffer): Header {
 			`invalid magic cookie; magic cookie must be '${magicCookie}'. the given value is '0x${maybeMagicCookie.toString(16)}'`,
 		);
 	}
-	return { method, cls, length, magicCookie };
+	const trxId = Buffer.alloc(6, buf.subarray(8, 14));
+	return { method, cls, length, magicCookie, trxId };
 }
 
 export function readMessage(buf: Buffer) {}

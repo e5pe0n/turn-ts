@@ -1,5 +1,5 @@
+import { randomBytes } from "node:crypto";
 import { describe, expect, it, test } from "vitest";
-import { range } from "./helpers.js";
 import { readClassAndMethod, readHeader, type Header } from "./message.js";
 
 describe("readClassAndMethod", () => {
@@ -38,55 +38,62 @@ describe("readClassAndMethod", () => {
 
 describe("readHeader", () => {
 	it("throws error if STUN message header does not begin with 0b00", () => {
-		const buf = Buffer.from([
-			// STUN Message Type
-			0b01_000000, // invalid first 2 bits
-			0x01,
-			0x00, // Message Length
-			0x00,
-			0x21, // Magic Cookie
-			0x12,
-			0xa4,
-			0x41,
-			// Transaction ID
-			...range(6).flatMap(() => [0x00]),
+		const trxId = randomBytes(6);
+		const buf = Buffer.concat([
+			Buffer.from([
+				// STUN Message Type
+				0b01_000000, // invalid first 2 bits
+				0x01,
+				0x00, // Message Length
+				0x00,
+				0x21, // Magic Cookie
+				0x12,
+				0xa4,
+				0x41,
+			]),
+			trxId,
 		]);
 		expect(() => readHeader(buf)).toThrowError(/first 2 bits must be zeros/);
 	});
 	it("throws error if STUN message header does not include valid magic cookie", () => {
-		const buf = Buffer.from([
-			0x00, // STUN Message Type
-			0x01,
-			0x10, // Message Length
-			0x11,
-			0x21, // Magic Cookie
-			0x12,
-			0xa4,
-			0x41,
-			// Transaction ID
-			...range(6).flatMap(() => [0x00]),
+		const trxId = randomBytes(6);
+		const buf = Buffer.concat([
+			Buffer.from([
+				0x00, // STUN Message Type
+				0x01,
+				0x10, // Message Length
+				0x11,
+				0x21, // Magic Cookie
+				0x12,
+				0xa4,
+				0x41,
+			]),
+			trxId,
 		]);
 		expect(() => readHeader(buf)).toThrowError(/invalid magic cookie/);
 	});
 	it("reads STUN message header", () => {
-		const buf = Buffer.from([
-			0x00, // STUN Message Type
-			0x01,
-			0x10, // Message Length
-			0x11,
-			0x21, // Magic Cookie
-			0x12,
-			0xa4,
-			0x42,
-			// Transaction ID
-			...range(6).flatMap(() => [0x00]),
+		const trxId = randomBytes(6);
+		const buf = Buffer.concat([
+			Buffer.from([
+				0x00, // STUN Message Type
+				0x01,
+				0x10, // Message Length
+				0x11,
+				0x21, // Magic Cookie
+				0x12,
+				0xa4,
+				0x42,
+			]),
+			trxId,
 		]);
 		const res = readHeader(buf);
-		expect(res).toMatchObject({
+		expect(res).toEqual({
 			cls: 0b00, // request
 			method: 0x0001, // Binding
 			length: 0x1011,
 			magicCookie: 0x2112a442,
+			trxId,
 		} satisfies Header);
 	});
 });
