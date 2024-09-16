@@ -1,4 +1,4 @@
-import { assertValueOf, isValueOf, type Override } from "./helpers.js";
+import { assertValueOf, type Override } from "./helpers.js";
 
 const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
