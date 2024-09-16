@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it, test } from "vitest";
 import {
+	type Header,
 	classRecord,
-	methodRecord,
 	decodeClassAndMethod,
 	decodeHeader,
-	type Header,
-} from "./message.js";
+	methodRecord,
+} from "./header.js";
 
 describe("decodeClassAndMethod", () => {
 	test.each([

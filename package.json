@@ -6,7 +6,7 @@
 	"main": "index.js",
 	"scripts": {
 		"check": "biome check",
-		"check:write": "biome check --write",
+		"fix": "biome check --write",
 		"test": "vitest --run --silent=false"
 	},
 	"keywords": [],

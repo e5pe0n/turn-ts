@@ -1,4 +1,6 @@
-import { assertValueOf, isValueOf, type Override } from "./helpers.js";
+import { magicCookie } from "./consts.js";
+import type { Header } from "./header.js";
+import { type Override, assertValueOf, isValueOf } from "./helpers.js";
 
 const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
@@ -84,10 +86,20 @@ type NonceAttr = {
 	value: unknown;
 };
 
-type XorMappedAddressAttr = {
+export type XorMappedAddressAttr = {
 	type: (typeof compReqAttrTypeRecord)["xorMappedAddress"];
 	length: number;
-	value: unknown;
+	value:
+		| {
+				family: (typeof addrFamilyRecord)["ipV4"];
+				port: number;
+				addr: Buffer; // 32 bits
+		  }
+		| {
+				family: (typeof addrFamilyRecord)["ipV6"];
+				port: number;
+				addr: Buffer; // 128 bits
+		  };
 };
 
 type SoftwareAttr = {
@@ -154,7 +166,55 @@ export function decodeMappedAddressValue(
 	return { family, addr, port };
 }
 
-export function decodeAttrs(buf: Buffer): Attr[] {
+export function decodeXorMappedAddressValue(
+	buf: Buffer,
+	header: Header,
+): XorMappedAddressAttr["value"] {
+	/**
+	 *    0                   1                   2                   3
+	 *    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+	 *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	 *   |x x x x x x x x|    Family     |         X-Port                |
+	 *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	 *   |                X-Address (Variable)
+	 *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	 */
+	const family = buf[1]!;
+	assertValueOf(
+		family,
+		addrFamilyRecord,
+		new Error(`invalid address family: '${family}' is not a address family.`),
+	);
+	const port = buf.subarray(2, 4).readUint16BE() ^ (magicCookie >>> 16);
+	switch (family) {
+		case addrFamilyRecord.ipV4: {
+			const xres = buf.subarray(4, 8).readUInt32BE() ^ magicCookie;
+			const addr = Buffer.alloc(4);
+			addr.writeInt32BE(xres);
+			return { port, family, addr };
+		}
+		case addrFamilyRecord.ipV6: {
+			const xres0 = buf.subarray(4, 8).readUint32BE() ^ magicCookie;
+			const xres1 =
+				buf.subarray(8, 12).readUint32BE() ^
+				header.trxId.subarray(0, 4).readUint32BE();
+			const xres2 =
+				buf.subarray(12, 16).readUint32BE() ^
+				header.trxId.subarray(4, 8).readUint32BE();
+			const xres3 =
+				buf.subarray(16, 20).readUint32BE() ^
+				header.trxId.subarray(8, 12).readUint32BE();
+			const addr = Buffer.alloc(16);
+			addr.writeInt32BE(xres0);
+			addr.writeInt32BE(xres1, 4);
+			addr.writeInt32BE(xres2, 8);
+			addr.writeInt32BE(xres3, 12);
+			return { port, family, addr };
+		}
+	}
+}
+
+export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
 	const processingAttrs: Override<Attr, { value: Buffer }>[] = [];
 	let bufLength = buf.length;
 	while (bufLength > 0) {
