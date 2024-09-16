@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { readMappedAddressValue, type MappedAddressAttr } from "./attr.js";
+import { decodeMappedAddressValue, type MappedAddressAttr } from "./attr.js";
 
-describe("readMappedAddressValue", () => {
+describe("decodeMappedAddressValue", () => {
 	it("throws an error if an invalid address family given", () => {
 		const buf = Buffer.from([
 			0x00,
@@ -13,11 +13,11 @@ describe("readMappedAddressValue", () => {
 			0x00,
 			0x01,
 		]);
-		expect(() => readMappedAddressValue(buf)).toThrowError(
+		expect(() => decodeMappedAddressValue(buf)).toThrowError(
 			/invalid address family/,
 		);
 	});
-	it("reads IPv4 MAPPED-ADDRESS value", () => {
+	it("decodes IPv4 MAPPED-ADDRESS value", () => {
 		const buf = Buffer.from([
 			0x00,
 			0x01, // Family: IPv4
@@ -28,13 +28,13 @@ describe("readMappedAddressValue", () => {
 			0x00,
 			0x01,
 		]);
-		expect(readMappedAddressValue(buf)).toEqual({
+		expect(decodeMappedAddressValue(buf)).toEqual({
 			family: 0x01,
 			port: 0x1001,
 			addr: new Uint8Array([0x10, 0x11, 0x00, 0x01]),
 		} satisfies MappedAddressAttr["value"]);
 	});
-	it("reads IPv6 MAPPED-ADDRESS value", () => {
+	it("decodes IPv6 MAPPED-ADDRESS value", () => {
 		const buf = Buffer.from([
 			0x00,
 			0x02, // Family: IPv4
@@ -60,7 +60,7 @@ describe("readMappedAddressValue", () => {
 			0x00,
 			0x01,
 		]);
-		expect(readMappedAddressValue(buf)).toEqual({
+		expect(decodeMappedAddressValue(buf)).toEqual({
 			family: 0x02,
 			port: 0x1001,
 			addr: new Uint8Array([

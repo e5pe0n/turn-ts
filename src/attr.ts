@@ -127,7 +127,7 @@ type Attr =
 	| AlternateServerAttr
 	| FingerprintAttr;
 
-export function readMappedAddressValue(
+export function decodeMappedAddressValue(
 	buf: Buffer,
 ): MappedAddressAttr["value"] {
 	/**
@@ -160,7 +160,7 @@ export function readMappedAddressValue(
 	return { family, addr, port };
 }
 
-export function readAttrs(buf: Buffer): Attr[] {
+export function decodeAttrs(buf: Buffer): Attr[] {
 	const processingAttrs: Override<Attr, { value: Buffer }>[] = [];
 	let bufLength = buf.length;
 	while (bufLength > 0) {
@@ -177,7 +177,7 @@ export function readAttrs(buf: Buffer): Attr[] {
 	for (const { type, length, value } of processingAttrs) {
 		switch (type) {
 			case compReqAttrTypeRecord.mappedAddress: {
-				const res = readMappedAddressValue(value);
+				const res = decodeMappedAddressValue(value);
 				attrs.push({ type, length, value: res });
 			}
 		}

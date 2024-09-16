@@ -3,12 +3,12 @@ import { describe, expect, it, test } from "vitest";
 import {
 	classRecord,
 	methodRecord,
-	readClassAndMethod,
-	readHeader,
+	decodeClassAndMethod,
+	decodeHeader,
 	type Header,
 } from "./message.js";
 
-describe("readClassAndMethod", () => {
+describe("decodeClassAndMethod", () => {
 	test.each([
 		[
 			{
@@ -37,18 +37,18 @@ describe("readClassAndMethod", () => {
 			},
 		],
 	])(
-		"reads a $methodName $className",
+		"decodes a $methodName $className",
 		({ arg, expected, methodName, className }) => {
-			expect(readClassAndMethod(arg)).toEqual(expected);
+			expect(decodeClassAndMethod(arg)).toEqual(expected);
 		},
 	);
 	it("throws error if result is not a method", () => {
 		const arg = 0x0000;
-		expect(() => readClassAndMethod(arg)).toThrowError(/not a method/);
+		expect(() => decodeClassAndMethod(arg)).toThrowError(/not a method/);
 	});
 });
 
-describe("readHeader", () => {
+describe("decodeHeader", () => {
 	it("throws error if STUN message header does not begin with 0b00", () => {
 		const trxId = randomBytes(6);
 		const buf = Buffer.concat([
@@ -65,7 +65,7 @@ describe("readHeader", () => {
 			]),
 			trxId,
 		]);
-		expect(() => readHeader(buf)).toThrowError(/first 2 bits must be zeros/);
+		expect(() => decodeHeader(buf)).toThrowError(/first 2 bits must be zeros/);
 	});
 	it("throws error if STUN message header does not include valid magic cookie", () => {
 		const trxId = randomBytes(6);
@@ -82,9 +82,9 @@ describe("readHeader", () => {
 			]),
 			trxId,
 		]);
-		expect(() => readHeader(buf)).toThrowError(/invalid magic cookie/);
+		expect(() => decodeHeader(buf)).toThrowError(/invalid magic cookie/);
 	});
-	it("reads STUN message header", () => {
+	it("decodes STUN message header", () => {
 		const trxId = randomBytes(6);
 		const buf = Buffer.concat([
 			Buffer.from([
@@ -99,7 +99,7 @@ describe("readHeader", () => {
 			]),
 			trxId,
 		]);
-		const res = readHeader(buf);
+		const res = decodeHeader(buf);
 		expect(res).toEqual({
 			cls: classRecord.request,
 			method: methodRecord.binding,

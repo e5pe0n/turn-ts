@@ -31,7 +31,7 @@ export type Header = {
 	trxId: Buffer;
 };
 
-export function readClassAndMethod(n: number): {
+export function decodeClassAndMethod(n: number): {
 	cls: Class;
 	method: Method;
 } {
@@ -73,7 +73,7 @@ export function readClassAndMethod(n: number): {
 
 const exclusiveMaxStunMessageType = 1 << 14;
 
-export function readHeader(buf: Buffer): Header {
+export function decodeHeader(buf: Buffer): Header {
 	/**
 	 *     0                   1                   2                   3
 	 *     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -91,7 +91,7 @@ export function readHeader(buf: Buffer): Header {
 	if (!(exclusiveMaxStunMessageType > fst16bits)) {
 		throw new Error("first 2 bits must be zeros.");
 	}
-	const { method, cls } = readClassAndMethod(fst16bits);
+	const { method, cls } = decodeClassAndMethod(fst16bits);
 	const length = buf.subarray(2, 4).readUint16BE();
 	const maybeMagicCookie = buf.subarray(4, 8).readUint32BE();
 	if (maybeMagicCookie !== magicCookie) {
@@ -103,4 +103,4 @@ export function readHeader(buf: Buffer): Header {
 	return { method, cls, length, magicCookie, trxId };
 }
 
-export function readMessage(buf: Buffer) {}
+export function decodeMessage(buf: Buffer) {}
