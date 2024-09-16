@@ -1,4 +1,4 @@
-import { assertValueOf, type Override } from "./helpers.js";
+import { assertValueOf, isValueOf, type Override } from "./helpers.js";
 
 const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
@@ -16,10 +16,6 @@ const compReqAttrTypeRecord = {
 type CompReqAttrType =
 	(typeof compReqAttrTypeRecord)[keyof typeof compReqAttrTypeRecord];
 
-function isCompReqAttrType(x: number): x is CompReqAttrType {
-	return Object.values(compReqAttrTypeRecord).includes(x as CompReqAttrType);
-}
-
 const compOptAttrTypeRecord = {
 	software: 0x8022,
 	alternateServer: 0x8023,
@@ -28,14 +24,12 @@ const compOptAttrTypeRecord = {
 type CompOptAttrType =
 	(typeof compOptAttrTypeRecord)[keyof typeof compOptAttrTypeRecord];
 
-function isCompOptAttrType(x: number): x is CompOptAttrType {
-	return Object.values(compOptAttrTypeRecord).includes(x as CompOptAttrType);
-}
-
 type AttrType = CompReqAttrType | CompOptAttrType;
 
 function isAttrType(x: number): x is AttrType {
-	return isCompReqAttrType(x) || isCompOptAttrType(x);
+	return (
+		isValueOf(x, compReqAttrTypeRecord) || isValueOf(x, compOptAttrTypeRecord)
+	);
 }
 
 export const addrFamilyRecord = {
@@ -166,6 +160,8 @@ export function decodeAttrs(buf: Buffer): Attr[] {
 	while (bufLength > 0) {
 		const attrType = buf.subarray(0, 2).readUint16BE();
 		if (!isAttrType(attrType)) {
+			// TODO: Distinguish between comprehension-required attributes
+			// and comprehension-optional attributes.
 			throw new Error(`invalid attr type; ${attrType} is not a attr type.`);
 		}
 		const length = buf.subarray(2, 4).readUint16BE();

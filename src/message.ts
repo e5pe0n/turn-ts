@@ -1,3 +1,5 @@
+import { assertValueOf } from "./helpers.js";
+
 export const classRecord = {
 	request: 0b00,
 	indication: 0b01,
@@ -7,19 +9,11 @@ export const classRecord = {
 
 export type Class = (typeof classRecord)[keyof typeof classRecord];
 
-function isClass(x: number): x is Class {
-	return Object.values(classRecord).includes(x as Class);
-}
-
 export const methodRecord = {
 	binding: 0x0001,
 } as const;
 
 export type Method = (typeof methodRecord)[keyof typeof methodRecord];
-
-function isMethod(x: number): x is Method {
-	return Object.values(methodRecord).includes(x as Method);
-}
 
 const magicCookie = 0x2112a442 as const;
 
@@ -61,12 +55,12 @@ export function decodeClassAndMethod(n: number): {
 		}
 	}
 
-	if (!isMethod(m)) {
-		throw new Error(`${m.toString(2)} is not a method.`);
-	}
-	if (!isClass(c)) {
-		throw new Error(`${c.toString(2)} is not a class.`);
-	}
+	assertValueOf(
+		m,
+		methodRecord,
+		new Error(`${m.toString(2)} is not a method.`),
+	);
+	assertValueOf(c, classRecord, new Error(`${c.toString(2)} is not a class.`));
 
 	return { method: m, cls: c };
 }
