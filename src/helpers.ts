@@ -50,3 +50,20 @@ export function range(start: number, stop?: number, step?: number): number[] {
 		? []
 		: Array.from(new Array(len), (_, i) => _start + i * _step);
 }
+
+export function isValueOf<R extends object, V extends R[keyof R]>(
+	x: unknown,
+	r: R,
+): x is V {
+	return Object.values(r).includes(x);
+}
+
+export function assertValueOf<R extends object, V extends R[keyof R]>(
+	x: unknown,
+	r: R,
+	err: Error,
+): asserts x is V {
+	if (!isValueOf(x, r)) {
+		throw err;
+	}
+}
