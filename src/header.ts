@@ -85,8 +85,8 @@ export function decodeHeader(buf: Buffer): Header {
 		throw new Error("first 2 bits must be zeros.");
 	}
 	const { method, cls } = decodeClassAndMethod(fst16bits);
-	const length = buf.subarray(2, 4).readUint16BE();
-	const maybeMagicCookie = buf.subarray(4, 8).readUint32BE();
+	const length = buf.subarray(2, 4).readInt16BE();
+	const maybeMagicCookie = buf.subarray(4, 8).readInt32BE();
 	if (maybeMagicCookie !== magicCookie) {
 		throw new Error(
 			`invalid magic cookie; magic cookie must be '${magicCookie}'. the given value is '0x${maybeMagicCookie.toString(16)}'`,

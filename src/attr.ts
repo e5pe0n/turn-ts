@@ -153,7 +153,7 @@ export function decodeMappedAddressValue(
 		addrFamilyRecord,
 		new Error(`invalid address family: '${family}' is not a address family.`),
 	);
-	const port = buf.subarray(2, 4).readUint16BE();
+	const port = buf.subarray(2, 4).readInt16BE();
 	let addr: Uint8Array;
 	switch (family) {
 		case addrFamilyRecord.ipV4:
@@ -185,25 +185,25 @@ export function decodeXorMappedAddressValue(
 		addrFamilyRecord,
 		new Error(`invalid address family: '${family}' is not a address family.`),
 	);
-	const port = buf.subarray(2, 4).readUint16BE() ^ (magicCookie >>> 16);
+	const port = buf.subarray(2, 4).readInt16BE() ^ (magicCookie >>> 16);
 	switch (family) {
 		case addrFamilyRecord.ipV4: {
-			const xres = buf.subarray(4, 8).readUInt32BE() ^ magicCookie;
+			const xres = buf.subarray(4, 8).readInt32BE() ^ magicCookie;
 			const addr = Buffer.alloc(4);
 			addr.writeInt32BE(xres);
 			return { port, family, addr };
 		}
 		case addrFamilyRecord.ipV6: {
-			const xres0 = buf.subarray(4, 8).readUint32BE() ^ magicCookie;
+			const xres0 = buf.subarray(4, 8).readInt32BE() ^ magicCookie;
 			const xres1 =
-				buf.subarray(8, 12).readUint32BE() ^
-				header.trxId.subarray(0, 4).readUint32BE();
+				buf.subarray(8, 12).readInt32BE() ^
+				header.trxId.subarray(0, 4).readInt32BE();
 			const xres2 =
-				buf.subarray(12, 16).readUint32BE() ^
-				header.trxId.subarray(4, 8).readUint32BE();
+				buf.subarray(12, 16).readInt32BE() ^
+				header.trxId.subarray(4, 8).readInt32BE();
 			const xres3 =
-				buf.subarray(16, 20).readUint32BE() ^
-				header.trxId.subarray(8, 12).readUint32BE();
+				buf.subarray(16, 20).readInt32BE() ^
+				header.trxId.subarray(8, 12).readInt32BE();
 			const addr = Buffer.alloc(16);
 			addr.writeInt32BE(xres0);
 			addr.writeInt32BE(xres1, 4);
