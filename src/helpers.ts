@@ -72,3 +72,19 @@ export function assertValueOf<R extends object, V extends R[keyof R]>(
 		throw err;
 	}
 }
+
+export function xorBufs(a: Buffer, b: Buffer): Buffer {
+	if (a.length !== b.length) {
+		throw new Error(
+			`invalid args; two buffers must have the same length. a: ${a}, b: ${b}`,
+		);
+	}
+	const resBuf = Buffer.alloc(a.length);
+	for (let offset = 0; offset < a.length; ++offset) {
+		const xor =
+			a.subarray(offset, offset + 1).readInt8() ^
+			b.subarray(offset, offset + 1).readInt8();
+		resBuf.writeInt8(xor, offset);
+	}
+	return resBuf;
+}
