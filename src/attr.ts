@@ -178,17 +178,6 @@ export function encodeMappedAddressValue(attr: MappedAddressAttr): Buffer {
 export function decodeMappedAddressValue(
 	buf: Buffer,
 ): MappedAddressAttr["value"] {
-	/**
-	 *   0                   1                   2                   3
-	 *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	 *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 *  |0 0 0 0 0 0 0 0|    Family     |           Port                |
-	 *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 *  |                                                               |
-	 *  |                 Address (32 bits or 128 bits)                 |
-	 *  |                                                               |
-	 *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 */
 	const family = buf[1]!;
 	assertValueOf(
 		family,
@@ -212,15 +201,6 @@ export function decodeXorMappedAddressValue(
 	buf: Buffer,
 	header: Header,
 ): XorMappedAddressAttr["value"] {
-	/**
-	 *    0                   1                   2                   3
-	 *    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	 *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 *   |x x x x x x x x|    Family     |         X-Port                |
-	 *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 *   |                X-Address (Variable)
-	 *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 */
 	const family = buf[1]!;
 	assertValueOf(
 		family,
@@ -257,15 +237,6 @@ export function decodeXorMappedAddressValue(
 }
 
 export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
-	/**
-	 *   0                   1                   2                   3
-	 *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	 *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 *  |         Type                  |            Length             |
-	 *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 *  |                         Value (variable)                ....
-	 *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 */
 	const processingAttrs: Override<Attr, { value: Buffer }>[] = [];
 	let bufLength = buf.length;
 	while (bufLength > 4) {
