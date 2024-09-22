@@ -90,10 +90,13 @@ type MessageIntegrityAttr = {
 	value: unknown;
 };
 
-type ErrorCodeAttr = {
+export type ErrorCodeAttr = {
 	type: (typeof compReqAttrTypeRecord)["ERROR-CODE"];
 	length: number;
-	value: unknown;
+	value: {
+		code: number;
+		reason: string;
+	};
 };
 
 type UnknownAttributesAttr = {
@@ -270,6 +273,27 @@ export function decodeXorMappedAddressValue(
 			return { port, family, addr };
 		}
 	}
+}
+
+export function encodeErrorCodeValue(value: ErrorCodeAttr["value"]): Buffer {
+	const { code, reason } = value;
+	if (!(300 <= code && code <= 699)) {
+		throw new Error(
+			`invalid error code; error code must be [300, 699]. '${code}' given.`,
+		);
+	}
+	const reasonBuf = Buffer.from(reason, "utf-8");
+	// ignoreing the num of chars in utf-8 specified by https://datatracker.ietf.org/doc/html/rfc5389#autoid-44
+	if (!(reasonBuf.length <= 763)) {
+		throw new Error(
+			"invalid reason phrase; reason phrase must be <= 763 bytes.",
+		);
+	}
+	const buf = Buffer.alloc(4);
+	buf.writeUInt8(Math.floor(code / 100), 2);
+	buf.writeUInt8(code % 100, 3);
+	const resBuf = Buffer.concat([buf, reasonBuf]);
+	return resBuf;
 }
 
 export function decodeAttrs(buf: Buffer, header: Header): Attr[] {

@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+	type ErrorCodeAttr,
 	type MappedAddressAttr,
 	type XorMappedAddressAttr,
 	addrFamilyRecord,
 	compReqAttrTypeRecord,
 	decodeMappedAddressValue,
 	decodeXorMappedAddressValue,
+	encodeErrorCodeValue,
 	encodeMappedAddressValue,
 	encodeXorMappedAddressValue,
 } from "./attr.js";
@@ -309,5 +311,58 @@ describe("decodeXorMappedAddressValue", () => {
 				0x93, 0x47, 0x61, 0x2c,
 			]),
 		} satisfies XorMappedAddressAttr["value"]);
+	});
+});
+
+describe("encodeErrorCodeValue", () => {
+	it("throws an error if the given code is not in [300, 699]", () => {
+		const value: ErrorCodeAttr["value"] = {
+			code: 700,
+			reason: "invalid attr type",
+		};
+		expect(() => encodeErrorCodeValue(value)).toThrowError(
+			/invalid error code/,
+		);
+	});
+	it("throws an error if the given reason is not < 128 chars in UTF-8 (<= 763 bytes)", () => {
+		const value: ErrorCodeAttr["value"] = {
+			code: 420,
+			reason: "a".repeat(764),
+		};
+		expect(() => encodeErrorCodeValue(value)).toThrowError(
+			/invalid reason phrase/,
+		);
+	});
+	it("encodes ERROR-CODE value", () => {
+		const value: ErrorCodeAttr["value"] = {
+			code: 420,
+			reason: "invalid attr type", // 17 bytes
+		};
+		expect(encodeErrorCodeValue(value)).toEqual(
+			Buffer.from([
+				0x00,
+				0x00,
+				0x04, // Class
+				0x14, // Number
+				// Reason Phrase
+				0x69,
+				0x6e,
+				0x76,
+				0x61,
+				0x6c,
+				0x69,
+				0x64,
+				0x20,
+				0x61,
+				0x74,
+				0x74,
+				0x72,
+				0x20,
+				0x74,
+				0x79,
+				0x70,
+				0x65,
+			]),
+		);
 	});
 });
