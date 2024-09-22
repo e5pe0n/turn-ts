@@ -1,14 +1,89 @@
-import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
 	type MappedAddressAttr,
 	type XorMappedAddressAttr,
+	addrFamilyRecord,
+	compReqAttrTypeRecord,
 	decodeMappedAddressValue,
 	decodeXorMappedAddressValue,
+	encodeMappedAddressValue,
 } from "./attr.js";
 import { magicCookie } from "./consts.js";
 import { type Header, classRecord, methodRecord } from "./header.js";
 
+describe("encodeMappedAddressValue", () => {
+	it("encodes IPv4 MAPPED-ADDRESS attr", () => {
+		const attr: MappedAddressAttr = {
+			type: compReqAttrTypeRecord["MAPPED-ADDRESS"],
+			length: 8,
+			value: {
+				family: addrFamilyRecord.ipV4,
+				port: 12345,
+				addr: Buffer.from([0xc9, 0xc7, 0xc5, 0x59]),
+			},
+		};
+		expect(encodeMappedAddressValue(attr)).toEqual(
+			Buffer.from([
+				0x00, // Attr Type
+				0x01,
+				0x00, // Attr Length
+				0x08,
+				// Attr Value
+				0x00,
+				0x01, // Family (IPv4)
+				0x30, // Port
+				0x39,
+				0xc9, // Address
+				0xc7,
+				0xc5,
+				0x59,
+			]),
+		);
+	});
+	it("encodes IPv6 MAPPED-ADDRESS attr", () => {
+		const attr: MappedAddressAttr = {
+			type: compReqAttrTypeRecord["MAPPED-ADDRESS"],
+			length: 20,
+			value: {
+				family: addrFamilyRecord.ipV6,
+				port: 12345,
+				addr: Buffer.from([
+					0xde, 0x3e, 0xf7, 0x46, 0x70, 0x0f, 0x21, 0xb2, 0x0f, 0xf4, 0xf4,
+					0x2e, 0x93, 0x47, 0x61, 0x2c,
+				]),
+			},
+		};
+		expect(encodeMappedAddressValue(attr)).toEqual(
+			Buffer.from([
+				0x00, // Attr Type
+				0x01,
+				0x00, // Attr Length
+				0x14,
+				// Attr Value
+				0x00,
+				0x02, // Family (IPv6)
+				0x30, // Port
+				0x39,
+				0xde, //  Address
+				0x3e,
+				0xf7,
+				0x46,
+				0x70,
+				0x0f,
+				0x21,
+				0xb2,
+				0x0f,
+				0xf4,
+				0xf4,
+				0x2e,
+				0x93,
+				0x47,
+				0x61,
+				0x2c,
+			]),
+		);
+	});
+});
 describe("decodeMappedAddressValue", () => {
 	it("throws an error if an invalid address family given", () => {
 		const buf = Buffer.from([

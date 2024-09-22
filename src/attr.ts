@@ -10,7 +10,7 @@ import {
 const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
 
-const compReqAttrTypeRecord = {
+export const compReqAttrTypeRecord = {
 	"MAPPED-ADDRESS": 0x0001,
 	USERNAME: 0x0006,
 	"MESSAGE-INTEGRITY": 0x0008,
@@ -22,7 +22,7 @@ const compReqAttrTypeRecord = {
 } as const;
 type CompReqAttrType = ValueOf<typeof compReqAttrTypeRecord>;
 
-const compOptAttrTypeRecord = {
+export const compOptAttrTypeRecord = {
 	SOFTWARE: 0x8022,
 	"ALTERNATE-SERVER": 0x8023,
 	FINGERPRINT: 0x8028,
@@ -158,6 +158,22 @@ type Attr =
 	| SoftwareAttr
 	| AlternateServerAttr
 	| FingerprintAttr;
+
+export function encodeMappedAddressValue(attr: MappedAddressAttr): Buffer {
+	const tlBuf = Buffer.alloc(4);
+	tlBuf.writeUInt16BE(attr.type);
+	tlBuf.writeUInt16BE(attr.length, 2);
+
+	const vBuf = Buffer.alloc(attr.length);
+	const { family, port, addr } = attr.value;
+	vBuf.writeUint8(0);
+	vBuf.writeUint8(family, 1);
+	vBuf.writeUInt16BE(port, 2);
+	vBuf.fill(addr, 4);
+
+	const resBuf = Buffer.concat([tlBuf, vBuf]);
+	return resBuf;
+}
 
 export function decodeMappedAddressValue(
 	buf: Buffer,
