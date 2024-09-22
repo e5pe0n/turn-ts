@@ -1,4 +1,4 @@
-import { expect, expectTypeOf, test, it, describe } from "vitest";
+import { describe, expect, expectTypeOf, it, test } from "vitest";
 import {
 	type ValueOf,
 	assertValueOf,
