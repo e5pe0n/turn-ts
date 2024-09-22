@@ -159,20 +159,37 @@ type Attr =
 	| AlternateServerAttr
 	| FingerprintAttr;
 
-export function encodeMappedAddressValue(attr: MappedAddressAttr): Buffer {
+export function encodeAttr(attr: Attr): Buffer {
 	const tlBuf = Buffer.alloc(4);
 	tlBuf.writeUInt16BE(attr.type);
 	tlBuf.writeUInt16BE(attr.length, 2);
 
-	const vBuf = Buffer.alloc(attr.length);
-	const { family, port, addr } = attr.value;
-	vBuf.writeUint8(0);
-	vBuf.writeUint8(family, 1);
-	vBuf.writeUInt16BE(port, 2);
-	vBuf.fill(addr, 4);
+	let vBuf: Buffer;
+	switch (attr.type) {
+		case compReqAttrTypeRecord["MAPPED-ADDRESS"]:
+			vBuf = encodeMappedAddressValue(attr);
+			break;
+		default:
+			throw new Error(
+				`invalid attr type: ${fAttrType`${attr.type}`} is not supported.`,
+			);
+	}
 
 	const resBuf = Buffer.concat([tlBuf, vBuf]);
 	return resBuf;
+}
+
+export function encodeMappedAddressValue({
+	length,
+	value,
+}: Omit<MappedAddressAttr, "type">): Buffer {
+	const buf = Buffer.alloc(length);
+	const { family, port, addr } = value;
+	buf.writeUint8(0);
+	buf.writeUint8(family, 1);
+	buf.writeUInt16BE(port, 2);
+	buf.fill(addr, 4);
+	return buf;
 }
 
 export function decodeMappedAddressValue(

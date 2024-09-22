@@ -24,11 +24,6 @@ describe("encodeMappedAddressValue", () => {
 		};
 		expect(encodeMappedAddressValue(attr)).toEqual(
 			Buffer.from([
-				0x00, // Attr Type
-				0x01,
-				0x00, // Attr Length
-				0x08,
-				// Attr Value
 				0x00,
 				0x01, // Family (IPv4)
 				0x30, // Port
@@ -55,11 +50,6 @@ describe("encodeMappedAddressValue", () => {
 		};
 		expect(encodeMappedAddressValue(attr)).toEqual(
 			Buffer.from([
-				0x00, // Attr Type
-				0x01,
-				0x00, // Attr Length
-				0x14,
-				// Attr Value
 				0x00,
 				0x02, // Family (IPv6)
 				0x30, // Port
