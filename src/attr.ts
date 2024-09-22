@@ -37,6 +37,29 @@ function isAttrType(x: number): x is AttrType {
 	);
 }
 
+function fAttrType(
+	strings: TemplateStringsArray,
+	v: CompReqAttrType | CompOptAttrType,
+): string {
+	{
+		const [kv] = Object.entries(compReqAttrTypeRecord).filter(
+			([, value]) => value === v,
+		);
+		if (kv) {
+			return kv[0];
+		}
+	}
+	{
+		const [kv] = Object.entries(compOptAttrTypeRecord).filter(
+			([, value]) => value === v,
+		);
+		if (kv) {
+			return kv[0];
+		}
+		throw new Error(`invalid value: '${v}' is not a value of Attribute Type.`);
+	}
+}
+
 export const addrFamilyRecord = {
 	ipV4: 0x01,
 	ipV6: 0x02,
@@ -239,10 +262,12 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
 		const length = buf.subarray(2, 4).readUInt16BE();
 		bufLength -= 4;
 		if (bufLength < length) {
-			throw new Error(`attr ${attrType}`);
+			throw new Error(
+				`invalid attr length; given ${fAttrType`${attrType}`} value length is ${length}, but the actual value length is ${bufLength}.`,
+			);
 		}
 		const value = Buffer.alloc(length, buf.subarray(4, 4 + length));
-		bufLength -= 4 + length;
+		bufLength -= length;
 		processingAttrs.push({ type: attrType, length, value });
 	}
 	const attrs: Attr[] = [];
@@ -251,6 +276,12 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
 			case compReqAttrTypeRecord["MAPPED-ADDRESS"]: {
 				const res = decodeMappedAddressValue(value);
 				attrs.push({ type, length, value: res });
+				break;
+			}
+			case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]: {
+				const res = decodeXorMappedAddressValue(value, header);
+				attrs.push({ type, length, value: res });
+				break;
 			}
 		}
 	}
