@@ -39,7 +39,7 @@ describe("decodeMappedAddressValue", () => {
 		expect(decodeMappedAddressValue(buf)).toEqual({
 			family: 0x01,
 			port: 0x1001,
-			addr: new Uint8Array([0x10, 0x11, 0x00, 0x01]),
+			addr: Buffer.from([0x10, 0x11, 0x00, 0x01]),
 		} satisfies MappedAddressAttr["value"]);
 	});
 	it("decodes IPv6 MAPPED-ADDRESS value", () => {
@@ -71,7 +71,7 @@ describe("decodeMappedAddressValue", () => {
 		expect(decodeMappedAddressValue(buf)).toEqual({
 			family: 0x02,
 			port: 0x1001,
-			addr: new Uint8Array([
+			addr: Buffer.from([
 				0x10, 0x11, 0x00, 0x01, 0x10, 0x11, 0x00, 0x01, 0x10, 0x11, 0x00, 0x01,
 				0x10, 0x11, 0x00, 0x01,
 			]),

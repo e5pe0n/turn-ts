@@ -72,7 +72,7 @@ export type MappedAddressAttr = {
 	value: {
 		family: AddrFamily;
 		port: number;
-		addr: Uint8Array;
+		addr: Buffer;
 	};
 };
 
@@ -180,13 +180,13 @@ export function decodeMappedAddressValue(
 		new Error(`invalid address family: '${family}' is not a address family.`),
 	);
 	const port = buf.subarray(2, 4).readInt16BE();
-	let addr: Uint8Array;
+	let addr: Buffer;
 	switch (family) {
 		case addrFamilyRecord.ipV4:
-			addr = new Uint8Array(buf.subarray(4, 8));
+			addr = Buffer.alloc(4, buf.subarray(4, 8));
 			break;
 		case addrFamilyRecord.ipV6:
-			addr = new Uint8Array(buf.subarray(4, 20));
+			addr = Buffer.alloc(16, buf.subarray(4, 20));
 			break;
 	}
 	return { family, addr, port };
