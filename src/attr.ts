@@ -5,6 +5,8 @@ import {
 	type ValueOf,
 	assertValueOf,
 	isValueOf,
+	numToBuf,
+	xorBufs,
 } from "./helpers.js";
 
 const compReqRange = [0x0000, 0x7fff] as const;
@@ -233,20 +235,12 @@ export function encodeXorMappedAddressValue(
 			return buf;
 		case addrFamilyRecord.ipV6:
 			{
-				const xAddr0 = addr.subarray(0, 4).readInt32BE() ^ header.magicCookie;
-				const xAddr1 =
-					addr.subarray(4, 8).readInt32BE() ^
-					header.trxId.subarray(0, 4).readInt32BE();
-				const xAddr2 =
-					addr.subarray(8, 12).readInt32BE() ^
-					header.trxId.subarray(4, 8).readInt32BE();
-				const xAddr3 =
-					addr.subarray(12, 16).readInt32BE() ^
-					header.trxId.subarray(8, 12).readInt32BE();
-				buf.writeInt32BE(xAddr0, 4);
-				buf.writeInt32BE(xAddr1, 8);
-				buf.writeInt32BE(xAddr2, 12);
-				buf.writeInt32BE(xAddr3, 16);
+				const rand = Buffer.concat([
+					numToBuf(header.magicCookie, 4),
+					header.trxId,
+				]);
+				const xAddr = xorBufs(addr, rand);
+				buf.fill(xAddr, 4);
 			}
 			return buf;
 	}
@@ -271,21 +265,9 @@ export function decodeXorMappedAddressValue(
 			return { port, family, addr };
 		}
 		case addrFamilyRecord.ipV6: {
-			const xres0 = buf.subarray(4, 8).readInt32BE() ^ magicCookie;
-			const xres1 =
-				buf.subarray(8, 12).readInt32BE() ^
-				header.trxId.subarray(0, 4).readInt32BE();
-			const xres2 =
-				buf.subarray(12, 16).readInt32BE() ^
-				header.trxId.subarray(4, 8).readInt32BE();
-			const xres3 =
-				buf.subarray(16, 20).readInt32BE() ^
-				header.trxId.subarray(8, 12).readInt32BE();
-			const addr = Buffer.alloc(16);
-			addr.writeInt32BE(xres0);
-			addr.writeInt32BE(xres1, 4);
-			addr.writeInt32BE(xres2, 8);
-			addr.writeInt32BE(xres3, 12);
+			const rand = Buffer.concat([numToBuf(magicCookie, 4), header.trxId]);
+			const xored = xorBufs(buf.subarray(4, 20), rand);
+			const addr = Buffer.alloc(16, xored);
 			return { port, family, addr };
 		}
 	}
