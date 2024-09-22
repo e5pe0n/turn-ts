@@ -214,6 +214,44 @@ export function decodeMappedAddressValue(
 	return { family, addr, port };
 }
 
+export function encodeXorMappedAddressValue(
+	{ length, value }: Omit<XorMappedAddressAttr, "type">,
+	header: Header,
+): Buffer {
+	const buf = Buffer.alloc(length);
+	const { family, port, addr } = value;
+	const xPort = port ^ (header.magicCookie >>> 16);
+	buf.writeUint8(0);
+	buf.writeUint8(family, 1);
+	buf.writeUInt16BE(xPort, 2);
+	switch (family) {
+		case addrFamilyRecord.ipV4:
+			{
+				const xAddr = addr.readInt32BE() ^ header.magicCookie;
+				buf.writeInt32BE(xAddr, 4);
+			}
+			return buf;
+		case addrFamilyRecord.ipV6:
+			{
+				const xAddr0 = addr.subarray(0, 4).readInt32BE() ^ header.magicCookie;
+				const xAddr1 =
+					addr.subarray(4, 8).readInt32BE() ^
+					header.trxId.subarray(0, 4).readInt32BE();
+				const xAddr2 =
+					addr.subarray(8, 12).readInt32BE() ^
+					header.trxId.subarray(4, 8).readInt32BE();
+				const xAddr3 =
+					addr.subarray(12, 16).readInt32BE() ^
+					header.trxId.subarray(8, 12).readInt32BE();
+				buf.writeInt32BE(xAddr0, 4);
+				buf.writeInt32BE(xAddr1, 8);
+				buf.writeInt32BE(xAddr2, 12);
+				buf.writeInt32BE(xAddr3, 16);
+			}
+			return buf;
+	}
+}
+
 export function decodeXorMappedAddressValue(
 	buf: Buffer,
 	header: Header,

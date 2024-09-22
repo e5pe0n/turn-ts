@@ -7,6 +7,7 @@ import {
 	decodeMappedAddressValue,
 	decodeXorMappedAddressValue,
 	encodeMappedAddressValue,
+	encodeXorMappedAddressValue,
 } from "./attr.js";
 import { magicCookie } from "./consts.js";
 import { type Header, classRecord, methodRecord } from "./header.js";
@@ -144,6 +145,90 @@ describe("decodeMappedAddressValue", () => {
 	});
 });
 
+describe("encodeXorMappedAddressValue", () => {
+	it("encodes IPv4 XOR-MAPPED-ADDRESS attr", () => {
+		const header: Header = {
+			cls: classRecord.request,
+			method: methodRecord.binding,
+			length: 8, // bytes
+			magicCookie,
+			trxId: Buffer.from([
+				0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+			]),
+		};
+		const attr: XorMappedAddressAttr = {
+			type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+			length: 8,
+			value: {
+				family: addrFamilyRecord.ipV4,
+				port: 12345,
+				addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
+			},
+		};
+		expect(encodeXorMappedAddressValue(attr, header)).toEqual(
+			Buffer.from([
+				0x00,
+				0x01, // Family (IPv4)
+				0x11, // Port
+				0x2b,
+				0xff, // X-Address (IPv4)
+				0x2c,
+				0x53,
+				0x04,
+			]),
+		);
+	});
+	it("encodes IPv6 XOR-MAPPED-ADDRESS attr", () => {
+		const header: Header = {
+			cls: classRecord.request,
+			method: methodRecord.binding,
+			length: 20, // bytes
+			magicCookie,
+			trxId: Buffer.from([
+				0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+			]),
+		};
+		const attr: XorMappedAddressAttr = {
+			type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+			length: 20,
+			value: {
+				family: addrFamilyRecord.ipV6,
+				port: 12345,
+				addr: Buffer.from([
+					0xde, 0x3e, 0xf7, 0x46, 0x70, 0x0f, 0x21, 0xb2, 0x0f, 0xf4, 0xf4,
+					0x2e, 0x93, 0x47, 0x61, 0x2c,
+				]),
+			},
+		};
+		expect(encodeXorMappedAddressValue(attr, header)).toEqual(
+			Buffer.from([
+				0x00,
+				0x02, // Family (IPv6)
+				0x11, // X-Port
+				0x2b,
+				0xff, // X-Address (IPv6)
+				0x2c,
+				0x53,
+				0x04,
+
+				0xf1,
+				0x43,
+				0x53,
+				0xbb,
+
+				0xa8,
+				0x9c,
+				0x0d,
+				0xa7,
+
+				0x6b,
+				0x4c,
+				0x12,
+				0x91,
+			]),
+		);
+	});
+});
 describe("decodeXorMappedAddressValue", () => {
 	it("throws an error if an invalid address family given", () => {
 		const header: Header = {
@@ -196,7 +281,7 @@ describe("decodeXorMappedAddressValue", () => {
 			addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
 		} satisfies XorMappedAddressAttr["value"]);
 	});
-	it("decodes IPv7 XOR-MAPPED-ADDRESS value", () => {
+	it("decodes IPv6 XOR-MAPPED-ADDRESS value", () => {
 		const header: Header = {
 			cls: classRecord.request,
 			method: methodRecord.binding,
