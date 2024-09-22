@@ -179,7 +179,7 @@ export function decodeMappedAddressValue(
 		addrFamilyRecord,
 		new Error(`invalid address family: '${family}' is not a address family.`),
 	);
-	const port = buf.subarray(2, 4).readInt16BE();
+	const port = buf.subarray(2, 4).readUInt16BE();
 	let addr: Buffer;
 	switch (family) {
 		case addrFamilyRecord.ipV4:
@@ -211,7 +211,7 @@ export function decodeXorMappedAddressValue(
 		addrFamilyRecord,
 		new Error(`invalid address family: '${family}' is not a address family.`),
 	);
-	const port = buf.subarray(2, 4).readInt16BE() ^ (magicCookie >>> 16);
+	const port = buf.subarray(2, 4).readUInt16BE() ^ (magicCookie >>> 16);
 	switch (family) {
 		case addrFamilyRecord.ipV4: {
 			const xres = buf.subarray(4, 8).readInt32BE() ^ magicCookie;
