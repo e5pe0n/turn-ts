@@ -13,17 +13,13 @@ import { magicCookie } from "./consts.js";
 import { type Header, classRecord, methodRecord } from "./header.js";
 
 describe("encodeMappedAddressValue", () => {
-	it("encodes IPv4 MAPPED-ADDRESS attr", () => {
-		const attr: MappedAddressAttr = {
-			type: compReqAttrTypeRecord["MAPPED-ADDRESS"],
-			length: 8,
-			value: {
-				family: addrFamilyRecord.ipV4,
-				port: 12345,
-				addr: Buffer.from([0xc9, 0xc7, 0xc5, 0x59]),
-			},
+	it("encodes IPv4 MAPPED-ADDRESS value", () => {
+		const value: MappedAddressAttr["value"] = {
+			family: addrFamilyRecord.ipV4,
+			port: 12345,
+			addr: Buffer.from([0xc9, 0xc7, 0xc5, 0x59]),
 		};
-		expect(encodeMappedAddressValue(attr)).toEqual(
+		expect(encodeMappedAddressValue(value)).toEqual(
 			Buffer.from([
 				0x00,
 				0x01, // Family (IPv4)
@@ -36,20 +32,16 @@ describe("encodeMappedAddressValue", () => {
 			]),
 		);
 	});
-	it("encodes IPv6 MAPPED-ADDRESS attr", () => {
-		const attr: MappedAddressAttr = {
-			type: compReqAttrTypeRecord["MAPPED-ADDRESS"],
-			length: 20,
-			value: {
-				family: addrFamilyRecord.ipV6,
-				port: 12345,
-				addr: Buffer.from([
-					0xde, 0x3e, 0xf7, 0x46, 0x70, 0x0f, 0x21, 0xb2, 0x0f, 0xf4, 0xf4,
-					0x2e, 0x93, 0x47, 0x61, 0x2c,
-				]),
-			},
+	it("encodes IPv6 MAPPED-ADDRESS value", () => {
+		const value: MappedAddressAttr["value"] = {
+			family: addrFamilyRecord.ipV6,
+			port: 12345,
+			addr: Buffer.from([
+				0xde, 0x3e, 0xf7, 0x46, 0x70, 0x0f, 0x21, 0xb2, 0x0f, 0xf4, 0xf4, 0x2e,
+				0x93, 0x47, 0x61, 0x2c,
+			]),
 		};
-		expect(encodeMappedAddressValue(attr)).toEqual(
+		expect(encodeMappedAddressValue(value)).toEqual(
 			Buffer.from([
 				0x00,
 				0x02, // Family (IPv6)
@@ -146,7 +138,7 @@ describe("decodeMappedAddressValue", () => {
 });
 
 describe("encodeXorMappedAddressValue", () => {
-	it("encodes IPv4 XOR-MAPPED-ADDRESS attr", () => {
+	it("encodes IPv4 XOR-MAPPED-ADDRESS value", () => {
 		const header: Header = {
 			cls: classRecord.request,
 			method: methodRecord.binding,
@@ -156,16 +148,12 @@ describe("encodeXorMappedAddressValue", () => {
 				0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
 			]),
 		};
-		const attr: XorMappedAddressAttr = {
-			type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
-			length: 8,
-			value: {
-				family: addrFamilyRecord.ipV4,
-				port: 12345,
-				addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
-			},
+		const value: XorMappedAddressAttr["value"] = {
+			family: addrFamilyRecord.ipV4,
+			port: 12345,
+			addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
 		};
-		expect(encodeXorMappedAddressValue(attr, header)).toEqual(
+		expect(encodeXorMappedAddressValue(value, header)).toEqual(
 			Buffer.from([
 				0x00,
 				0x01, // Family (IPv4)
@@ -178,7 +166,7 @@ describe("encodeXorMappedAddressValue", () => {
 			]),
 		);
 	});
-	it("encodes IPv6 XOR-MAPPED-ADDRESS attr", () => {
+	it("encodes IPv6 XOR-MAPPED-ADDRESS value", () => {
 		const header: Header = {
 			cls: classRecord.request,
 			method: methodRecord.binding,
@@ -188,19 +176,15 @@ describe("encodeXorMappedAddressValue", () => {
 				0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
 			]),
 		};
-		const attr: XorMappedAddressAttr = {
-			type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
-			length: 20,
-			value: {
-				family: addrFamilyRecord.ipV6,
-				port: 12345,
-				addr: Buffer.from([
-					0xde, 0x3e, 0xf7, 0x46, 0x70, 0x0f, 0x21, 0xb2, 0x0f, 0xf4, 0xf4,
-					0x2e, 0x93, 0x47, 0x61, 0x2c,
-				]),
-			},
+		const value: XorMappedAddressAttr["value"] = {
+			family: addrFamilyRecord.ipV6,
+			port: 12345,
+			addr: Buffer.from([
+				0xde, 0x3e, 0xf7, 0x46, 0x70, 0x0f, 0x21, 0xb2, 0x0f, 0xf4, 0xf4, 0x2e,
+				0x93, 0x47, 0x61, 0x2c,
+			]),
 		};
-		expect(encodeXorMappedAddressValue(attr, header)).toEqual(
+		expect(encodeXorMappedAddressValue(value, header)).toEqual(
 			Buffer.from([
 				0x00,
 				0x02, // Family (IPv6)

@@ -164,12 +164,11 @@ type Attr =
 export function encodeAttr(attr: Attr): Buffer {
 	const tlBuf = Buffer.alloc(4);
 	tlBuf.writeUInt16BE(attr.type);
-	tlBuf.writeUInt16BE(attr.length, 2);
 
 	let vBuf: Buffer;
 	switch (attr.type) {
 		case compReqAttrTypeRecord["MAPPED-ADDRESS"]:
-			vBuf = encodeMappedAddressValue(attr);
+			vBuf = encodeMappedAddressValue(attr.value);
 			break;
 		default:
 			throw new Error(
@@ -177,16 +176,16 @@ export function encodeAttr(attr: Attr): Buffer {
 			);
 	}
 
+	tlBuf.writeUInt16BE(attr.length, 2);
 	const resBuf = Buffer.concat([tlBuf, vBuf]);
 	return resBuf;
 }
 
-export function encodeMappedAddressValue({
-	length,
-	value,
-}: Omit<MappedAddressAttr, "type">): Buffer {
-	const buf = Buffer.alloc(length);
+export function encodeMappedAddressValue(
+	value: MappedAddressAttr["value"],
+): Buffer {
 	const { family, port, addr } = value;
+	const buf = Buffer.alloc(family === addrFamilyRecord.ipV4 ? 8 : 20);
 	buf.writeUint8(0);
 	buf.writeUint8(family, 1);
 	buf.writeUInt16BE(port, 2);
@@ -217,12 +216,12 @@ export function decodeMappedAddressValue(
 }
 
 export function encodeXorMappedAddressValue(
-	{ length, value }: Omit<XorMappedAddressAttr, "type">,
+	value: XorMappedAddressAttr["value"],
 	header: Header,
 ): Buffer {
-	const buf = Buffer.alloc(length);
 	const { family, port, addr } = value;
 	const xPort = port ^ (header.magicCookie >>> 16);
+	const buf = Buffer.alloc(family === addrFamilyRecord.ipV4 ? 8 : 20);
 	buf.writeUint8(0);
 	buf.writeUint8(family, 1);
 	buf.writeUInt16BE(xPort, 2);
