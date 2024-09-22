@@ -73,6 +73,16 @@ export function assertValueOf<R extends object, V extends R[keyof R]>(
 	}
 }
 
+export function numToBuf(n: number, length: number): Buffer {
+	const resBuf = Buffer.alloc(length);
+	let m = n;
+	for (let offset = length - 1; offset >= 0; --offset) {
+		resBuf.writeUInt8(m & 0xff, offset);
+		m >>>= 8;
+	}
+	return resBuf;
+}
+
 export function xorBufs(a: Buffer, b: Buffer): Buffer {
 	if (a.length !== b.length) {
 		throw new Error(

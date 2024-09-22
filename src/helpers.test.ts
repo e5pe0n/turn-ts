@@ -1,5 +1,11 @@
 import { expect, expectTypeOf, test, it, describe } from "vitest";
-import { type ValueOf, assertValueOf, isValueOf, xorBufs } from "./helpers.js";
+import {
+	type ValueOf,
+	assertValueOf,
+	isValueOf,
+	numToBuf,
+	xorBufs,
+} from "./helpers.js";
 
 const addrFamilyRecord = {
 	ipV4: 0x01,
@@ -22,6 +28,13 @@ test("assertValueOf", () => {
 	expectTypeOf(
 		assertValueOf<AddrFamilyRecord, AddrFamily>,
 	).asserts.toEqualTypeOf<AddrFamily>();
+});
+
+describe("numToBuf", () => {
+	it("convert a number to a buffer", () => {
+		const n = 0x2112a442;
+		expect(numToBuf(n, 4)).toEqual(Buffer.from([0x21, 0x12, 0xa4, 0x42]));
+	});
 });
 
 describe("xorBufs", () => {
