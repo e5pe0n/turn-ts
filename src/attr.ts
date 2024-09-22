@@ -1,6 +1,11 @@
 import { magicCookie } from "./consts.js";
 import type { Header } from "./header.js";
-import { type Override, assertValueOf, isValueOf } from "./helpers.js";
+import {
+	type Override,
+	type ValueOf,
+	assertValueOf,
+	isValueOf,
+} from "./helpers.js";
 
 const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
@@ -15,16 +20,14 @@ const compReqAttrTypeRecord = {
 	nonce: 0x0015,
 	xorMappedAddress: 0x0020,
 } as const;
-type CompReqAttrType =
-	(typeof compReqAttrTypeRecord)[keyof typeof compReqAttrTypeRecord];
+type CompReqAttrType = ValueOf<typeof compReqAttrTypeRecord>;
 
 const compOptAttrTypeRecord = {
 	software: 0x8022,
 	alternateServer: 0x8023,
 	fingerprint: 0x8028,
 } as const;
-type CompOptAttrType =
-	(typeof compOptAttrTypeRecord)[keyof typeof compOptAttrTypeRecord];
+type CompOptAttrType = ValueOf<typeof compOptAttrTypeRecord>;
 
 type AttrType = CompReqAttrType | CompOptAttrType;
 
@@ -38,7 +41,7 @@ export const addrFamilyRecord = {
 	ipV4: 0x01,
 	ipV6: 0x02,
 } as const;
-type AddrFamily = (typeof addrFamilyRecord)[keyof typeof addrFamilyRecord];
+type AddrFamily = ValueOf<typeof addrFamilyRecord>;
 
 export type MappedAddressAttr = {
 	type: (typeof compReqAttrTypeRecord)["mappedAddress"];

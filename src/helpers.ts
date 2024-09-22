@@ -15,6 +15,11 @@ export type Override<T, U extends { [Prop in keyof T]?: unknown }> = {
 };
 
 /**
+ * Union type of values of given a type `T`.
+ */
+export type ValueOf<T> = T[keyof T];
+
+/**
  * Crate a new Array such as [0, 1, ..., `stop - 1`].
  *
  * @example

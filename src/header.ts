@@ -1,5 +1,5 @@
 import { magicCookie } from "./consts.js";
-import { assertValueOf } from "./helpers.js";
+import { type ValueOf, assertValueOf } from "./helpers.js";
 
 export const classRecord = {
 	request: 0b00,
@@ -8,13 +8,13 @@ export const classRecord = {
 	errorResponse: 0b11,
 } as const;
 
-export type Class = (typeof classRecord)[keyof typeof classRecord];
+export type Class = ValueOf<typeof classRecord>;
 
 export const methodRecord = {
 	binding: 0x0001,
 } as const;
 
-export type Method = (typeof methodRecord)[keyof typeof methodRecord];
+export type Method = ValueOf<typeof methodRecord>;
 
 export type Header = {
 	cls: Class;

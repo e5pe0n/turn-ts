@@ -1,5 +1,5 @@
 import { expectTypeOf, test } from "vitest";
-import { assertValueOf, isValueOf } from "./helpers.js";
+import { type ValueOf, assertValueOf, isValueOf } from "./helpers.js";
 
 const addrFamilyRecord = {
 	ipV4: 0x01,
@@ -7,6 +7,10 @@ const addrFamilyRecord = {
 } as const;
 type AddrFamilyRecord = typeof addrFamilyRecord;
 type AddrFamily = (typeof addrFamilyRecord)[keyof typeof addrFamilyRecord];
+
+test("ValueOf", () => {
+	expectTypeOf<ValueOf<typeof addrFamilyRecord>>().toEqualTypeOf<AddrFamily>();
+});
 
 test("isValueOf", () => {
 	expectTypeOf(
