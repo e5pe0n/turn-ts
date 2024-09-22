@@ -11,21 +11,21 @@ const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
 
 const compReqAttrTypeRecord = {
-	mappedAddress: 0x0001,
-	username: 0x0006,
-	messageIntegrity: 0x0008,
-	errorCode: 0x0009,
-	unknownAttributes: 0x000a,
-	realm: 0x0014,
-	nonce: 0x0015,
-	xorMappedAddress: 0x0020,
+	"MAPPED-ADDRESS": 0x0001,
+	USERNAME: 0x0006,
+	"MESSAGE-INTEGRITY": 0x0008,
+	"ERROR-CODE": 0x0009,
+	"UNKNOWN-ATTRIBUTES": 0x000a,
+	REALM: 0x0014,
+	NONCE: 0x0015,
+	"XOR-MAPPED-ADDRESS": 0x0020,
 } as const;
 type CompReqAttrType = ValueOf<typeof compReqAttrTypeRecord>;
 
 const compOptAttrTypeRecord = {
-	software: 0x8022,
-	alternateServer: 0x8023,
-	fingerprint: 0x8028,
+	SOFTWARE: 0x8022,
+	"ALTERNATE-SERVER": 0x8023,
+	FINGERPRINT: 0x8028,
 } as const;
 type CompOptAttrType = ValueOf<typeof compOptAttrTypeRecord>;
 
@@ -44,7 +44,7 @@ export const addrFamilyRecord = {
 type AddrFamily = ValueOf<typeof addrFamilyRecord>;
 
 export type MappedAddressAttr = {
-	type: (typeof compReqAttrTypeRecord)["mappedAddress"];
+	type: (typeof compReqAttrTypeRecord)["MAPPED-ADDRESS"];
 	length: number;
 	value: {
 		family: AddrFamily;
@@ -54,43 +54,43 @@ export type MappedAddressAttr = {
 };
 
 type UsernameAttr = {
-	type: (typeof compReqAttrTypeRecord)["username"];
+	type: (typeof compReqAttrTypeRecord)["USERNAME"];
 	length: number;
 	value: unknown;
 };
 
 type MessageIntegrityAttr = {
-	type: (typeof compReqAttrTypeRecord)["messageIntegrity"];
+	type: (typeof compReqAttrTypeRecord)["MESSAGE-INTEGRITY"];
 	length: number;
 	value: unknown;
 };
 
 type ErrorCodeAttr = {
-	type: (typeof compReqAttrTypeRecord)["errorCode"];
+	type: (typeof compReqAttrTypeRecord)["ERROR-CODE"];
 	length: number;
 	value: unknown;
 };
 
 type UnknownAttributesAttr = {
-	type: (typeof compReqAttrTypeRecord)["unknownAttributes"];
+	type: (typeof compReqAttrTypeRecord)["UNKNOWN-ATTRIBUTES"];
 	length: number;
 	value: unknown;
 };
 
 type RealmAttr = {
-	type: (typeof compReqAttrTypeRecord)["realm"];
+	type: (typeof compReqAttrTypeRecord)["REALM"];
 	length: number;
 	value: unknown;
 };
 
 type NonceAttr = {
-	type: (typeof compReqAttrTypeRecord)["nonce"];
+	type: (typeof compReqAttrTypeRecord)["NONCE"];
 	length: number;
 	value: unknown;
 };
 
 export type XorMappedAddressAttr = {
-	type: (typeof compReqAttrTypeRecord)["xorMappedAddress"];
+	type: (typeof compReqAttrTypeRecord)["XOR-MAPPED-ADDRESS"];
 	length: number;
 	value:
 		| {
@@ -106,19 +106,19 @@ export type XorMappedAddressAttr = {
 };
 
 type SoftwareAttr = {
-	type: (typeof compOptAttrTypeRecord)["software"];
+	type: (typeof compOptAttrTypeRecord)["SOFTWARE"];
 	length: number;
 	value: unknown;
 };
 
 type AlternateServerAttr = {
-	type: (typeof compOptAttrTypeRecord)["alternateServer"];
+	type: (typeof compOptAttrTypeRecord)["ALTERNATE-SERVER"];
 	length: number;
 	value: unknown;
 };
 
 type FingerprintAttr = {
-	type: (typeof compOptAttrTypeRecord)["fingerprint"];
+	type: (typeof compOptAttrTypeRecord)["FINGERPRINT"];
 	length: number;
 	value: unknown;
 };
@@ -218,16 +218,29 @@ export function decodeXorMappedAddressValue(
 }
 
 export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
+	/**
+	 *   0                   1                   2                   3
+	 *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+	 *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	 *  |         Type                  |            Length             |
+	 *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	 *  |                         Value (variable)                ....
+	 *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	 */
 	const processingAttrs: Override<Attr, { value: Buffer }>[] = [];
 	let bufLength = buf.length;
-	while (bufLength > 0) {
-		const attrType = buf.subarray(0, 2).readUint16BE();
+	while (bufLength > 4) {
+		const attrType = buf.subarray(0, 2).readUInt16BE();
 		if (!isAttrType(attrType)) {
 			// TODO: Distinguish between comprehension-required attributes
 			// and comprehension-optional attributes.
 			throw new Error(`invalid attr type; ${attrType} is not a attr type.`);
 		}
-		const length = buf.subarray(2, 4).readUint16BE();
+		const length = buf.subarray(2, 4).readUInt16BE();
+		bufLength -= 4;
+		if (bufLength < length) {
+			throw new Error(`attr ${attrType}`);
+		}
 		const value = Buffer.alloc(length, buf.subarray(4, 4 + length));
 		bufLength -= 4 + length;
 		processingAttrs.push({ type: attrType, length, value });
@@ -235,7 +248,7 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
 	const attrs: Attr[] = [];
 	for (const { type, length, value } of processingAttrs) {
 		switch (type) {
-			case compReqAttrTypeRecord.mappedAddress: {
+			case compReqAttrTypeRecord["MAPPED-ADDRESS"]: {
 				const res = decodeMappedAddressValue(value);
 				attrs.push({ type, length, value: res });
 			}
