@@ -16,6 +16,11 @@ export const methodRecord = {
 
 export type Method = ValueOf<typeof methodRecord>;
 
+type MsgType = {
+	cls: Class;
+	method: Method;
+};
+
 export type Header = {
 	cls: Class;
 	method: Method;
@@ -24,22 +29,7 @@ export type Header = {
 	trxId: Buffer;
 };
 
-export function decodeClassAndMethod(n: number): {
-	cls: Class;
-	method: Method;
-} {
-	/**
-	 *  0  1  2 3 4 5 6 7 8 9 0 1 2 3
-	 *  3  2  1 0 9 8 7 6 5 4 3 2 1 0
-	 *
-	 *  0                 1
-	 *  2  3  4 5 6 7 8 9 0 1 2 3 4 5
-	 *
-	 * +--+--+-+-+-+-+-+-+-+-+-+-+-+-+
-	 * |M |M |M|M|M|C|M|M|M|C|M|M|M|M|
-	 * |11|10|9|8|7|1|6|5|4|0|3|2|1|0|
-	 * +--+--+-+-+-+-+-+-+-+-+-+-+-+-+
-	 */
+export function decodeMsgType(n: number): MsgType {
 	let m = 0;
 	let c = 0;
 	for (let i = 0, b = 1 << 13; i < 14; ++i, b >>>= 1) {
@@ -84,7 +74,7 @@ export function decodeHeader(buf: Buffer): Header {
 	if (!(exclusiveMaxStunMessageType > fst16bits)) {
 		throw new Error("first 2 bits must be zeros.");
 	}
-	const { method, cls } = decodeClassAndMethod(fst16bits);
+	const { method, cls } = decodeMsgType(fst16bits);
 	const length = buf.subarray(2, 4).readInt16BE();
 	const maybeMagicCookie = buf.subarray(4, 8).readInt32BE();
 	if (maybeMagicCookie !== magicCookie) {

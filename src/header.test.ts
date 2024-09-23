@@ -3,12 +3,12 @@ import { describe, expect, it, test } from "vitest";
 import {
 	type Header,
 	classRecord,
-	decodeClassAndMethod,
+	decodeMsgType,
 	decodeHeader,
 	methodRecord,
 } from "./header.js";
 
-describe("decodeClassAndMethod", () => {
+describe("decodeMsgType", () => {
 	test.each([
 		[
 			{
@@ -39,12 +39,12 @@ describe("decodeClassAndMethod", () => {
 	])(
 		"decodes a $methodName $className",
 		({ arg, expected, methodName, className }) => {
-			expect(decodeClassAndMethod(arg)).toEqual(expected);
+			expect(decodeMsgType(arg)).toEqual(expected);
 		},
 	);
 	it("throws error if result is not a method", () => {
 		const arg = 0x0000;
-		expect(() => decodeClassAndMethod(arg)).toThrowError(/not a method/);
+		expect(() => decodeMsgType(arg)).toThrowError(/not a method/);
 	});
 });
 
