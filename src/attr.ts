@@ -296,6 +296,29 @@ export function encodeErrorCodeValue(value: ErrorCodeAttr["value"]): Buffer {
 	return resBuf;
 }
 
+export function decodeErrorCodeValue(buf: Buffer): ErrorCodeAttr["value"] {
+	const cls = buf.subarray(2, 3).readUInt8();
+	if (!(3 <= cls && cls <= 6)) {
+		throw new Error(
+			`invalid error class; expected error class is in [3, 6]. actual is \`${cls}\`.`,
+		);
+	}
+	const num = buf.subarray(3, 4).readUInt8();
+	if (!(0 <= num && num <= 99)) {
+		throw new Error(
+			`invalid error number; expected error number is in [0, 99]. actual is \`${num}\`.`,
+		);
+	}
+	const reasonBuf = buf.subarray(4);
+	if (!(reasonBuf.length <= 763)) {
+		throw new Error(
+			"invalid reason phrase; expected reason phrase is <= 763 bytes. actual is > 763 bytes.",
+		);
+	}
+	const reason = reasonBuf.toString("utf-8");
+	return { code: cls * 100 + num, reason };
+}
+
 export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
 	const processingAttrs: Override<Attr, { value: Buffer }>[] = [];
 	let bufLength = buf.length;

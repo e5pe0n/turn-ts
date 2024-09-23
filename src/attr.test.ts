@@ -5,6 +5,7 @@ import {
 	type XorMappedAddressAttr,
 	addrFamilyRecord,
 	compReqAttrTypeRecord,
+	decodeErrorCodeValue,
 	decodeMappedAddressValue,
 	decodeXorMappedAddressValue,
 	encodeErrorCodeValue,
@@ -364,5 +365,107 @@ describe("encodeErrorCodeValue", () => {
 				0x65,
 			]),
 		);
+	});
+});
+describe("decodeErrorCodeValue", () => {
+	it("throws an error if the error class is not in [3, 6]", () => {
+		const buf = Buffer.from([
+			0x00,
+			0x00,
+			0x07, // Class
+			0x14, // Number
+			// Reason Phrase
+			0x69,
+			0x6e,
+			0x76,
+			0x61,
+			0x6c,
+			0x69,
+			0x64,
+			0x20,
+			0x61,
+			0x74,
+			0x74,
+			0x72,
+			0x20,
+			0x74,
+			0x79,
+			0x70,
+			0x65,
+		]);
+		expect(() => decodeErrorCodeValue(buf)).toThrowError(/invalid error class/);
+	});
+	it("throws an error if the error number is not in [0, 99]", () => {
+		const buf = Buffer.from([
+			0x00,
+			0x00,
+			0x04, // Class
+			0x64, // Number
+			// Reason Phrase
+			0x69,
+			0x6e,
+			0x76,
+			0x61,
+			0x6c,
+			0x69,
+			0x64,
+			0x20,
+			0x61,
+			0x74,
+			0x74,
+			0x72,
+			0x20,
+			0x74,
+			0x79,
+			0x70,
+			0x65,
+		]);
+		expect(() => decodeErrorCodeValue(buf)).toThrowError(
+			/invalid error number/,
+		);
+	});
+	it("throws an error if the reason phrase is not <= 763 bytes", () => {
+		const buf = Buffer.concat([
+			Buffer.from([
+				0x00,
+				0x00,
+				0x04, // Class
+				0x14, // Number
+			]),
+			Buffer.from("a".repeat(764)),
+		]);
+		expect(() => decodeErrorCodeValue(buf)).toThrowError(
+			/invalid reason phrase/,
+		);
+	});
+	it("decodes ERROR-CODE value", () => {
+		const buf = Buffer.from([
+			0x00,
+			0x00,
+			0x04, // Class
+			0x14, // Number
+			// Reason Phrase
+			0x69,
+			0x6e,
+			0x76,
+			0x61,
+			0x6c,
+			0x69,
+			0x64,
+			0x20,
+			0x61,
+			0x74,
+			0x74,
+			0x72,
+			0x20,
+			0x74,
+			0x79,
+			0x70,
+			0x65,
+		]);
+		expect(decodeErrorCodeValue(buf)).toEqual({
+			code: 420,
+			reason: "invalid attr type",
+		});
 	});
 });
