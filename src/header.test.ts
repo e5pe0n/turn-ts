@@ -1,11 +1,49 @@
 import { describe, expect, it, test } from "vitest";
 import {
 	type Header,
+	type MsgType,
 	classRecord,
 	decodeHeader,
 	decodeMsgType,
+	encodeMsgType,
 	methodRecord,
 } from "./header.js";
+
+describe("encodeMsgType", () => {
+	test.each([
+		{
+			arg: { method: methodRecord.binding, cls: classRecord.request },
+			expected: Buffer.from([0b00_000000, 0b00000001]),
+			methodName: "Binding",
+			className: "request",
+		},
+		{
+			arg: {
+				method: methodRecord.binding,
+				cls: classRecord.successResponse,
+			},
+			expected: Buffer.from([0b00_000001, 0b00000001]),
+			methodName: "Binding",
+			className: "success response",
+		},
+		{
+			arg: {
+				method: methodRecord.binding,
+				cls: classRecord.errorResponse,
+			},
+			expected: Buffer.from([0b00_000001, 0b00010001]),
+			methodName: "Binding",
+			className: "error response",
+		},
+	] satisfies {
+		arg: MsgType;
+		expected: Buffer;
+		methodName: string;
+		className: string;
+	}[])("encodes a $methodName $className message type", ({ arg, expected }) => {
+		expect(encodeMsgType(arg)).toEqual(expected);
+	});
+});
 
 describe("decodeMsgType", () => {
 	test.each([

@@ -16,7 +16,7 @@ export const methodRecord = {
 
 export type Method = ValueOf<typeof methodRecord>;
 
-type MsgType = {
+export type MsgType = {
 	cls: Class;
 	method: Method;
 };
@@ -28,6 +28,22 @@ export type Header = {
 	magicCookie: typeof magicCookie;
 	trxId: Buffer;
 };
+
+export function encodeMsgType({ cls, method }: MsgType): Buffer {
+	const buf = Buffer.alloc(2);
+	let n = 0;
+	n |= method & 0b1111;
+	if (cls & 0b01) {
+		n |= 1 << 4;
+	}
+	n |= method & (0b111 << 5);
+	if (cls & 0b10) {
+		n |= 1 << 8;
+	}
+	n |= method & (0b11111 << 9);
+	buf.writeUInt16BE(n);
+	return buf;
+}
 
 export function decodeMsgType(n: number): MsgType {
 	let m = 0;
