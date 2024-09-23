@@ -325,7 +325,7 @@ describe("encodeErrorCodeValue", () => {
 			/invalid error code/,
 		);
 	});
-	it("throws an error if the given reason is not < 128 chars in UTF-8 (<= 763 bytes)", () => {
+	it("throws an error if the given reason is not <= 763 bytes", () => {
 		const value: ErrorCodeAttr["value"] = {
 			code: 420,
 			reason: "a".repeat(764),
