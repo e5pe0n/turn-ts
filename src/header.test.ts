@@ -1,10 +1,9 @@
-import { randomBytes } from "node:crypto";
 import { describe, expect, it, test } from "vitest";
 import {
 	type Header,
 	classRecord,
-	decodeMsgType,
 	decodeHeader,
+	decodeMsgType,
 	methodRecord,
 } from "./header.js";
 
@@ -50,7 +49,9 @@ describe("decodeMsgType", () => {
 
 describe("decodeHeader", () => {
 	it("throws error if STUN message header does not begin with 0b00", () => {
-		const trxId = randomBytes(6);
+		const trxId = Buffer.from([
+			0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+		]);
 		const buf = Buffer.concat([
 			Buffer.from([
 				// STUN Message Type
@@ -68,7 +69,9 @@ describe("decodeHeader", () => {
 		expect(() => decodeHeader(buf)).toThrowError(/first 2 bits must be zeros/);
 	});
 	it("throws error if STUN message header does not include valid magic cookie", () => {
-		const trxId = randomBytes(6);
+		const trxId = Buffer.from([
+			0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+		]);
 		const buf = Buffer.concat([
 			Buffer.from([
 				0x00, // STUN Message Type
