@@ -36,7 +36,7 @@ describe("decodeMsgType", () => {
 			},
 		],
 	])(
-		"decodes a $methodName $className",
+		"decodes a $methodName $className message type",
 		({ arg, expected, methodName, className }) => {
 			expect(decodeMsgType(arg)).toEqual(expected);
 		},
