@@ -5,7 +5,8 @@
 	"type": "module",
 	"main": "index.js",
 	"scripts": {
-		"check": "biome check",
+		"type:check": "tsc --noEmit",
+		"check": "pnpm type:check && biome check",
 		"fix": "biome check --write",
 		"test": "vitest --run --silent=false"
 	},
