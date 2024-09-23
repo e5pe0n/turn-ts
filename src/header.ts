@@ -92,6 +92,6 @@ export function decodeHeader(buf: Buffer): Header {
 			`invalid magic cookie; magic cookie must be '${magicCookie}'. the given value is '0x${maybeMagicCookie.toString(16)}'`,
 		);
 	}
-	const trxId = Buffer.alloc(6, buf.subarray(8, 14));
+	const trxId = Buffer.alloc(12, buf.subarray(8, 20));
 	return { method, cls, length, magicCookie, trxId };
 }

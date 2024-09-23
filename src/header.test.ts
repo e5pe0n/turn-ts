@@ -85,7 +85,9 @@ describe("decodeHeader", () => {
 		expect(() => decodeHeader(buf)).toThrowError(/invalid magic cookie/);
 	});
 	it("decodes STUN message header", () => {
-		const trxId = randomBytes(6);
+		const trxId = Buffer.from([
+			0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+		]);
 		const buf = Buffer.concat([
 			Buffer.from([
 				0x00, // STUN Message Type

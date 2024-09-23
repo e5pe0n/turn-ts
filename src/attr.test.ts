@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+	type Attr,
 	type ErrorCodeAttr,
 	type MappedAddressAttr,
 	type XorMappedAddressAttr,
 	addrFamilyRecord,
 	compReqAttrTypeRecord,
+	decodeAttrs,
 	decodeErrorCodeValue,
 	decodeMappedAddressValue,
 	decodeXorMappedAddressValue,
@@ -467,5 +469,73 @@ describe("decodeErrorCodeValue", () => {
 			code: 420,
 			reason: "invalid attr type",
 		});
+	});
+});
+
+describe("decodeAttrs", () => {
+	it("throws an error if the value length is not enough", () => {
+		const header: Header = {
+			cls: classRecord.request,
+			method: methodRecord.binding,
+			length: 11,
+			magicCookie,
+			trxId: Buffer.from([
+				0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+			]),
+		};
+		const buf = Buffer.from([
+			0x00, // Type: XOR-MAPPED-ADDRESS
+			0x20,
+			0x00, // Length: 8 bytes
+			0x08,
+			// Value: 8 - 1 bytes
+			0x00,
+			0x01, // Family: IPv4
+			0x10, // X-Port
+			0x01,
+			0xff, // X-Address (IPv4)
+			0x2c,
+			0x53,
+			// 0x04,	-1 bytes
+		]);
+		expect(() => decodeAttrs(buf, header)).toThrowError(/invalid attr length/);
+	});
+	// TODO: Decode multiple attrs.
+	it("docodes attrs", () => {
+		const header: Header = {
+			cls: classRecord.request,
+			method: methodRecord.binding,
+			length: 12,
+			magicCookie,
+			trxId: Buffer.from([
+				0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+			]),
+		};
+		const buf = Buffer.from([
+			0x00, // Type: XOR-MAPPED-ADDRESS
+			0x20,
+			0x00, // Length: 8 bytes
+			0x08,
+			// Value: 8 bytes
+			0x00,
+			0x01, // Family: IPv4
+			0x10, // X-Port
+			0x01,
+			0xff, // X-Address (IPv4)
+			0x2c,
+			0x53,
+			0x04,
+		]); // 12 bytes
+		expect(decodeAttrs(buf, header)).toEqual([
+			{
+				type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+				length: 8,
+				value: {
+					family: addrFamilyRecord.ipV4,
+					port: 0x3113,
+					addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
+				},
+			},
+		] satisfies Attr[]);
 	});
 });

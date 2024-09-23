@@ -1,7 +1,6 @@
 import { magicCookie } from "./consts.js";
 import type { Header } from "./header.js";
 import {
-	type Override,
 	type ValueOf,
 	assertValueOf,
 	isValueOf,
@@ -151,7 +150,7 @@ type FingerprintAttr = {
 	value: unknown;
 };
 
-type Attr =
+export type Attr =
 	| MappedAddressAttr
 	| UsernameAttr
 	| MessageIntegrityAttr
@@ -182,6 +181,78 @@ export function encodeAttr(attr: Attr): Buffer {
 	tlBuf.writeUInt16BE(attr.length, 2);
 	const resBuf = Buffer.concat([tlBuf, vBuf]);
 	return resBuf;
+}
+
+export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
+	const attrs: Attr[] = [];
+	let offset = 0;
+	while (offset + 4 < buf.length) {
+		const attrType = buf.subarray(offset, offset + 2).readUInt16BE();
+		if (!isAttrType(attrType)) {
+			// TODO: Distinguish between comprehension-required attributes
+			// and comprehension-optional attributes.
+			throw new Error(`invalid attr type; ${attrType} is not a attr type.`);
+		}
+		const length = buf.subarray(offset + 2, offset + 4).readUInt16BE();
+		const restLength = buf.length - (offset + 4);
+		if (!(restLength >= length)) {
+			throw new Error(
+				`invalid attr length; given ${fAttrType`${attrType}`} value length is ${length}, but the actual value length is ${restLength}.`,
+			);
+		}
+		const vBuf = Buffer.alloc(
+			length,
+			buf.subarray(offset + 4, offset + 4 + length),
+		);
+		switch (attrType) {
+			case compReqAttrTypeRecord["MAPPED-ADDRESS"]: {
+				const value = decodeMappedAddressValue(vBuf);
+				attrs.push({ type: attrType, length, value });
+				break;
+			}
+			case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]: {
+				const value = decodeXorMappedAddressValue(vBuf, header);
+				attrs.push({ type: attrType, length, value });
+				break;
+			}
+			default:
+				throw new Error(
+					`invalid attr type; ${fAttrType`${attrType}`} is not supported.`,
+				);
+		}
+		offset += 4 + length;
+	}
+	return attrs;
+}
+
+export function decodeAttr(buf: Buffer, header: Header): Attr {
+	const attrType = buf.subarray(0, 2).readUInt16BE();
+	if (!isAttrType(attrType)) {
+		// TODO: Distinguish between comprehension-required attributes
+		// and comprehension-optional attributes.
+		throw new Error(`invalid attr type; ${attrType} is not a attr type.`);
+	}
+	const length = buf.subarray(2, 4).readUInt16BE();
+	if (!(buf.subarray(4).length === length)) {
+		throw new Error(
+			`invalid attr length; given ${fAttrType`${attrType}`} value length is ${length}, but the actual value length is ${buf.length}.`,
+		);
+	}
+	const vBuf = Buffer.alloc(length, buf.subarray(4, 4 + length));
+	switch (attrType) {
+		case compReqAttrTypeRecord["MAPPED-ADDRESS"]: {
+			const value = decodeMappedAddressValue(vBuf);
+			return { type: attrType, length, value };
+		}
+		case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]: {
+			const value = decodeXorMappedAddressValue(vBuf, header);
+			return { type: attrType, length, value };
+		}
+		default:
+			throw new Error(
+				`invalid attr type; ${fAttrType`${attrType}`} is not supported.`,
+			);
+	}
 }
 
 export function encodeMappedAddressValue(
@@ -317,43 +388,4 @@ export function decodeErrorCodeValue(buf: Buffer): ErrorCodeAttr["value"] {
 	}
 	const reason = reasonBuf.toString("utf-8");
 	return { code: cls * 100 + num, reason };
-}
-
-export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
-	const processingAttrs: Override<Attr, { value: Buffer }>[] = [];
-	let bufLength = buf.length;
-	while (bufLength > 4) {
-		const attrType = buf.subarray(0, 2).readUInt16BE();
-		if (!isAttrType(attrType)) {
-			// TODO: Distinguish between comprehension-required attributes
-			// and comprehension-optional attributes.
-			throw new Error(`invalid attr type; ${attrType} is not a attr type.`);
-		}
-		const length = buf.subarray(2, 4).readUInt16BE();
-		bufLength -= 4;
-		if (bufLength < length) {
-			throw new Error(
-				`invalid attr length; given ${fAttrType`${attrType}`} value length is ${length}, but the actual value length is ${bufLength}.`,
-			);
-		}
-		const value = Buffer.alloc(length, buf.subarray(4, 4 + length));
-		bufLength -= length;
-		processingAttrs.push({ type: attrType, length, value });
-	}
-	const attrs: Attr[] = [];
-	for (const { type, length, value } of processingAttrs) {
-		switch (type) {
-			case compReqAttrTypeRecord["MAPPED-ADDRESS"]: {
-				const res = decodeMappedAddressValue(value);
-				attrs.push({ type, length, value: res });
-				break;
-			}
-			case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]: {
-				const res = decodeXorMappedAddressValue(value, header);
-				attrs.push({ type, length, value: res });
-				break;
-			}
-		}
-	}
-	return attrs;
 }
