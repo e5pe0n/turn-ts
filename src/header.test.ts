@@ -49,13 +49,13 @@ describe("decodeMsgType", () => {
 	test.each([
 		[
 			{
-				arg: 0b000000_00000001,
+				arg: Buffer.from([0b000000, 0b00000001]),
 				expected: { method: methodRecord.binding, cls: classRecord.request },
 				methodName: "Binding",
 				className: "request",
 			},
 			{
-				arg: 0b000001_00000001,
+				arg: Buffer.from([0b000001, 0b00000001]),
 				expected: {
 					method: methodRecord.binding,
 					cls: classRecord.successResponse,
@@ -64,7 +64,7 @@ describe("decodeMsgType", () => {
 				className: "success response",
 			},
 			{
-				arg: 0b000001_00010001,
+				arg: Buffer.from([0b000001, 0b00010001]),
 				expected: {
 					method: methodRecord.binding,
 					cls: classRecord.errorResponse,
@@ -80,32 +80,12 @@ describe("decodeMsgType", () => {
 		},
 	);
 	it("throws error if result is not a method", () => {
-		const arg = 0x0000;
+		const arg = Buffer.from([0x00, 0x00]);
 		expect(() => decodeMsgType(arg)).toThrowError(/not a method/);
 	});
 });
 
 describe("decodeHeader", () => {
-	it("throws error if STUN message header does not begin with 0b00", () => {
-		const trxId = Buffer.from([
-			0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-		]);
-		const buf = Buffer.concat([
-			Buffer.from([
-				// STUN Message Type
-				0b01_000000, // invalid first 2 bits
-				0x01,
-				0x00, // Message Length
-				0x00,
-				0x21, // Magic Cookie
-				0x12,
-				0xa4,
-				0x41,
-			]),
-			trxId,
-		]);
-		expect(() => decodeHeader(buf)).toThrowError(/first 2 bits must be zeros/);
-	});
 	it("throws error if STUN message header does not include valid magic cookie", () => {
 		const trxId = Buffer.from([
 			0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,

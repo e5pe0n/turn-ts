@@ -45,7 +45,8 @@ export function encodeMsgType({ cls, method }: MsgType): Buffer {
 	return buf;
 }
 
-export function decodeMsgType(n: number): MsgType {
+export function decodeMsgType(buf: Buffer): MsgType {
+	const n = buf.readUInt16BE();
 	let m = 0;
 	let c = 0;
 	for (let i = 0, b = 1 << 13; i < 14; ++i, b >>>= 1) {
@@ -70,27 +71,8 @@ export function decodeMsgType(n: number): MsgType {
 	return { method: m, cls: c };
 }
 
-const exclusiveMaxStunMessageType = 1 << 14;
-
 export function decodeHeader(buf: Buffer): Header {
-	/**
-	 *     0                   1                   2                   3
-	 *     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	 *    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 *    |0 0|     STUN Message Type     |         Message Length        |
-	 *    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 *    |                         Magic Cookie                          |
-	 *    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 *    |                                                               |
-	 *    |                     Transaction ID (96 bits)                  |
-	 *    |                                                               |
-	 *    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 */
-	const fst16bits = buf.subarray(0, 2).readUint16BE();
-	if (!(exclusiveMaxStunMessageType > fst16bits)) {
-		throw new Error("first 2 bits must be zeros.");
-	}
-	const { method, cls } = decodeMsgType(fst16bits);
+	const { method, cls } = decodeMsgType(buf.subarray(0, 2));
 	const length = buf.subarray(2, 4).readInt16BE();
 	const maybeMagicCookie = buf.subarray(4, 8).readInt32BE();
 	if (maybeMagicCookie !== magicCookie) {
