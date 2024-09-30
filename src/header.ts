@@ -1,5 +1,5 @@
 import { magicCookie } from "./consts.js";
-import { type ValueOf, assertValueOf } from "./helpers.js";
+import { type ValueOf, assertValueOf, numToBuf } from "./helpers.js";
 
 export const classRecord = {
 	request: 0b00,
@@ -69,6 +69,18 @@ export function decodeMsgType(buf: Buffer): MsgType {
 	assertValueOf(c, classRecord, new Error(`${c.toString(2)} is not a class.`));
 
 	return { method: m, cls: c };
+}
+
+export function encodeHeader({
+	cls,
+	method,
+	length,
+	trxId,
+}: { cls: Class; method: Method; length: number; trxId: Buffer }): Buffer {
+	const msgTypeBuf = encodeMsgType({ cls, method });
+	const lenBuf = numToBuf(length, 2);
+	const cookieBuf = numToBuf(magicCookie, 4);
+	return Buffer.concat([msgTypeBuf, lenBuf, cookieBuf, trxId]);
 }
 
 export function decodeHeader(buf: Buffer): Header {

@@ -5,6 +5,7 @@ import {
 	classRecord,
 	decodeHeader,
 	decodeMsgType,
+	encodeHeader,
 	encodeMsgType,
 	methodRecord,
 } from "./header.js";
@@ -82,6 +83,30 @@ describe("decodeMsgType", () => {
 	it("throws error if result is not a method", () => {
 		const arg = Buffer.from([0x00, 0x00]);
 		expect(() => decodeMsgType(arg)).toThrowError(/not a method/);
+	});
+});
+
+describe("encodeHeader", () => {
+	it("encodes a STUN message header", () => {
+		const trxId = Buffer.from([
+			0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+		]);
+		const res = encodeHeader({ cls: 0b10, method: 0x0001, length: 28, trxId });
+		expect(res).toEqual(
+			Buffer.concat([
+				Buffer.from([
+					0b00_000001, // STUN Message Type
+					0x01,
+					0x00, // Message Length
+					0x1c,
+					0x21, // Magic Cookie
+					0x12,
+					0xa4,
+					0x42,
+				]),
+				trxId,
+			]),
+		);
 	});
 });
 
