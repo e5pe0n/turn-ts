@@ -98,3 +98,7 @@ export function xorBufs(a: Buffer, b: Buffer): Buffer {
 	}
 	return resBuf;
 }
+
+export function fBuf(buf: Buffer): string {
+	return Array.from(buf.values()).toString();
+}

@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it, test } from "vitest";
 import {
 	type ValueOf,
 	assertValueOf,
+	fBuf,
 	isValueOf,
 	numToBuf,
 	xorBufs,
@@ -71,5 +72,12 @@ describe("xorBufs", () => {
 				Buffer.from([0x2b, 0x45, 0xff, 0x24, 0x30]),
 			);
 		});
+	});
+});
+
+describe("fBuf", () => {
+	it("returns a string of numbers consisting of the buffer content", () => {
+		const res = fBuf(Buffer.from([43, 69, 255, 36, 48]));
+		expect(res).toEqual("43,69,255,36,48");
 	});
 });
