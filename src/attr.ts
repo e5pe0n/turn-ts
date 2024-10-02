@@ -152,24 +152,31 @@ type FingerprintAttr = {
 
 export type Attr =
 	| MappedAddressAttr
-	| UsernameAttr
-	| MessageIntegrityAttr
+	// | UsernameAttr
+	// | MessageIntegrityAttr
 	| ErrorCodeAttr
-	| UnknownAttributesAttr
-	| RealmAttr
-	| NonceAttr
-	| XorMappedAddressAttr
-	| SoftwareAttr
-	| AlternateServerAttr
-	| FingerprintAttr;
+	// | UnknownAttributesAttr
+	// | RealmAttr
+	// | NonceAttr
+	| XorMappedAddressAttr;
+// | SoftwareAttr
+// | AlternateServerAttr
+// | FingerprintAttr;
 
-export function encodeAttr(attr: Attr, trxId: Buffer): Buffer {
+type AttrWithoutLength =
+	| Omit<MappedAddressAttr, "length">
+	| Omit<XorMappedAddressAttr, "length">
+	| Omit<ErrorCodeAttr, "length">;
+
+export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
 	const tlBuf = Buffer.alloc(4);
 	tlBuf.writeUInt16BE(attr.type);
 
 	let vBuf: Buffer;
 	switch (attr.type) {
 		case compReqAttrTypeRecord["MAPPED-ADDRESS"]:
+			attr.type;
+			attr.value;
 			vBuf = encodeMappedAddressValue(attr.value);
 			break;
 		case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]:
@@ -178,13 +185,12 @@ export function encodeAttr(attr: Attr, trxId: Buffer): Buffer {
 		case compReqAttrTypeRecord["ERROR-CODE"]:
 			vBuf = encodeErrorCodeValue(attr.value);
 			break;
-		default:
-			throw new Error(
-				`invalid attr type: ${fAttrType`${attr.type}`} is not supported.`,
-			);
+		default: {
+			throw new Error(`invalid attr: ${attr} is not supported.`);
+		}
 	}
 
-	tlBuf.writeUInt16BE(attr.length, 2);
+	tlBuf.writeUInt16BE(vBuf.length, 2);
 	const resBuf = Buffer.concat([tlBuf, vBuf]);
 	return resBuf;
 }

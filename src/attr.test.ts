@@ -10,6 +10,7 @@ import {
 	decodeErrorCodeValue,
 	decodeMappedAddressValue,
 	decodeXorMappedAddressValue,
+	encodeAttr,
 	encodeErrorCodeValue,
 	encodeMappedAddressValue,
 	encodeXorMappedAddressValue,
@@ -457,6 +458,42 @@ describe("decodeErrorCodeValue", () => {
 			code: 420,
 			reason: "invalid attr type",
 		});
+	});
+});
+
+describe("encodeAttr", () => {
+	it("encodes an attribute", () => {
+		const trxId = Buffer.from([
+			0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+		]);
+		const res = encodeAttr(
+			{
+				type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+				value: {
+					family: addrFamilyRecord.ipV4,
+					addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
+					port: 12345,
+				},
+			},
+			trxId,
+		);
+		expect(res).toEqual(
+			Buffer.from([
+				0x00, // Type
+				0x20,
+				0x00, // Length
+				0x08,
+				// Value
+				0x00,
+				0x01, // Family (IPv4)
+				0x11, // Port
+				0x2b,
+				0xff, // X-Address (IPv4)
+				0x2c,
+				0x53,
+				0x04,
+			]),
+		);
 	});
 });
 
