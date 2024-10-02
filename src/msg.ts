@@ -1,5 +1,16 @@
-import { type Attr, decodeAttrs } from "./attr.js";
-import { type Header, decodeHeader } from "./header.js";
+import {
+	type Attr,
+	type AttrWithoutLength,
+	decodeAttrs,
+	encodeAttr,
+} from "./attr.js";
+import {
+	type Class,
+	type Header,
+	type Method,
+	decodeHeader,
+	encodeHeader,
+} from "./header.js";
 
 export type StunMsg = {
 	header: Header;
@@ -27,4 +38,27 @@ export function decodeStunMsg(buf: Buffer): StunMsg {
 		header,
 		attrs,
 	};
+}
+
+type EncodeStunMsgParams = {
+	header: {
+		cls: Class;
+		method: Method;
+		trxId: Buffer;
+	};
+	attrs: AttrWithoutLength[];
+};
+
+export function encodeStunMsg({
+	header: { cls, method, trxId },
+	attrs,
+}: EncodeStunMsgParams): Buffer {
+	const attrsBuf = Buffer.concat(attrs.map((attr) => encodeAttr(attr, trxId)));
+	const hBuf = encodeHeader({
+		cls,
+		method,
+		trxId,
+		length: attrsBuf.length,
+	});
+	return Buffer.concat([hBuf, attrsBuf]);
 }

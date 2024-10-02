@@ -163,7 +163,7 @@ export type Attr =
 // | AlternateServerAttr
 // | FingerprintAttr;
 
-type AttrWithoutLength =
+export type AttrWithoutLength =
 	| Omit<MappedAddressAttr, "length">
 	| Omit<XorMappedAddressAttr, "length">
 	| Omit<ErrorCodeAttr, "length">;

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { addrFamilyRecord, compReqAttrTypeRecord } from "./attr.js";
 import { magicCookie } from "./consts.js";
-import { classRecord, methodRecord } from "./header.js";
-import { type StunMsg, decodeStunMsg } from "./msg.js";
+import { classRecord, methodRecord, type Header } from "./header.js";
+import { type StunMsg, decodeStunMsg, encodeStunMsg } from "./msg.js";
 
 describe("decodeStunMsg", () => {
 	it("throws an error if the STUN message is not >= 20 bytes", () => {
@@ -85,5 +85,62 @@ describe("decodeStunMsg", () => {
 				},
 			],
 		} satisfies StunMsg);
+	});
+});
+
+describe("encodeStunMsg", () => {
+	it("encodes a STUN message", () => {
+		const trxId = Buffer.from([
+			0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+		]);
+		const res = encodeStunMsg({
+			header: {
+				cls: classRecord.successResponse,
+				method: methodRecord.binding,
+				trxId,
+			},
+			attrs: [
+				{
+					type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+					value: {
+						family: addrFamilyRecord.ipV4,
+						addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
+						port: 12345,
+					},
+				},
+			],
+		});
+		expect(res).toEqual(
+			Buffer.concat([
+				// Header
+				Buffer.from([
+					0b00_000001, // Message Type
+					0b00000001,
+					0x00, // Length: 12 bytes
+					0x0c,
+					0x21, // Magic Cookie
+					0x12,
+					0xa4,
+					0x42,
+				]),
+				trxId,
+				// Attrs
+				Buffer.from([
+					0x00, // Type
+					0x20,
+					0x00, // Length
+					0x08,
+					// Value
+					0x00,
+					0x01, // Family (IPv4)
+					0x11, // Port
+					0x2b,
+					0xff, // X-Address (IPv4)
+					0x2c,
+					0x53,
+					0x04,
+				]),
+			]),
+		);
 	});
 });
