@@ -163,7 +163,7 @@ export type Attr =
 	| AlternateServerAttr
 	| FingerprintAttr;
 
-export function encodeAttr(attr: Attr): Buffer {
+export function encodeAttr(attr: Attr, trxId: Buffer): Buffer {
 	const tlBuf = Buffer.alloc(4);
 	tlBuf.writeUInt16BE(attr.type);
 
@@ -171,6 +171,12 @@ export function encodeAttr(attr: Attr): Buffer {
 	switch (attr.type) {
 		case compReqAttrTypeRecord["MAPPED-ADDRESS"]:
 			vBuf = encodeMappedAddressValue(attr.value);
+			break;
+		case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]:
+			vBuf = encodeXorMappedAddressValue(attr.value, trxId);
+			break;
+		case compReqAttrTypeRecord["ERROR-CODE"]:
+			vBuf = encodeErrorCodeValue(attr.value);
 			break;
 		default:
 			throw new Error(
@@ -291,10 +297,10 @@ export function decodeMappedAddressValue(
 
 export function encodeXorMappedAddressValue(
 	value: XorMappedAddressAttr["value"],
-	header: Header,
+	trxId: Buffer,
 ): Buffer {
 	const { family, port, addr } = value;
-	const xPort = port ^ (header.magicCookie >>> 16);
+	const xPort = port ^ (magicCookie >>> 16);
 	const buf = Buffer.alloc(family === addrFamilyRecord.ipV4 ? 8 : 20);
 	buf.writeUint8(0);
 	buf.writeUint8(family, 1);
@@ -302,16 +308,13 @@ export function encodeXorMappedAddressValue(
 	switch (family) {
 		case addrFamilyRecord.ipV4:
 			{
-				const xAddr = addr.readInt32BE() ^ header.magicCookie;
+				const xAddr = addr.readInt32BE() ^ magicCookie;
 				buf.writeInt32BE(xAddr, 4);
 			}
 			return buf;
 		case addrFamilyRecord.ipV6:
 			{
-				const rand = Buffer.concat([
-					numToBuf(header.magicCookie, 4),
-					header.trxId,
-				]);
+				const rand = Buffer.concat([numToBuf(magicCookie, 4), trxId]);
 				const xAddr = xorBufs(addr, rand);
 				buf.fill(xAddr, 4);
 			}

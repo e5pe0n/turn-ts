@@ -144,21 +144,15 @@ describe("decodeMappedAddressValue", () => {
 
 describe("encodeXorMappedAddressValue", () => {
 	it("encodes IPv4 XOR-MAPPED-ADDRESS value", () => {
-		const header: Header = {
-			cls: classRecord.request,
-			method: methodRecord.binding,
-			length: 8, // bytes
-			magicCookie,
-			trxId: Buffer.from([
-				0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-			]),
-		};
+		const trxId = Buffer.from([
+			0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+		]);
 		const value: XorMappedAddressAttr["value"] = {
 			family: addrFamilyRecord.ipV4,
 			port: 12345,
 			addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
 		};
-		expect(encodeXorMappedAddressValue(value, header)).toEqual(
+		expect(encodeXorMappedAddressValue(value, trxId)).toEqual(
 			Buffer.from([
 				0x00,
 				0x01, // Family (IPv4)
@@ -172,15 +166,9 @@ describe("encodeXorMappedAddressValue", () => {
 		);
 	});
 	it("encodes IPv6 XOR-MAPPED-ADDRESS value", () => {
-		const header: Header = {
-			cls: classRecord.request,
-			method: methodRecord.binding,
-			length: 20, // bytes
-			magicCookie,
-			trxId: Buffer.from([
-				0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-			]),
-		};
+		const trxId = Buffer.from([
+			0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+		]);
 		const value: XorMappedAddressAttr["value"] = {
 			family: addrFamilyRecord.ipV6,
 			port: 12345,
@@ -189,7 +177,7 @@ describe("encodeXorMappedAddressValue", () => {
 				0x93, 0x47, 0x61, 0x2c,
 			]),
 		};
-		expect(encodeXorMappedAddressValue(value, header)).toEqual(
+		expect(encodeXorMappedAddressValue(value, trxId)).toEqual(
 			Buffer.from([
 				0x00,
 				0x02, // Family (IPv6)
