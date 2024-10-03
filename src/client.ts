@@ -25,7 +25,7 @@ export type ClientConfig = {
 	protocol: Protocol;
 };
 
-function bufToAddrStr(buf: Buffer): string {
+function fAddr(buf: Buffer): string {
 	return Array.from(buf.values()).map(String).join(".");
 }
 
@@ -36,7 +36,7 @@ function decodeSuccessResponse(buf: Buffer): SuccessResponse {
 	} = msg.attrs[0]! as XorMappedAddressAttr;
 	return {
 		port,
-		address: bufToAddrStr(addr),
+		address: fAddr(addr),
 	};
 }
 
