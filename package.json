@@ -8,7 +8,10 @@
 		"type:check": "tsc --noEmit",
 		"check": "pnpm type:check && biome check",
 		"fix": "biome check --write",
-		"test": "vitest --run"
+		"test": "vitest --run",
+		"test:par": "vitest --run --config ./vitest.config-par.ts",
+		"test:seq": "vitest --run --config ./vitest.config-seq.ts",
+		"test:all": "pnpm test:par && pnpm test:seq"
 	},
 	"keywords": [],
 	"author": "",
