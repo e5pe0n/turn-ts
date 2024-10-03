@@ -8,16 +8,25 @@ import {
 import { fBuf } from "./helpers.js";
 import { createSocket, type Socket } from "node:dgram";
 import { decodeStunMsg } from "./msg.js";
-import type { XorMappedAddressAttr } from "./attr.js";
+import { compReqAttrTypeRecord, type XorMappedAddressAttr } from "./attr.js";
 
 export type MessageClass = Extract<keyof typeof classRecord, "request">;
 export type MessageMethod = keyof typeof methodRecord;
 export type Protocol = "udp" | "tcp";
 
+export type ErrorResponse = {
+	success: false;
+	code: number;
+	reason: string;
+};
+
 export type SuccessResponse = {
+	success: true;
 	address: string; // Reflexive Transport Address
 	port: number;
 };
+
+export type Response = SuccessResponse | ErrorResponse;
 
 export type ClientConfig = {
 	address: string;
@@ -29,15 +38,25 @@ function fAddr(buf: Buffer): string {
 	return Array.from(buf.values()).map(String).join(".");
 }
 
-function decodeSuccessResponse(buf: Buffer): SuccessResponse {
+function decodeResponse(buf: Buffer): Response {
 	const msg = decodeStunMsg(buf);
-	const {
-		value: { port, addr },
-	} = msg.attrs[0]! as XorMappedAddressAttr;
-	return {
-		port,
-		address: fAddr(addr),
-	};
+	const { type, value } = msg.attrs[0]!;
+	switch (type) {
+		case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]:
+			return {
+				success: true,
+				port: value.port,
+				address: fAddr(value.addr),
+			};
+		case compReqAttrTypeRecord["ERROR-CODE"]:
+			return {
+				success: false,
+				code: value.code,
+				reason: value.reason,
+			};
+		default:
+			throw new Error(`invalid attr type: ${type} is not supported.`);
+	}
 }
 
 export class Client {
@@ -55,10 +74,7 @@ export class Client {
 		this.#sock.bind();
 	}
 
-	async req(
-		cls: MessageClass,
-		method: MessageMethod,
-	): Promise<SuccessResponse> {
+	async req(cls: MessageClass, method: MessageMethod): Promise<Response> {
 		const trxId = randomBytes(12);
 		this.#trxMap.set(fBuf(trxId), trxId);
 		const hBuf = encodeHeader({
@@ -70,7 +86,7 @@ export class Client {
 		return new Promise((resolve, reject) => {
 			this.#sock.on("message", (msg) => {
 				this.#sock.removeAllListeners("message");
-				const res = decodeSuccessResponse(msg);
+				const res = decodeResponse(msg);
 				resolve(res);
 			});
 			this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {

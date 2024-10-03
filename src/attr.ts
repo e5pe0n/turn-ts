@@ -227,6 +227,11 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
 				attrs.push({ type: attrType, length, value });
 				break;
 			}
+			case compReqAttrTypeRecord["ERROR-CODE"]: {
+				const value = decodeErrorCodeValue(vBuf);
+				attrs.push({ type: attrType, length, value });
+				break;
+			}
 			default:
 				throw new Error(
 					`invalid attr type; ${fAttrType`${attrType}`} is not supported.`,
