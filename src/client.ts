@@ -33,9 +33,17 @@ function fAddr(buf: Buffer): string {
 	return Array.from(buf.values()).map(String).join(".");
 }
 
-function decodeResponse(buf: Buffer): Response {
-	const msg = decodeStunMsg(buf);
-	const { type, value } = msg.attrs[0]!;
+function decodeResponse(buf: Buffer, trxId: Buffer): Response {
+	const {
+		header: { trxId: resTrxId },
+		attrs,
+	} = decodeStunMsg(buf);
+	if (!trxId.equals(resTrxId)) {
+		throw new Error(
+			`invalid transaction id; expected: ${trxId}, actual: ${resTrxId}.`,
+		);
+	}
+	const { type, value } = attrs[0]!;
 	switch (type) {
 		case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]:
 			return {
@@ -58,7 +66,6 @@ export class Client {
 	#address: string;
 	#port: number;
 	#protocol: Protocol;
-	#trxMap: Map<string, Buffer> = new Map();
 	#sock: Socket;
 
 	constructor(config: ClientConfig) {
@@ -70,11 +77,10 @@ export class Client {
 
 	async req(cls: MessageClass, method: MessageMethod): Promise<Response> {
 		const trxId = randomBytes(12);
-		this.#trxMap.set(fBuf(trxId), trxId);
 		const hBuf = encodeHeader({
 			cls: classRecord[cls],
 			method: methodRecord[method],
-			trxId: randomBytes(12),
+			trxId,
 			length: 0,
 		});
 		this.#sock.bind();
@@ -82,8 +88,12 @@ export class Client {
 			this.#sock.on("message", (msg) => {
 				this.#sock.removeAllListeners("message");
 				this.#sock.close();
-				const res = decodeResponse(msg);
-				resolve(res);
+				try {
+					const res = decodeResponse(msg, trxId);
+					resolve(res);
+				} catch (err) {
+					reject(err);
+				}
 			});
 			this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
 				if (err) {
