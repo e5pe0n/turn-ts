@@ -4,10 +4,10 @@ import { compReqAttrTypeRecord } from "./attr.js";
 import { classRecord, encodeHeader, methodRecord } from "./header.js";
 import { fBuf } from "./helpers.js";
 import { decodeStunMsg } from "./msg.js";
+import type { Protocol } from "./types.js";
 
 export type MessageClass = Extract<keyof typeof classRecord, "request">;
 export type MessageMethod = keyof typeof methodRecord;
-export type Protocol = "udp" | "tcp";
 
 export type ErrorResponse = {
 	success: false;
