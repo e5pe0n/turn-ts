@@ -66,7 +66,6 @@ export class Client {
 		this.#port = config.port;
 		this.#protocol = config.protocol;
 		this.#sock = createSocket("udp4");
-		this.#sock.bind();
 	}
 
 	async req(cls: MessageClass, method: MessageMethod): Promise<Response> {
@@ -78,14 +77,17 @@ export class Client {
 			trxId: randomBytes(12),
 			length: 0,
 		});
+		this.#sock.bind();
 		return new Promise((resolve, reject) => {
 			this.#sock.on("message", (msg) => {
 				this.#sock.removeAllListeners("message");
+				this.#sock.close();
 				const res = decodeResponse(msg);
 				resolve(res);
 			});
 			this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
 				if (err) {
+					this.#sock.close();
 					reject(err);
 				}
 			});

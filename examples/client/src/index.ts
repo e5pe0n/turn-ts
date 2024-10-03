@@ -8,5 +8,4 @@ import { Client } from "stun-ts";
 	});
 	const res = await client.req("request", "binding");
 	console.log(res);
-	process.exit(0);
 }
