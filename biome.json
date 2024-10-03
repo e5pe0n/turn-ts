@@ -25,6 +25,9 @@
 			},
 			"complexity": {
 				"useSimpleNumberKeys": "off"
+			},
+			"correctness": {
+				"noUnusedImports": "warn"
 			}
 		}
 	},

@@ -1,14 +1,9 @@
 import { randomBytes } from "node:crypto";
-import {
-	classRecord,
-	encodeHeader,
-	encodeMsgType,
-	methodRecord,
-} from "./header.js";
+import { type Socket, createSocket } from "node:dgram";
+import { compReqAttrTypeRecord } from "./attr.js";
+import { classRecord, encodeHeader, methodRecord } from "./header.js";
 import { fBuf } from "./helpers.js";
-import { createSocket, type Socket } from "node:dgram";
 import { decodeStunMsg } from "./msg.js";
-import { compReqAttrTypeRecord, type XorMappedAddressAttr } from "./attr.js";
 
 export type MessageClass = Extract<keyof typeof classRecord, "request">;
 export type MessageMethod = keyof typeof methodRecord;

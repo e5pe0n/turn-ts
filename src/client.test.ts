@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { Client, type SuccessResponse, type ErrorResponse } from "./client.js";
 import { createSocket } from "node:dgram";
-import { decodeStunMsg, encodeStunMsg } from "./msg.js";
-import { classRecord, methodRecord } from "./header.js";
+import { describe, expect, it } from "vitest";
 import { addrFamilyRecord, compReqAttrTypeRecord } from "./attr.js";
+import { Client, type ErrorResponse, type SuccessResponse } from "./client.js";
+import { classRecord, methodRecord } from "./header.js";
+import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 
 describe("req", () => {
 	describe("udp", () => {

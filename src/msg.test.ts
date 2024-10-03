@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addrFamilyRecord, compReqAttrTypeRecord } from "./attr.js";
 import { magicCookie } from "./consts.js";
-import { classRecord, methodRecord, type Header } from "./header.js";
+import { classRecord, methodRecord } from "./header.js";
 import { type StunMsg, decodeStunMsg, encodeStunMsg } from "./msg.js";
 
 describe("decodeStunMsg", () => {
