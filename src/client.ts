@@ -86,7 +86,6 @@ export class Client {
 		this.#sock.bind();
 		return new Promise((resolve, reject) => {
 			this.#sock.on("message", (msg) => {
-				this.#sock.removeAllListeners("message");
 				this.#sock.close();
 				try {
 					const res = decodeResponse(msg, trxId);
