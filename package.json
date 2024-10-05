@@ -9,8 +9,8 @@
 		"check": "pnpm type:check && biome check",
 		"fix": "biome check --write",
 		"test": "vitest --run",
-		"test:par": "vitest --run --config ./vitest.config-par.ts",
-		"test:seq": "vitest --run --config ./vitest.config-seq.ts",
+		"test:par": "vitest --run --project parallel",
+		"test:seq": "vitest --run --project sequential",
 		"test:all": "pnpm test:par && pnpm test:seq"
 	},
 	"keywords": [],
