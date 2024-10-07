@@ -1,9 +1,17 @@
 import { createSocket } from "node:dgram";
-import { describe, expect, it } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { addrFamilyRecord, compReqAttrTypeRecord } from "./attr.js";
 import { Client, type ErrorResponse, type SuccessResponse } from "./client.js";
 import { classRecord, methodRecord } from "./header.js";
 import { decodeStunMsg, encodeStunMsg } from "./msg.js";
+
+beforeEach(() => {
+	vi.useFakeTimers();
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
 
 describe("req", () => {
 	describe("udp", () => {
@@ -46,6 +54,47 @@ describe("req", () => {
 				code: 401,
 				reason: "Unauthorized",
 			} satisfies ErrorResponse);
+		});
+
+		describe("transaction", async () => {
+			it("retransmits requests according to the RTO=500ms, Rc=7 and Rm=3, then throws a no response error due to timeout", async () => {
+				const client = new Client({
+					address: "127.0.0.1",
+					port: 12345,
+					protocol: "udp",
+					rtoMs: 500,
+					rc: 7,
+					rm: 3,
+				});
+				const dbger = vi.fn();
+				const p = client.req("request", "binding", dbger);
+				expect(dbger).toHaveBeenCalledTimes(1);
+				vi.advanceTimersByTime(500);
+				expect(dbger).toHaveBeenCalledTimes(2);
+				vi.advanceTimersByTime(2 * 500);
+				expect(dbger).toHaveBeenCalledTimes(3);
+				vi.advanceTimersByTime(3 * 500);
+				expect(p).rejects.toThrowError(/timeout/i);
+			});
+			it("retransmits requests according to the RTO=500ms, Rc=3 and Rm=16, then throws a no response error due to Rc", async () => {
+				const client = new Client({
+					address: "127.0.0.1",
+					port: 12345,
+					protocol: "udp",
+					rtoMs: 500,
+					rc: 3,
+					rm: 16,
+				});
+				const dbger = vi.fn();
+				const p = client.req("request", "binding", dbger);
+				expect(dbger).toHaveBeenCalledTimes(1);
+				vi.advanceTimersByTime(500);
+				expect(dbger).toHaveBeenCalledTimes(2);
+				vi.advanceTimersByTime(2 * 500);
+				expect(dbger).toHaveBeenCalledTimes(3);
+				vi.advanceTimersByTime(3 * 500);
+				expect(p).rejects.toThrowError(/rc/i);
+			});
 		});
 
 		describe("Binding Request", () => {

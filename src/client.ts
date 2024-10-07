@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { type Socket, createSocket } from "node:dgram";
 import { compReqAttrTypeRecord } from "./attr.js";
 import { classRecord, encodeHeader, methodRecord } from "./header.js";
-import { fBuf } from "./helpers.js";
 import { decodeStunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
 
@@ -27,6 +26,9 @@ export type ClientConfig = {
 	address: string;
 	port: number;
 	protocol: Protocol;
+	rtoMs?: number;
+	rc?: number;
+	rm?: number;
 };
 
 function fAddr(buf: Buffer): string {
@@ -67,15 +69,25 @@ export class Client {
 	#port: number;
 	#protocol: Protocol;
 	#sock: Socket;
+	#rtoMs = 3000;
+	#rc = 7;
+	#rm = 16;
 
 	constructor(config: ClientConfig) {
 		this.#address = config.address;
 		this.#port = config.port;
 		this.#protocol = config.protocol;
 		this.#sock = createSocket("udp4");
+		this.#rtoMs = config.rtoMs ?? this.#rtoMs;
+		this.#rc = config.rc ?? this.#rc;
+		this.#rm = config.rm ?? this.#rm;
 	}
 
-	async req(cls: MessageClass, method: MessageMethod): Promise<Response> {
+	async req(
+		cls: MessageClass,
+		method: MessageMethod,
+		dbger?: (buf: Buffer) => void,
+	): Promise<Response> {
 		const trxId = randomBytes(12);
 		const hBuf = encodeHeader({
 			cls: classRecord[cls],
@@ -84,9 +96,11 @@ export class Client {
 			length: 0,
 		});
 		this.#sock.bind();
+		let settled = false;
 		return new Promise((resolve, reject) => {
 			this.#sock.on("message", (msg) => {
 				this.#sock.close();
+				settled = true;
 				try {
 					const res = decodeResponse(msg, trxId);
 					resolve(res);
@@ -94,12 +108,37 @@ export class Client {
 					reject(err);
 				}
 			});
-			this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
-				if (err) {
-					this.#sock.close();
-					reject(err);
+			let lastSentAt = Date.now();
+			let numAttemps = 0;
+			const send = () => {
+				++numAttemps;
+				if (settled) {
+					return;
 				}
-			});
+				if (!settled && numAttemps > this.#rc) {
+					settled = true;
+					reject(new Error("no response error; reached Rc"));
+					return;
+				}
+				if (!settled && Date.now() - lastSentAt >= this.#rtoMs * this.#rm) {
+					settled = true;
+					reject(new Error("no response error; reached timeout"));
+					return;
+				}
+				if (dbger) {
+					dbger(hBuf);
+				}
+				this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
+					if (err) {
+						this.#sock.close();
+						settled = true;
+						reject(err);
+					}
+				});
+				lastSentAt = Date.now();
+				setTimeout(send, this.#rtoMs * numAttemps);
+			};
+			send();
 		});
 	}
 }
