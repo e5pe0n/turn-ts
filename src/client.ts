@@ -4,6 +4,7 @@ import { compReqAttrTypeRecord } from "./attr.js";
 import { classRecord, encodeHeader, methodRecord } from "./header.js";
 import { decodeStunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
+import { retry } from "./helpers.js";
 
 export type MessageClass = Extract<keyof typeof classRecord, "request">;
 export type MessageMethod = keyof typeof methodRecord;
@@ -83,11 +84,7 @@ export class Client {
 		this.#rm = config.rm ?? this.#rm;
 	}
 
-	async req(
-		cls: MessageClass,
-		method: MessageMethod,
-		dbger?: (buf: Buffer) => void,
-	): Promise<Response> {
+	async req(cls: MessageClass, method: MessageMethod): Promise<Response> {
 		const trxId = randomBytes(12);
 		const hBuf = encodeHeader({
 			cls: classRecord[cls],
@@ -96,49 +93,33 @@ export class Client {
 			length: 0,
 		});
 		this.#sock.bind();
-		let settled = false;
-		return new Promise((resolve, reject) => {
-			this.#sock.on("message", (msg) => {
-				this.#sock.close();
-				settled = true;
-				try {
-					const res = decodeResponse(msg, trxId);
-					resolve(res);
-				} catch (err) {
-					reject(err);
-				}
+		const _res = async (): Promise<Buffer> =>
+			new Promise((resolve, reject) => {
+				this.#sock.on("message", (msg) => {
+					return resolve(msg);
+				});
 			});
-			let lastSentAt = Date.now();
-			let numAttemps = 0;
-			const send = () => {
-				++numAttemps;
-				if (settled) {
-					return;
-				}
-				if (!settled && numAttemps > this.#rc) {
-					settled = true;
-					reject(new Error("no response error; reached Rc"));
-					return;
-				}
-				if (!settled && Date.now() - lastSentAt >= this.#rtoMs * this.#rm) {
-					settled = true;
-					reject(new Error("no response error; reached timeout"));
-					return;
-				}
-				if (dbger) {
-					dbger(hBuf);
-				}
+		const _req = async (): Promise<void> =>
+			new Promise((resolve, reject) => {
 				this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
 					if (err) {
-						this.#sock.close();
-						settled = true;
 						reject(err);
 					}
+					reject();
 				});
-				lastSentAt = Date.now();
-				setTimeout(send, this.#rtoMs * numAttemps);
-			};
-			send();
-		});
+			});
+
+		const resMsg = (await Promise.race([
+			retry(
+				_req,
+				this.#rc,
+				(numAttemps: number) => this.#rtoMs * numAttemps,
+				this.#rtoMs * this.#rm,
+			),
+			_res(),
+		])) as Buffer;
+		this.#sock.close();
+		const res = decodeResponse(resMsg, trxId);
+		return res;
 	}
 }

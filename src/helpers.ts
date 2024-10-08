@@ -1,3 +1,5 @@
+import { setTimeout } from "node:timers/promises";
+
 /**
  * Override the property types of `T` by given `U`.
  *
@@ -101,4 +103,75 @@ export function xorBufs(a: Buffer, b: Buffer): Buffer {
 
 export function fBuf(buf: Buffer): string {
 	return Array.from(buf.values()).toString();
+}
+
+export type Result<T, U = unknown> =
+	| {
+			success: true;
+			value: T;
+	  }
+	| {
+			success: false;
+			error: U;
+	  };
+
+export async function retry<T>(
+	fn: () => Promise<T>,
+	maxAttempts: number,
+	intervalMs: number | ((numAttempts: number) => number),
+	attemptTimeoutMs: number | ((numAttemps: number) => number),
+	timeoutMs?: number,
+): Promise<T> {
+	const _retry = async (): Promise<Result<T>> => {
+		let numAttempts = 0;
+		while (true) {
+			try {
+				++numAttempts;
+				const res = await fn();
+				return { success: true, value: res };
+			} catch (error) {
+				if (numAttempts > maxAttempts) {
+					return {
+						success: false,
+						error: new Error("reached max retries", { cause: error }),
+					};
+				}
+				const _intervalMs =
+					typeof intervalMs === "number" ? intervalMs : intervalMs(numAttempts);
+				const _attemptTimeoutMs =
+					typeof attemptTimeoutMs === "number"
+						? attemptTimeoutMs
+						: attemptTimeoutMs(numAttempts);
+				const state = await Promise.race([
+					setTimeout(_intervalMs, "ready" as const),
+					setTimeout(_attemptTimeoutMs, "timeouted" as const),
+				]);
+				if (state === "timeouted") {
+					return {
+						success: false,
+						error: new Error("reached timeout"),
+					};
+				}
+			}
+		}
+	};
+	if (typeof timeoutMs === "number") {
+		const res = await Promise.race([
+			_retry(),
+			setTimeout(timeoutMs, {
+				success: false,
+				error: new Error("reached timeout"),
+			} satisfies Result<T>),
+		]);
+		if (!res.success) {
+			throw res.error;
+		}
+		return res.value;
+	}
+
+	const res = await _retry();
+	if (!res.success) {
+		throw res.error;
+	}
+	return res.value;
 }
