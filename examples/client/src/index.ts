@@ -6,6 +6,6 @@ import { Client } from "stun-ts";
 		port: 19302,
 		protocol: "udp",
 	});
-	const res = await client.req("request", "binding");
+	const res = await client.send("request", "binding");
 	console.log(res);
 }

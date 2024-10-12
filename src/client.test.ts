@@ -5,7 +5,7 @@ import { Client, type ErrorResponse, type SuccessResponse } from "./client.js";
 import { classRecord, methodRecord } from "./header.js";
 import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 
-describe("req", () => {
+describe("send", () => {
 	describe("udp", () => {
 		it("receives an error response", async () => {
 			const server = createSocket("udp4");
@@ -39,7 +39,7 @@ describe("req", () => {
 				port: 12345,
 				protocol: "udp",
 			});
-			const res = await client.req("request", "binding");
+			const res = await client.send("request", "binding");
 			server.close();
 			expect(res).toEqual({
 				success: false,
@@ -66,7 +66,7 @@ describe("req", () => {
 					rm: 3,
 				});
 				const startedAt = Date.now();
-				await expect(client.req("request", "binding")).rejects.toThrowError(
+				await expect(client.send("request", "binding")).rejects.toThrowError(
 					/timeout/i,
 				);
 				expect(resAts).toHaveLength(4);
@@ -93,7 +93,7 @@ describe("req", () => {
 					rm: 16,
 				});
 				const startedAt = Date.now();
-				await expect(client.req("request", "binding")).rejects.toThrowError(
+				await expect(client.send("request", "binding")).rejects.toThrowError(
 					/retries/i,
 				);
 				expect(resAts).toHaveLength(4);
@@ -144,7 +144,7 @@ describe("req", () => {
 					rm: 16,
 				});
 				const startedAt = Date.now();
-				const res = await client.req("request", "binding");
+				const res = await client.send("request", "binding");
 				expect(res).toEqual({
 					success: true,
 					address: "222.62.247.70",
@@ -192,7 +192,7 @@ describe("req", () => {
 				port: 12345,
 				protocol: "udp",
 			});
-			const res = await client.req("request", "binding");
+			const res = await client.send("request", "binding");
 			server.close();
 			expect(res).toEqual({
 				success: true,

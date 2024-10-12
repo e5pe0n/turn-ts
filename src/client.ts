@@ -84,7 +84,7 @@ export class Client {
 		this.#rm = config.rm ?? this.#rm;
 	}
 
-	async req(cls: MessageClass, method: MessageMethod): Promise<Response> {
+	async send(cls: MessageClass, method: MessageMethod): Promise<Response> {
 		const trxId = randomBytes(12);
 		const hBuf = encodeHeader({
 			cls: classRecord[cls],
