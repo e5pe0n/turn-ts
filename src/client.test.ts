@@ -7,48 +7,47 @@ import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 
 describe("send", () => {
 	describe("udp", () => {
-		it("receives an error response", async () => {
-			const server = createSocket("udp4");
-			server.on("message", (msg, rinfo) => {
-				const { header, attrs } = decodeStunMsg(msg);
-				const res = encodeStunMsg({
-					header: {
-						cls: classRecord.errorResponse,
-						method: header.method,
-						trxId: header.trxId,
-					},
-					attrs: [
-						{
-							type: compReqAttrTypeRecord["ERROR-CODE"],
-							value: {
-								code: 401,
-								reason: "Unauthorized",
-							},
+		describe("Binding Request", () => {
+			it("receives an error response", async () => {
+				const server = createSocket("udp4");
+				server.on("message", (msg, rinfo) => {
+					const { header, attrs } = decodeStunMsg(msg);
+					const res = encodeStunMsg({
+						header: {
+							cls: classRecord.errorResponse,
+							method: header.method,
+							trxId: header.trxId,
 						},
-					],
+						attrs: [
+							{
+								type: compReqAttrTypeRecord["ERROR-CODE"],
+								value: {
+									code: 401,
+									reason: "Unauthorized",
+								},
+							},
+						],
+					});
+					server.send(res, rinfo.port, rinfo.address, (err, bytes) => {
+						if (err) {
+							throw err;
+						}
+					});
 				});
-				server.send(res, rinfo.port, rinfo.address, (err, bytes) => {
-					if (err) {
-						throw err;
-					}
+				server.bind(12345, "127.0.0.1");
+				const client = new Client({
+					address: "127.0.0.1",
+					port: 12345,
+					protocol: "udp",
 				});
+				const res = await client.send("request", "binding");
+				server.close();
+				expect(res).toEqual({
+					success: false,
+					code: 401,
+					reason: "Unauthorized",
+				} satisfies ErrorResponse);
 			});
-			server.bind(12345, "127.0.0.1");
-			const client = new Client({
-				address: "127.0.0.1",
-				port: 12345,
-				protocol: "udp",
-			});
-			const res = await client.send("request", "binding");
-			server.close();
-			expect(res).toEqual({
-				success: false,
-				code: 401,
-				reason: "Unauthorized",
-			} satisfies ErrorResponse);
-		});
-
-		describe("transaction", async () => {
 			it("retransmits requests according to the RTO=100ms, Rc=7 and Rm=4, then throws a no response error due to timeout", async () => {
 				const server = createSocket("udp4");
 				const resAts: number[] = [];
@@ -156,9 +155,6 @@ describe("send", () => {
 				server.close();
 			});
 		});
-	});
-
-	describe("Binding Request", () => {
 		it("sends a request then receives a success response", async () => {
 			const server = createSocket("udp4");
 			server.on("message", (msg, rinfo) => {
