@@ -383,6 +383,28 @@ describe("send", () => {
           server.close();
         }
       });
+      it("throws a timeout error if reached the timeout", async () => {
+        const server = createServer();
+        server.on("error", (err) => {
+          throw err;
+        });
+        const client = createClient({
+          protocol: "tcp",
+          address: "127.0.0.1",
+          port: 12345,
+          tiMs: 100,
+        });
+        try {
+          server.listen(12345, "127.0.0.1");
+
+          // Act and Assert
+          await expect(client.send("request", "binding")).rejects.toThrowError(
+            /timeout/i,
+          );
+        } finally {
+          server.close();
+        }
+      });
       it("sends a binding request then receives a success response", async () => {
         // Arrange
         let resolve: (value: Buffer | PromiseLike<Buffer>) => void;

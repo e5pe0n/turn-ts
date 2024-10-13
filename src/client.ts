@@ -224,9 +224,12 @@ class TcpClient {
       }
       case "request": {
         const resBuf = await new Promise<Buffer>((resolve, reject) => {
-          const sock = createConnection(this.#port, this.#address, () => {
-            sock.write(hBuf);
-          });
+          const sock = createConnection(
+            { port: this.#port, host: this.#address, timeout: this.#tiMs },
+            () => {
+              sock.write(hBuf);
+            },
+          );
           sock.on("data", (data) => {
             sock.end();
             resolve(data);
@@ -234,6 +237,10 @@ class TcpClient {
           sock.on("error", (err) => {
             sock.end();
             throw err;
+          });
+          sock.on("timeout", () => {
+            sock.end();
+            reject(new Error("reached timeout"));
           });
         });
         const res = decodeResponse(resBuf, trxId);
