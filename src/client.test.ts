@@ -7,6 +7,43 @@ import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 
 describe("send", () => {
   describe("udp", () => {
+    describe("Binding Indication", () => {
+      it("sends a binding indication", async () => {
+        const server = createSocket("udp4");
+        const res = new Promise<Buffer>((resolve, reject) => {
+          server.on("message", (msg, rinfo) => {
+            resolve(msg);
+          });
+        });
+        server.bind(12345, "127.0.0.1");
+        const client = new Client({
+          address: "127.0.0.1",
+          port: 12345,
+          protocol: "udp",
+        });
+        try {
+          await client.send("indication", "binding");
+          const buf = await res;
+          expect(buf).toHaveLength(20);
+          expect(buf.subarray(0, 8)).toEqual(
+            Buffer.concat([
+              Buffer.from([
+                0x00, // STUN Message Type
+                0x11,
+                0x00, // Message Length
+                0x00,
+                0x21, // Magic Cookie
+                0x12,
+                0xa4,
+                0x42,
+              ]),
+            ]),
+          );
+        } finally {
+          server.close();
+        }
+      });
+    });
     describe("Binding Request", () => {
       it("receives an error response", async () => {
         const server = createSocket("udp4");

@@ -6,7 +6,10 @@ import { retry } from "./helpers.js";
 import { decodeStunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
 
-export type MessageClass = Extract<keyof typeof classRecord, "request">;
+export type MessageClass = Extract<
+  keyof typeof classRecord,
+  "request" | "indication"
+>;
 export type MessageMethod = keyof typeof methodRecord;
 
 export type ErrorResponse = {
@@ -84,7 +87,18 @@ export class Client {
     this.#rm = config.rm ?? this.#rm;
   }
 
-  async send(cls: MessageClass, method: MessageMethod): Promise<Response> {
+  async send(
+    cls: Extract<MessageClass, "indication">,
+    method: MessageMethod,
+  ): Promise<undefined>;
+  async send(
+    cls: Extract<MessageClass, "request">,
+    method: MessageMethod,
+  ): Promise<Response>;
+  async send(
+    cls: MessageClass,
+    method: MessageMethod,
+  ): Promise<undefined | Response> {
     const trxId = randomBytes(12);
     const hBuf = encodeHeader({
       cls: classRecord[cls],
@@ -93,33 +107,50 @@ export class Client {
       length: 0,
     });
     this.#sock.bind();
-    const _res = async (): Promise<Buffer> =>
-      new Promise((resolve, reject) => {
-        this.#sock.on("message", (msg) => {
-          return resolve(msg);
-        });
-      });
-    const _req = async (): Promise<void> =>
-      new Promise((resolve, reject) => {
-        this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
-          if (err) {
-            reject(err);
-          }
-          reject();
-        });
-      });
+    try {
+      switch (cls) {
+        case "indication":
+          await new Promise<void>((resolve, reject) => {
+            this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
+              if (err) {
+                reject(err);
+              }
+              resolve();
+            });
+          });
+          return;
+        case "request": {
+          const _res = async (): Promise<Buffer> =>
+            new Promise((resolve, reject) => {
+              this.#sock.on("message", (msg) => {
+                return resolve(msg);
+              });
+            });
+          const _req = async (): Promise<void> =>
+            new Promise((resolve, reject) => {
+              this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
+                if (err) {
+                  reject(err);
+                }
+                reject();
+              });
+            });
 
-    const resMsg = (await Promise.race([
-      retry(
-        _req,
-        this.#rc,
-        (numAttemps: number) => this.#rtoMs * numAttemps,
-        this.#rtoMs * this.#rm,
-      ),
-      _res(),
-    ])) as Buffer;
-    this.#sock.close();
-    const res = decodeResponse(resMsg, trxId);
-    return res;
+          const resMsg = (await Promise.race([
+            retry(
+              _req,
+              this.#rc,
+              (numAttemps: number) => this.#rtoMs * numAttemps,
+              this.#rtoMs * this.#rm,
+            ),
+            _res(),
+          ])) as Buffer;
+          const res = decodeResponse(resMsg, trxId);
+          return res;
+        }
+      }
+    } finally {
+      this.#sock.close();
+    }
   }
 }
