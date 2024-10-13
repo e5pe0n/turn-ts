@@ -332,5 +332,130 @@ describe("send", () => {
         }
       });
     });
+
+    describe("Binding Request", () => {
+      it("can receive an error response", async () => {
+        // Arrange
+        const server = createServer((conn) => {
+          conn.on("data", (data) => {
+            const { header } = decodeStunMsg(data);
+            const res = encodeStunMsg({
+              header: {
+                cls: classRecord.errorResponse,
+                method: header.method,
+                trxId: header.trxId,
+              },
+              attrs: [
+                {
+                  type: compReqAttrTypeRecord["ERROR-CODE"],
+                  value: {
+                    code: 401,
+                    reason: "Unauthorized",
+                  },
+                },
+              ],
+            });
+            conn.write(res);
+            conn.end();
+          });
+        });
+        server.on("error", (err) => {
+          throw err;
+        });
+        const client = createClient({
+          protocol: "tcp",
+          address: "127.0.0.1",
+          port: 12345,
+        });
+        try {
+          server.listen(12345, "127.0.0.1");
+
+          // Act
+          const res = await client.send("request", "binding");
+
+          // Assert
+          expect(res).toEqual({
+            success: false,
+            code: 401,
+            reason: "Unauthorized",
+          } satisfies ErrorResponse);
+        } finally {
+          server.close();
+        }
+      });
+      it("sends a binding request then receives a success response", async () => {
+        // Arrange
+        let resolve: (value: Buffer | PromiseLike<Buffer>) => void;
+        const p = new Promise<Buffer>((res, rej) => {
+          resolve = res;
+        });
+        const server = createServer((conn) => {
+          conn.on("data", (data) => {
+            const {
+              header: { trxId },
+            } = decodeStunMsg(data);
+            const res = encodeStunMsg({
+              header: {
+                cls: classRecord.successResponse,
+                method: methodRecord.binding,
+                trxId,
+              },
+              attrs: [
+                {
+                  type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+                  value: {
+                    family: addrFamilyRecord.ipV4,
+                    addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
+                    port: 54321,
+                  },
+                },
+              ],
+            });
+            conn.write(res);
+            conn.end();
+            resolve(data);
+          });
+        });
+        server.on("error", (err) => {
+          throw err;
+        });
+        const client = createClient({
+          protocol: "tcp",
+          address: "127.0.0.1",
+          port: 12345,
+        });
+        try {
+          server.listen(12345, "127.0.0.1");
+
+          // Act
+          const res = await client.send("request", "binding");
+          const reqBuf = await p;
+
+          // Assert
+          expect(reqBuf).toHaveLength(20);
+          expect(reqBuf.subarray(0, 8)).toEqual(
+            Buffer.concat([
+              Buffer.from([
+                0x00, // STUN Message Type
+                0x01,
+                0x00, // Message Length
+                0x00,
+                0x21, // Magic Cookie
+                0x12,
+                0xa4,
+                0x42,
+              ]),
+            ]),
+          );
+          expect(res).toEqual({
+            success: true,
+            address: "222.62.247.70",
+            port: 54321,
+          } satisfies SuccessResponse);
+        } finally {
+          server.close();
+        }
+      });
+    });
   });
 });

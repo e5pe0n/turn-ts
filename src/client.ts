@@ -191,7 +191,15 @@ class TcpClient {
   async send(
     cls: Extract<MessageClass, "indication">,
     method: MessageMethod,
-  ): Promise<void> {
+  ): Promise<undefined>;
+  async send(
+    cls: Extract<MessageClass, "request">,
+    method: MessageMethod,
+  ): Promise<Response>;
+  async send(
+    cls: MessageClass,
+    method: MessageMethod,
+  ): Promise<undefined | Response> {
     const trxId = randomBytes(12);
     const hBuf = encodeHeader({
       cls: classRecord[cls],
@@ -199,13 +207,35 @@ class TcpClient {
       trxId,
       length: 0,
     });
-    const sock = createConnection(this.#port, this.#address, () => {
-      sock.write(hBuf);
-      sock.end();
-    });
-    sock.on("error", (err) => {
-      sock.end();
-      throw err;
-    });
+    switch (cls) {
+      case "indication": {
+        const sock = createConnection(this.#port, this.#address, () => {
+          sock.write(hBuf);
+          sock.end();
+        });
+        sock.on("error", (err) => {
+          sock.end();
+          throw err;
+        });
+        return;
+      }
+      case "request": {
+        const resBuf = await new Promise<Buffer>((resolve, reject) => {
+          const sock = createConnection(this.#port, this.#address, () => {
+            sock.write(hBuf);
+          });
+          sock.on("data", (data) => {
+            sock.end();
+            resolve(data);
+          });
+          sock.on("error", (err) => {
+            sock.end();
+            throw err;
+          });
+        });
+        const res = decodeResponse(resBuf, trxId);
+        return res;
+      }
+    }
   }
 }
