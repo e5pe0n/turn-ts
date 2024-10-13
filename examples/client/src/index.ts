@@ -1,7 +1,7 @@
-import { Client } from "stun-ts";
+import { createClient } from "stun-ts";
 
 {
-  const client = new Client({
+  const client = createClient({
     address: "74.125.250.129", // stun.l.google.com
     port: 19302,
     protocol: "udp",

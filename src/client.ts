@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { type Socket, createSocket } from "node:dgram";
+import { createConnection } from "node:net";
 import { compReqAttrTypeRecord } from "./attr.js";
 import { classRecord, encodeHeader, methodRecord } from "./header.js";
 import { retry } from "./helpers.js";
@@ -26,14 +27,23 @@ export type SuccessResponse = {
 
 export type Response = SuccessResponse | ErrorResponse;
 
-export type ClientConfig = {
+export type UdpClientConfig = {
+  protocol: "udp";
   address: string;
   port: number;
-  protocol: Protocol;
   rtoMs?: number;
   rc?: number;
   rm?: number;
 };
+
+export type TcpClientConfig = {
+  protocol: "tcp";
+  address: string;
+  port: number;
+  tiMs?: number;
+};
+
+export type ClientConfig = UdpClientConfig | TcpClientConfig;
 
 function fAddr(buf: Buffer): string {
   return Array.from(buf.values()).map(String).join(".");
@@ -68,16 +78,26 @@ function decodeResponse(buf: Buffer, trxId: Buffer): Response {
   }
 }
 
-export class Client {
+export function createClient(config: UdpClientConfig): UdpClient;
+export function createClient(config: TcpClientConfig): TcpClient;
+export function createClient(config: ClientConfig): UdpClient | TcpClient {
+  switch (config.protocol) {
+    case "udp":
+      return new UdpClient(config);
+    case "tcp":
+      return new TcpClient(config);
+  }
+}
+class UdpClient {
+  #protocol: Protocol;
   #address: string;
   #port: number;
-  #protocol: Protocol;
   #sock: Socket;
   #rtoMs = 3000;
   #rc = 7;
   #rm = 16;
 
-  constructor(config: ClientConfig) {
+  constructor(config: UdpClientConfig) {
     this.#address = config.address;
     this.#port = config.port;
     this.#protocol = config.protocol;
@@ -152,5 +172,40 @@ export class Client {
     } finally {
       this.#sock.close();
     }
+  }
+}
+
+class TcpClient {
+  #protocol: Protocol;
+  #address: string;
+  #port: number;
+  #tiMs = 39_500;
+
+  constructor(config: TcpClientConfig) {
+    this.#protocol = config.protocol;
+    this.#address = config.address;
+    this.#port = config.port;
+    this.#tiMs = config.tiMs ?? this.#tiMs;
+  }
+
+  async send(
+    cls: Extract<MessageClass, "indication">,
+    method: MessageMethod,
+  ): Promise<void> {
+    const trxId = randomBytes(12);
+    const hBuf = encodeHeader({
+      cls: classRecord[cls],
+      method: methodRecord[method],
+      trxId,
+      length: 0,
+    });
+    const sock = createConnection(this.#port, this.#address, () => {
+      sock.write(hBuf);
+      sock.end();
+    });
+    sock.on("error", (err) => {
+      sock.end();
+      throw err;
+    });
   }
 }

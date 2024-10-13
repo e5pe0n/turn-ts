@@ -1,7 +1,12 @@
 import { createSocket } from "node:dgram";
+import { createServer } from "node:net";
 import { describe, expect, it } from "vitest";
 import { addrFamilyRecord, compReqAttrTypeRecord } from "./attr.js";
-import { Client, type ErrorResponse, type SuccessResponse } from "./client.js";
+import {
+  type ErrorResponse,
+  type SuccessResponse,
+  createClient,
+} from "./client.js";
 import { classRecord, methodRecord } from "./header.js";
 import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 
@@ -16,7 +21,7 @@ describe("send", () => {
             resolve(msg);
           });
         });
-        const client = new Client({
+        const client = createClient({
           address: "127.0.0.1",
           port: 12345,
           protocol: "udp",
@@ -77,7 +82,7 @@ describe("send", () => {
             }
           });
         });
-        const client = new Client({
+        const client = createClient({
           address: "127.0.0.1",
           port: 12345,
           protocol: "udp",
@@ -106,7 +111,7 @@ describe("send", () => {
           resAts.push(Date.now());
           const { header, attrs } = decodeStunMsg(msg);
         });
-        const client = new Client({
+        const client = createClient({
           address: "127.0.0.1",
           port: 12345,
           protocol: "udp",
@@ -139,7 +144,7 @@ describe("send", () => {
           resAts.push(Date.now());
           const { header, attrs } = decodeStunMsg(msg);
         });
-        const client = new Client({
+        const client = createClient({
           address: "127.0.0.1",
           port: 12345,
           protocol: "udp",
@@ -197,7 +202,7 @@ describe("send", () => {
           }
         });
 
-        const client = new Client({
+        const client = createClient({
           address: "127.0.0.1",
           port: 12345,
           protocol: "udp",
@@ -255,7 +260,7 @@ describe("send", () => {
         });
       });
       try {
-        const client = new Client({
+        const client = createClient({
           address: "127.0.0.1",
           port: 12345,
           protocol: "udp",
@@ -274,6 +279,58 @@ describe("send", () => {
       } finally {
         server.close();
       }
+    });
+  });
+
+  describe("tcp", () => {
+    describe("Binding Indication", () => {
+      it("sends a binding indication", async () => {
+        // Arrange
+        let resolve: (value: Buffer | PromiseLike<Buffer>) => void;
+        const p = new Promise<Buffer>((res, rej) => {
+          resolve = res;
+        });
+        const server = createServer((conn) => {
+          conn.on("data", (data) => {
+            conn.end();
+            resolve(data);
+          });
+        });
+        server.on("error", (err) => {
+          throw err;
+        });
+        const client = createClient({
+          protocol: "tcp",
+          address: "127.0.0.1",
+          port: 12345,
+        });
+        try {
+          server.listen(12345, "127.0.0.1");
+
+          // Act
+          await client.send("indication", "binding");
+          const buf = await p;
+
+          // Assert
+          expect(buf).toHaveLength(20);
+          expect(buf.subarray(0, 8)).toEqual(
+            Buffer.concat([
+              Buffer.from([
+                0x00, // STUN Message Type
+                0x11,
+                0x00, // Message Length
+                0x00,
+                0x21, // Magic Cookie
+                0x12,
+                0xa4,
+                0x42,
+              ]),
+            ]),
+          );
+        } finally {
+          server.close();
+        }
+      });
     });
   });
 });

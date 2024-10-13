@@ -1,11 +1,11 @@
 import { expect, it } from "vitest";
-import { Client, type SuccessResponse } from "./client.js";
+import { type SuccessResponse, createClient } from "./client.js";
 import { Server } from "./server.js";
 
 it("receives a request then return a response", async () => {
   const server = new Server({ protocol: "udp" });
   server.listen(12345);
-  const client = new Client({
+  const client = createClient({
     port: 12345,
     address: "127.0.0.1",
     protocol: "udp",
