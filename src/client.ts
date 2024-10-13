@@ -209,13 +209,16 @@ class TcpClient {
     });
     switch (cls) {
       case "indication": {
-        const sock = createConnection(this.#port, this.#address, () => {
-          sock.write(hBuf);
-          sock.end();
-        });
-        sock.on("error", (err) => {
-          sock.end();
-          throw err;
+        await new Promise<void>((resolve, reject) => {
+          const sock = createConnection(this.#port, this.#address, () => {
+            sock.write(hBuf);
+            sock.end();
+            resolve();
+          });
+          sock.on("error", (err) => {
+            sock.end();
+            reject(err);
+          });
         });
         return;
       }
