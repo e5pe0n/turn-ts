@@ -7,5 +7,6 @@ import { createClient } from "stun-ts";
     protocol: "udp",
   });
   const res = await client.send("request", "binding");
+  // biome-ignore lint/suspicious/noConsole: example code
   console.log(res);
 }
