@@ -262,36 +262,6 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
   return attrs;
 }
 
-export function decodeAttr(buf: Buffer, header: Header): Attr {
-  const attrType = buf.subarray(0, 2).readUInt16BE();
-  if (!isAttrType(attrType)) {
-    // TODO: Distinguish between comprehension-required attributes
-    // and comprehension-optional attributes.
-    throw new Error(`invalid attr type; ${attrType} is not a attr type.`);
-  }
-  const length = buf.subarray(2, 4).readUInt16BE();
-  if (!(buf.subarray(4).length === length)) {
-    throw new Error(
-      `invalid attr length; given ${fAttrType`${attrType}`} value length is ${length}, but the actual value length is ${buf.length}.`,
-    );
-  }
-  const vBuf = Buffer.alloc(length, buf.subarray(4, 4 + length));
-  switch (attrType) {
-    case compReqAttrTypeRecord["MAPPED-ADDRESS"]: {
-      const value = decodeMappedAddressValue(vBuf);
-      return { type: attrType, length, value };
-    }
-    case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]: {
-      const value = decodeXorMappedAddressValue(vBuf, header);
-      return { type: attrType, length, value };
-    }
-    default:
-      throw new Error(
-        `invalid attr type; ${fAttrType`${attrType}`} is not supported.`,
-      );
-  }
-}
-
 export function encodeMappedAddressValue(
   value: MappedAddressAttr["value"],
 ): Buffer {
