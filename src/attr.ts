@@ -77,10 +77,12 @@ export type MappedAddressAttr = {
   };
 };
 
-type UsernameAttr = {
+export type UsernameAttr = {
   type: (typeof compReqAttrTypeRecord)["USERNAME"];
   length: number;
-  value: unknown;
+  value: {
+    username: string;
+  };
 };
 
 type MessageIntegrityAttr = {
@@ -152,7 +154,7 @@ type FingerprintAttr = {
 
 export type Attr =
   | MappedAddressAttr
-  // | UsernameAttr
+  | UsernameAttr
   // | MessageIntegrityAttr
   | ErrorCodeAttr
   // | UnknownAttributesAttr
@@ -166,7 +168,8 @@ export type Attr =
 export type AttrWithoutLength =
   | Omit<MappedAddressAttr, "length">
   | Omit<XorMappedAddressAttr, "length">
-  | Omit<ErrorCodeAttr, "length">;
+  | Omit<ErrorCodeAttr, "length">
+  | Omit<UsernameAttr, "length">;
 
 export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
   const tlBuf = Buffer.alloc(4);
@@ -185,6 +188,8 @@ export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
     case compReqAttrTypeRecord["ERROR-CODE"]:
       vBuf = encodeErrorCodeValue(attr.value);
       break;
+    case compReqAttrTypeRecord["USERNAME"]:
+      vBuf = encode;
     default: {
       throw new Error(`invalid attr: ${attr} is not supported.`);
     }
@@ -402,4 +407,14 @@ export function decodeErrorCodeValue(buf: Buffer): ErrorCodeAttr["value"] {
   }
   const reason = reasonBuf.toString("utf-8");
   return { code: cls * 100 + num, reason };
+}
+
+export function encodeUsernameValue(value: UsernameAttr["value"]): Buffer {
+  const buf = Buffer.from(value.username, "utf8");
+  if (!(buf.length < 513)) {
+    throw new Error(
+      `invalid username; expected is < 513 bytes. actual is ${buf.length}.`,
+    );
+  }
+  return buf;
 }

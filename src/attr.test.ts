@@ -3,6 +3,7 @@ import {
   type Attr,
   type ErrorCodeAttr,
   type MappedAddressAttr,
+  type UsernameAttr,
   type XorMappedAddressAttr,
   addrFamilyRecord,
   compReqAttrTypeRecord,
@@ -13,6 +14,7 @@ import {
   encodeAttr,
   encodeErrorCodeValue,
   encodeMappedAddressValue,
+  encodeUsernameValue,
   encodeXorMappedAddressValue,
 } from "./attr.js";
 import { magicCookie } from "./consts.js";
@@ -458,6 +460,22 @@ describe("decodeErrorCodeValue", () => {
       code: 420,
       reason: "invalid attr type",
     });
+  });
+});
+
+describe("encodeUsernameValue", () => {
+  it("encodes USERNAME value", () => {
+    const value: UsernameAttr["value"] = {
+      username: "user1",
+    };
+    const res = encodeUsernameValue(value);
+    expect(res).toEqual(Buffer.from([0x75, 0x73, 0x65, 0x72, 0x31]));
+  });
+  it("throws an error if the given username is not < 513 bytes", () => {
+    const value: UsernameAttr["value"] = {
+      username: "u".repeat(513),
+    };
+    expect(() => encodeUsernameValue(value)).toThrowError(/invalid username/);
   });
 });
 
