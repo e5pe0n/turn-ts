@@ -3,6 +3,7 @@ import {
   type Attr,
   type ErrorCodeAttr,
   type MappedAddressAttr,
+  type NonceAttr,
   type RealmAttr,
   type UsernameAttr,
   type XorMappedAddressAttr,
@@ -11,12 +12,14 @@ import {
   decodeAttrs,
   decodeErrorCodeValue,
   decodeMappedAddressValue,
+  decodeNonceValue,
   decodeRealmValue,
   decodeUsernameValue,
   decodeXorMappedAddressValue,
   encodeAttr,
   encodeErrorCodeValue,
   encodeMappedAddressValue,
+  encodeNonceValue,
   encodeRealmValue,
   encodeUsernameValue,
   encodeXorMappedAddressValue,
@@ -516,6 +519,32 @@ describe("decodeRealmValue", () => {
     expect(res).toEqual({
       realm: "realm",
     } satisfies RealmAttr["value"]);
+  });
+});
+
+describe("encodeNonceValue", () => {
+  it("encodes NONCE value", () => {
+    const value: NonceAttr["value"] = {
+      nonce: "nonce",
+    };
+    const res = encodeNonceValue(value);
+    expect(res).toEqual(Buffer.from([0x6e, 0x6f, 0x6e, 0x63, 0x65]));
+  });
+  it("throws an error if the given nonce is not <= 763 bytes", () => {
+    const value: NonceAttr["value"] = {
+      nonce: "n".repeat(764),
+    };
+    expect(() => encodeNonceValue(value)).toThrowError(/invalid nonce/);
+  });
+});
+
+describe("decodeNonceValue", () => {
+  it("decodes Nonce value", () => {
+    const buf = Buffer.from([0x6e, 0x6f, 0x6e, 0x63, 0x65]);
+    const res = decodeNonceValue(buf);
+    expect(res).toEqual({
+      nonce: "nonce",
+    } satisfies NonceAttr["value"]);
   });
 });
 

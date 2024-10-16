@@ -114,10 +114,12 @@ export type RealmAttr = {
   };
 };
 
-type NonceAttr = {
+export type NonceAttr = {
   type: (typeof compReqAttrTypeRecord)["NONCE"];
   length: number;
-  value: unknown;
+  value: {
+    nonce: string;
+  };
 };
 
 export type XorMappedAddressAttr = {
@@ -161,7 +163,7 @@ export type Attr =
   | ErrorCodeAttr
   // | UnknownAttributesAttr
   | RealmAttr
-  // | NonceAttr
+  | NonceAttr
   | XorMappedAddressAttr;
 // | SoftwareAttr
 // | AlternateServerAttr
@@ -172,7 +174,8 @@ export type AttrWithoutLength =
   | Omit<XorMappedAddressAttr, "length">
   | Omit<ErrorCodeAttr, "length">
   | Omit<UsernameAttr, "length">
-  | Omit<RealmAttr, "length">;
+  | Omit<RealmAttr, "length">
+  | Omit<NonceAttr, "length">;
 
 export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
   const tlBuf = Buffer.alloc(4);
@@ -194,6 +197,9 @@ export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
       break;
     case compReqAttrTypeRecord.REALM:
       vBuf = encodeRealmValue(attr.value);
+      break;
+    case compReqAttrTypeRecord.NONCE:
+      vBuf = encodeNonceValue(attr.value);
       break;
     default: {
       throw new Error(`invalid attr: ${attr} is not supported.`);
@@ -249,6 +255,11 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
       }
       case compReqAttrTypeRecord.REALM: {
         const value = decodeRealmValue(vBuf);
+        attrs.push({ type: attrType, length, value });
+        break;
+      }
+      case compReqAttrTypeRecord.NONCE: {
+        const value = decodeNonceValue(vBuf);
         attrs.push({ type: attrType, length, value });
         break;
       }
@@ -422,4 +433,19 @@ export function encodeRealmValue(value: RealmAttr["value"]): Buffer {
 export function decodeRealmValue(buf: Buffer): RealmAttr["value"] {
   const res = buf.toString("utf8");
   return { realm: res };
+}
+
+export function encodeNonceValue(value: NonceAttr["value"]): Buffer {
+  const buf = Buffer.from(value.nonce, "utf8");
+  if (!(buf.length <= 763)) {
+    throw new Error(
+      `invalid nonce; expected is < 763 bytes. actual is ${buf.length}.`,
+    );
+  }
+  return buf;
+}
+
+export function decodeNonceValue(buf: Buffer): NonceAttr["value"] {
+  const res = buf.toString("utf8");
+  return { nonce: res };
 }
