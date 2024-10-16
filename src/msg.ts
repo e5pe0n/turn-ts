@@ -40,7 +40,7 @@ export function decodeStunMsg(buf: Buffer): StunMsg {
   };
 }
 
-type EncodeStunMsgParams = {
+export type EncodeStunMsgParams = {
   header: {
     cls: Class;
     method: Method;

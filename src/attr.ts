@@ -1,3 +1,4 @@
+import { createHash, createHmac } from "node:crypto";
 import { magicCookie } from "./consts.js";
 import type { Header } from "./header.js";
 import {
@@ -7,6 +8,11 @@ import {
   numToBuf,
   xorBufs,
 } from "./helpers.js";
+import {
+  encodeStunMsg,
+  type EncodeStunMsgParams,
+  type StunMsg,
+} from "./msg.js";
 
 const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
@@ -85,10 +91,10 @@ export type UsernameAttr = {
   };
 };
 
-type MessageIntegrityAttr = {
+export type MessageIntegrityAttr = {
   type: (typeof compReqAttrTypeRecord)["MESSAGE-INTEGRITY"];
   length: number;
-  value: unknown;
+  value: Buffer;
 };
 
 export type ErrorCodeAttr = {
@@ -159,7 +165,7 @@ type FingerprintAttr = {
 export type Attr =
   | MappedAddressAttr
   | UsernameAttr
-  // | MessageIntegrityAttr
+  | MessageIntegrityAttr
   | ErrorCodeAttr
   // | UnknownAttributesAttr
   | RealmAttr
@@ -175,7 +181,8 @@ export type AttrWithoutLength =
   | Omit<ErrorCodeAttr, "length">
   | Omit<UsernameAttr, "length">
   | Omit<RealmAttr, "length">
-  | Omit<NonceAttr, "length">;
+  | Omit<NonceAttr, "length">
+  | Omit<MessageIntegrityAttr, "length">;
 
 export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
   const tlBuf = Buffer.alloc(4);
@@ -448,4 +455,75 @@ export function encodeNonceValue(value: NonceAttr["value"]): Buffer {
 export function decodeNonceValue(buf: Buffer): NonceAttr["value"] {
   const res = buf.toString("utf8");
   return { nonce: res };
+}
+
+function calcMessageIntegrity(
+  args:
+    | {
+        term: "long";
+        username: string;
+        realm: string;
+        password: string;
+        msg: Buffer;
+      }
+    | {
+        term: "short";
+        password: string;
+        msg: Buffer;
+      },
+): Buffer {
+  let key: Buffer;
+  const md5 = createHash("md5");
+  switch (args.term) {
+    case "long": {
+      const { username, realm, password } = args;
+      key = md5.update(`${username}:${realm}:${password}`).digest();
+      break;
+    }
+    case "short": {
+      const { password } = args;
+      key = md5.update(password).digest();
+      break;
+    }
+  }
+  const hmac = createHmac("sha1", key);
+  hmac.update(args.msg);
+  return hmac.digest();
+}
+
+const MESSAGE_INTEGRITY_BYTES = 20;
+const DUMMY_CONTENT = Buffer.alloc(MESSAGE_INTEGRITY_BYTES);
+
+export function encodeMessageIntegrityValue(
+  args:
+    | {
+        term: "long";
+        username: string;
+        realm: string;
+        password: string;
+        msg: StunMsg;
+      }
+    | {
+        term: "short";
+        password: string;
+        msg: StunMsg;
+      },
+): Buffer {
+  const { msg } = args;
+  const tmpMsg: EncodeStunMsgParams = {
+    ...msg,
+    attrs: [
+      ...msg.attrs,
+      {
+        type: compReqAttrTypeRecord["MESSAGE-INTEGRITY"],
+        value: DUMMY_CONTENT,
+      },
+    ],
+  };
+  const encodedMsg = encodeStunMsg(tmpMsg);
+  const integrity = calcMessageIntegrity({
+    ...args,
+    msg: encodedMsg,
+  });
+  return integrity;
 }
