@@ -188,8 +188,9 @@ export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
     case compReqAttrTypeRecord["ERROR-CODE"]:
       vBuf = encodeErrorCodeValue(attr.value);
       break;
-    case compReqAttrTypeRecord["USERNAME"]:
-      vBuf = encode;
+    case compReqAttrTypeRecord.USERNAME:
+      vBuf = encodeUsernameValue(attr.value);
+      break;
     default: {
       throw new Error(`invalid attr: ${attr} is not supported.`);
     }
@@ -234,6 +235,11 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
       }
       case compReqAttrTypeRecord["ERROR-CODE"]: {
         const value = decodeErrorCodeValue(vBuf);
+        attrs.push({ type: attrType, length, value });
+        break;
+      }
+      case compReqAttrTypeRecord.USERNAME: {
+        const value = decodeUsernameValue(vBuf);
         attrs.push({ type: attrType, length, value });
         break;
       }
@@ -417,4 +423,9 @@ export function encodeUsernameValue(value: UsernameAttr["value"]): Buffer {
     );
   }
   return buf;
+}
+
+export function decodeUsernameValue(buf: Buffer): UsernameAttr["value"] {
+  const res = buf.toString("utf8");
+  return { username: res };
 }

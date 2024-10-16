@@ -10,6 +10,7 @@ import {
   decodeAttrs,
   decodeErrorCodeValue,
   decodeMappedAddressValue,
+  decodeUsernameValue,
   decodeXorMappedAddressValue,
   encodeAttr,
   encodeErrorCodeValue,
@@ -476,6 +477,16 @@ describe("encodeUsernameValue", () => {
       username: "u".repeat(513),
     };
     expect(() => encodeUsernameValue(value)).toThrowError(/invalid username/);
+  });
+});
+
+describe("decodeUsernameValue", () => {
+  it("decodes USERNAME value", () => {
+    const buf = Buffer.from([0x75, 0x73, 0x65, 0x72, 0x31]);
+    const res = decodeUsernameValue(buf);
+    expect(res).toEqual({
+      username: "user1",
+    } satisfies UsernameAttr["value"]);
   });
 });
 
