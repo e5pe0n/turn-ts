@@ -106,10 +106,12 @@ type UnknownAttributesAttr = {
   value: unknown;
 };
 
-type RealmAttr = {
+export type RealmAttr = {
   type: (typeof compReqAttrTypeRecord)["REALM"];
   length: number;
-  value: unknown;
+  value: {
+    realm: string;
+  };
 };
 
 type NonceAttr = {
@@ -158,7 +160,7 @@ export type Attr =
   // | MessageIntegrityAttr
   | ErrorCodeAttr
   // | UnknownAttributesAttr
-  // | RealmAttr
+  | RealmAttr
   // | NonceAttr
   | XorMappedAddressAttr;
 // | SoftwareAttr
@@ -169,7 +171,8 @@ export type AttrWithoutLength =
   | Omit<MappedAddressAttr, "length">
   | Omit<XorMappedAddressAttr, "length">
   | Omit<ErrorCodeAttr, "length">
-  | Omit<UsernameAttr, "length">;
+  | Omit<UsernameAttr, "length">
+  | Omit<RealmAttr, "length">;
 
 export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
   const tlBuf = Buffer.alloc(4);
@@ -178,8 +181,6 @@ export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
   let vBuf: Buffer;
   switch (attr.type) {
     case compReqAttrTypeRecord["MAPPED-ADDRESS"]:
-      attr.type;
-      attr.value;
       vBuf = encodeMappedAddressValue(attr.value);
       break;
     case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]:
@@ -190,6 +191,9 @@ export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
       break;
     case compReqAttrTypeRecord.USERNAME:
       vBuf = encodeUsernameValue(attr.value);
+      break;
+    case compReqAttrTypeRecord.REALM:
+      vBuf = encodeRealmValue(attr.value);
       break;
     default: {
       throw new Error(`invalid attr: ${attr} is not supported.`);
@@ -240,6 +244,11 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
       }
       case compReqAttrTypeRecord.USERNAME: {
         const value = decodeUsernameValue(vBuf);
+        attrs.push({ type: attrType, length, value });
+        break;
+      }
+      case compReqAttrTypeRecord.REALM: {
+        const value = decodeRealmValue(vBuf);
         attrs.push({ type: attrType, length, value });
         break;
       }
@@ -428,4 +437,19 @@ export function encodeUsernameValue(value: UsernameAttr["value"]): Buffer {
 export function decodeUsernameValue(buf: Buffer): UsernameAttr["value"] {
   const res = buf.toString("utf8");
   return { username: res };
+}
+
+export function encodeRealmValue(value: RealmAttr["value"]): Buffer {
+  const buf = Buffer.from(value.realm, "utf8");
+  if (!(buf.length <= 763)) {
+    throw new Error(
+      `invalid realm; expected is < 763 bytes. actual is ${buf.length}.`,
+    );
+  }
+  return buf;
+}
+
+export function decodeRealmValue(buf: Buffer): RealmAttr["value"] {
+  const res = buf.toString("utf8");
+  return { realm: res };
 }

@@ -3,6 +3,7 @@ import {
   type Attr,
   type ErrorCodeAttr,
   type MappedAddressAttr,
+  type RealmAttr,
   type UsernameAttr,
   type XorMappedAddressAttr,
   addrFamilyRecord,
@@ -10,11 +11,13 @@ import {
   decodeAttrs,
   decodeErrorCodeValue,
   decodeMappedAddressValue,
+  decodeRealmValue,
   decodeUsernameValue,
   decodeXorMappedAddressValue,
   encodeAttr,
   encodeErrorCodeValue,
   encodeMappedAddressValue,
+  encodeRealmValue,
   encodeUsernameValue,
   encodeXorMappedAddressValue,
 } from "./attr.js";
@@ -487,6 +490,32 @@ describe("decodeUsernameValue", () => {
     expect(res).toEqual({
       username: "user1",
     } satisfies UsernameAttr["value"]);
+  });
+});
+
+describe("encodeRealmValue", () => {
+  it("encodes REALM value", () => {
+    const value: RealmAttr["value"] = {
+      realm: "realm",
+    };
+    const res = encodeRealmValue(value);
+    expect(res).toEqual(Buffer.from([0x72, 0x65, 0x61, 0x6c, 0x6d]));
+  });
+  it("throws an error if the given realm is not <= 763 bytes", () => {
+    const value: RealmAttr["value"] = {
+      realm: "r".repeat(764),
+    };
+    expect(() => encodeRealmValue(value)).toThrowError(/invalid realm/);
+  });
+});
+
+describe("decodeRealmValue", () => {
+  it("decodes REALM value", () => {
+    const buf = Buffer.from([0x72, 0x65, 0x61, 0x6c, 0x6d]);
+    const res = decodeRealmValue(buf);
+    expect(res).toEqual({
+      realm: "realm",
+    } satisfies RealmAttr["value"]);
   });
 });
 
