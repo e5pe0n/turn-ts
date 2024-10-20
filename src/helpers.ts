@@ -175,3 +175,31 @@ export async function retry<T>(
   }
   return res.value;
 }
+
+export function pad0s(s: string, digits: number): string {
+  return "0".repeat(digits - s.length) + s;
+}
+
+export function fAddr(addr: Buffer): string {
+  if (addr.length === 4) {
+    // ip v4
+    return addr.join(".");
+  } else if (addr.length === 16) {
+    // ip v6
+    return Array.from(addr)
+      .map((v) => pad0s(v.toString(16), 2))
+      .reduce((acc, v, i) => {
+        if (i % 2 === 0) {
+          acc.push(v);
+        } else {
+          acc[acc.length - 1] = acc.at(-1) + v;
+        }
+        return acc;
+      }, [] as string[])
+      .join(":");
+  } else {
+    throw new Error(
+      `invalid address; expected addresss bytes is 4 or 16. actual is ${addr.length}.`,
+    );
+  }
+}

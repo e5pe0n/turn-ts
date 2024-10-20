@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it, test } from "vitest";
 import {
   type ValueOf,
   assertValueOf,
+  fAddr,
   fBuf,
   isValueOf,
   numToBuf,
@@ -79,5 +80,21 @@ describe("fBuf", () => {
   it("returns a string of numbers consisting of the buffer content", () => {
     const res = fBuf(Buffer.from([43, 69, 255, 36, 48]));
     expect(res).toEqual("43,69,255,36,48");
+  });
+});
+
+describe("fAddr", () => {
+  it("returns a string representation of the given IP v4 address", () => {
+    const res = fAddr(Buffer.from([0xde, 0x3e, 0xf7, 0x46]));
+    expect(res).toMatch("222.62.247.70");
+  });
+  it("returns a string representation of the given IP v6 address", () => {
+    const res = fAddr(
+      Buffer.from([
+        0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e,
+        0x03, 0x70, 0x73, 0x34,
+      ]),
+    );
+    expect(res).toMatch("2001:0db8:85a3:0000:0000:8a2e:0370:7334");
   });
 });
