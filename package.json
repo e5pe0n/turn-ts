@@ -8,9 +8,9 @@
     "type:check": "tsc --noEmit",
     "check": "pnpm type:check && biome check",
     "fix": "biome check --write",
-    "test": "vitest --run",
-    "test:par": "vitest --run --project parallel",
-    "test:seq": "vitest --run --project sequential",
+    "test": "vitest --run --typecheck",
+    "test:par": "vitest --run --typecheck --project parallel",
+    "test:seq": "vitest --run --typecheck --project sequential",
     "test:all": "pnpm test:par && pnpm test:seq"
   },
   "keywords": [],
