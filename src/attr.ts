@@ -87,10 +87,22 @@ export type UsernameAttr = {
   };
 };
 
+type Credentials =
+  | {
+      term: "long";
+      username: string;
+      realm: string;
+      password: string;
+    }
+  | {
+      term: "short";
+      password: string;
+    };
+
 export type MessageIntegrityAttr = {
   type: (typeof compReqAttrTypeRecord)["MESSAGE-INTEGRITY"];
   length: number;
-  value: Buffer;
+  value: Credentials;
 };
 
 export type ErrorCodeAttr = {
@@ -458,68 +470,48 @@ export function decodeNonceValue(buf: Buffer): NonceAttr["value"] {
 }
 
 function calcMessageIntegrity(
-  args:
-    | {
-        term: "long";
-        username: string;
-        realm: string;
-        password: string;
-        msgBuf: Buffer;
-      }
-    | {
-        term: "short";
-        password: string;
-        msgBuf: Buffer;
-      },
+  arg: Credentials & {
+    msg: RawStunMsg;
+  },
 ): Buffer {
   let key: Buffer;
   const md5 = createHash("md5");
-  switch (args.term) {
+  switch (arg.term) {
     case "long": {
-      const { username, realm, password } = args;
+      const { username, realm, password } = arg;
       key = md5.update(`${username}:${realm}:${password}`).digest();
       break;
     }
     case "short": {
-      const { password } = args;
+      const { password } = arg;
       key = md5.update(password).digest();
       break;
     }
   }
   const hmac = createHmac("sha1", key);
-  hmac.update(args.msgBuf);
+  hmac.update(arg.msg);
   return hmac.digest();
 }
 
 const MESSAGE_INTEGRITY_BYTES = 20;
 
 export function encodeMessageIntegrityValue(
-  args:
-    | {
-        term: "long";
-        username: string;
-        realm: string;
-        password: string;
-        msgBuf: Buffer;
-      }
-    | {
-        term: "short";
-        password: string;
-        msgBuf: Buffer;
-      },
+  arg: Credentials & {
+    msg: RawStunMsg;
+  },
 ): Buffer {
-  const { msgBuf } = args;
+  const { msg } = arg;
 
   const tlBuf = Buffer.alloc(4);
   tlBuf.writeUInt16BE(compReqAttrTypeRecord["MESSAGE-INTEGRITY"]);
   tlBuf.writeUInt16BE(MESSAGE_INTEGRITY_BYTES);
   const vBuf = Buffer.alloc(MESSAGE_INTEGRITY_BYTES);
 
-  const tmpMsgBuf = Buffer.concat([Buffer.from(msgBuf), tlBuf, vBuf]);
-  tmpMsgBuf.writeUInt16BE(tmpMsgBuf.length);
+  const tmpMsg = Buffer.concat([Buffer.from(msg), tlBuf, vBuf]) as RawStunMsg;
+  tmpMsg.writeUInt16BE(tmpMsg.length);
   const integrity = calcMessageIntegrity({
-    ...args,
-    msgBuf: tmpMsgBuf,
+    ...arg,
+    msg: tmpMsg,
   });
 
   return integrity;
