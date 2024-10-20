@@ -203,3 +203,37 @@ export function fAddr(addr: Buffer): string {
     );
   }
 }
+
+export function pAddr(addr: string): Buffer {
+  const nStrsV4 = addr.split(".");
+  const nStrsV6 = addr.split(":");
+  if (!(nStrsV4.length === 4 || (3 <= nStrsV6.length && nStrsV6.length <= 8))) {
+    throw new Error(
+      "invalid address; expected ip v4 or ip v6 address such as '127.0.0.1' or '2001:db8:85a3::8a2e:370:7334'.",
+    );
+  }
+  if (nStrsV4.length === 4) {
+    return Buffer.from(nStrsV4.map(Number));
+  } else {
+    const numNs = nStrsV6.filter((v) => v !== "").length;
+    const paddedNs = [];
+    let padded = false;
+    for (const nStr of nStrsV6) {
+      if (nStr === "") {
+        if (!padded) {
+          for (let i = 0; i < 8 - numNs; ++i) {
+            paddedNs.push(0);
+          }
+          padded = true;
+        }
+      } else {
+        paddedNs.push(Number.parseInt(nStr, 16));
+      }
+    }
+    const buf = Buffer.alloc(16);
+    for (const [i, n] of paddedNs.entries()) {
+      buf.writeUInt16BE(n, i * 2);
+    }
+    return buf;
+  }
+}
