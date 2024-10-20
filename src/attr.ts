@@ -8,11 +8,7 @@ import {
   numToBuf,
   xorBufs,
 } from "./helpers.js";
-import {
-  encodeStunMsg,
-  type EncodeStunMsgParams,
-  type StunMsg,
-} from "./msg.js";
+import type { RawStunMsg } from "./types.js";
 
 const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
@@ -280,6 +276,10 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
   return attrs;
 }
 
+export function readAttrs(msg: RawStunMsg, header: Header): Attr[] {
+  return decodeAttrs(msg.subarray(20, 20 + header.length), header);
+}
+
 export function encodeMappedAddressValue(
   value: MappedAddressAttr["value"],
 ): Buffer {
@@ -464,12 +464,12 @@ function calcMessageIntegrity(
         username: string;
         realm: string;
         password: string;
-        msg: Buffer;
+        msgBuf: Buffer;
       }
     | {
         term: "short";
         password: string;
-        msg: Buffer;
+        msgBuf: Buffer;
       },
 ): Buffer {
   let key: Buffer;
@@ -487,12 +487,11 @@ function calcMessageIntegrity(
     }
   }
   const hmac = createHmac("sha1", key);
-  hmac.update(args.msg);
+  hmac.update(args.msgBuf);
   return hmac.digest();
 }
 
 const MESSAGE_INTEGRITY_BYTES = 20;
-const DUMMY_CONTENT = Buffer.alloc(MESSAGE_INTEGRITY_BYTES);
 
 export function encodeMessageIntegrityValue(
   args:
@@ -501,29 +500,27 @@ export function encodeMessageIntegrityValue(
         username: string;
         realm: string;
         password: string;
-        msg: StunMsg;
+        msgBuf: Buffer;
       }
     | {
         term: "short";
         password: string;
-        msg: StunMsg;
+        msgBuf: Buffer;
       },
 ): Buffer {
-  const { msg } = args;
-  const tmpMsg: EncodeStunMsgParams = {
-    ...msg,
-    attrs: [
-      ...msg.attrs,
-      {
-        type: compReqAttrTypeRecord["MESSAGE-INTEGRITY"],
-        value: DUMMY_CONTENT,
-      },
-    ],
-  };
-  const encodedMsg = encodeStunMsg(tmpMsg);
+  const { msgBuf } = args;
+
+  const tlBuf = Buffer.alloc(4);
+  tlBuf.writeUInt16BE(compReqAttrTypeRecord["MESSAGE-INTEGRITY"]);
+  tlBuf.writeUInt16BE(MESSAGE_INTEGRITY_BYTES);
+  const vBuf = Buffer.alloc(MESSAGE_INTEGRITY_BYTES);
+
+  const tmpMsgBuf = Buffer.concat([Buffer.from(msgBuf), tlBuf, vBuf]);
+  tmpMsgBuf.writeUInt16BE(tmpMsgBuf.length);
   const integrity = calcMessageIntegrity({
     ...args,
-    msg: encodedMsg,
+    msgBuf: tmpMsgBuf,
   });
+
   return integrity;
 }

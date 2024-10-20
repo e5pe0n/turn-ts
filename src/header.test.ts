@@ -3,12 +3,13 @@ import {
   type Header,
   type MsgType,
   classRecord,
-  decodeHeader,
   decodeMsgType,
   encodeHeader,
   encodeMsgType,
   methodRecord,
+  readHeader,
 } from "./header.js";
+import type { RawStunMsg } from "./types.js";
 
 describe("encodeMsgType", () => {
   test.each([
@@ -110,7 +111,7 @@ describe("encodeHeader", () => {
   });
 });
 
-describe("decodeHeader", () => {
+describe("readHeader", () => {
   it("throws error if STUN message header does not include valid magic cookie", () => {
     const trxId = Buffer.from([
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
@@ -127,10 +128,10 @@ describe("decodeHeader", () => {
         0x41,
       ]),
       trxId,
-    ]);
-    expect(() => decodeHeader(buf)).toThrowError(/invalid magic cookie/);
+    ]) as RawStunMsg;
+    expect(() => readHeader(buf)).toThrowError(/invalid magic cookie/);
   });
-  it("decodes STUN message header", () => {
+  it("extracts then decodes a header from a STUN message", () => {
     const trxId = Buffer.from([
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
     ]);
@@ -146,8 +147,8 @@ describe("decodeHeader", () => {
         0x42,
       ]),
       trxId,
-    ]);
-    const res = decodeHeader(buf);
+    ]) as RawStunMsg;
+    const res = readHeader(buf);
     expect(res).toEqual({
       cls: classRecord.request,
       method: methodRecord.binding,

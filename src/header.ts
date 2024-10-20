@@ -1,5 +1,6 @@
 import { magicCookie } from "./consts.js";
 import { type ValueOf, assertValueOf, numToBuf } from "./helpers.js";
+import type { RawStunMsg } from "./types.js";
 
 export const classRecord = {
   request: 0b00,
@@ -71,6 +72,23 @@ export function decodeMsgType(buf: Buffer): MsgType {
   return { method: m, cls: c };
 }
 
+export function readMsgType(msg: RawStunMsg): MsgType {
+  const { method, cls } = decodeMsgType(msg.subarray(0, 2));
+  return { method, cls };
+}
+
+export function readMsgLength(msg: RawStunMsg): number {
+  return msg.subarray(2, 4).readInt16BE();
+}
+
+export function readMagicCookie(msg: RawStunMsg): number {
+  return msg.subarray(4, 8).readInt32BE();
+}
+
+export function readTrxId(msg: RawStunMsg): Buffer {
+  return Buffer.alloc(12, msg.subarray(8, 20));
+}
+
 export function encodeHeader({
   cls,
   method,
@@ -83,15 +101,15 @@ export function encodeHeader({
   return Buffer.concat([msgTypeBuf, lenBuf, cookieBuf, trxId]);
 }
 
-export function decodeHeader(buf: Buffer): Header {
-  const { method, cls } = decodeMsgType(buf.subarray(0, 2));
-  const length = buf.subarray(2, 4).readInt16BE();
-  const maybeMagicCookie = buf.subarray(4, 8).readInt32BE();
+export function readHeader(msg: RawStunMsg): Header {
+  const { method, cls } = readMsgType(msg);
+  const length = readMsgLength(msg);
+  const maybeMagicCookie = readMagicCookie(msg);
   if (maybeMagicCookie !== magicCookie) {
     throw new Error(
       `invalid magic cookie; magic cookie must be '${magicCookie}'. the given value is '0x${maybeMagicCookie.toString(16)}'`,
     );
   }
-  const trxId = Buffer.alloc(12, buf.subarray(8, 20));
+  const trxId = readTrxId(msg);
   return { method, cls, length, magicCookie, trxId };
 }
