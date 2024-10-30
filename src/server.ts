@@ -3,6 +3,7 @@ import { addrFamilyRecord, compReqAttrTypeRecord } from "./attr.js";
 import { classRecord, methodRecord } from "./header.js";
 import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
+import { pAddr } from "./helpers.js";
 
 export type ServerConfig = {
   protocol: Protocol;
@@ -33,9 +34,12 @@ export class Server {
               {
                 type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
                 value: {
-                  family: addrFamilyRecord.ipV4,
-                  addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
-                  port: 54321,
+                  family:
+                    rinfo.family === "IPv4"
+                      ? addrFamilyRecord.ipV4
+                      : addrFamilyRecord.ipV6,
+                  addr: pAddr(rinfo.address),
+                  port: rinfo.port,
                 },
               },
             ],

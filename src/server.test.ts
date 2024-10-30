@@ -13,8 +13,8 @@ it("receives a request then return a response", async () => {
   const res = await client.send("request", "binding");
   expect(res).toEqual({
     success: true,
-    address: "222.62.247.70",
-    port: 54321,
+    address: "127.0.0.1",
+    port: expect.any(Number),
   } satisfies SuccessResponse);
   server.close();
 });
