@@ -1,9 +1,11 @@
 import { describe, expect, expectTypeOf, it, test } from "vitest";
 import {
+  type Inverse,
   type ValueOf,
   assertValueOf,
   fAddr,
   fBuf,
+  getKey,
   isValueOf,
   numToBuf,
   pAddr,
@@ -19,6 +21,18 @@ type AddrFamily = (typeof addrFamilyRecord)[keyof typeof addrFamilyRecord];
 
 test("ValueOf", () => {
   expectTypeOf<ValueOf<typeof addrFamilyRecord>>().toEqualTypeOf<AddrFamily>();
+});
+
+test("Inverse", () => {
+  expectTypeOf<Inverse<typeof addrFamilyRecord>>().toEqualTypeOf<{
+    0x01: "ipV4";
+    0x02: "ipV6";
+  }>;
+});
+
+test("getKey", () => {
+  expectTypeOf(getKey(addrFamilyRecord, 1)).toEqualTypeOf("ipV4" as const);
+  expect(getKey(addrFamilyRecord, 1)).toMatch("ipV4");
 });
 
 test("isValueOf", () => {

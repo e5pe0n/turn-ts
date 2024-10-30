@@ -21,6 +21,26 @@ export type Override<T, U extends { [Prop in keyof T]?: unknown }> = {
  */
 export type ValueOf<T> = T[keyof T];
 
+type Invertable = Record<PropertyKey, PropertyKey>;
+
+export type Inverse<T extends Invertable> = {
+  [K in keyof T as T[K]]: K;
+};
+
+export function getKey<T extends Invertable, V extends T[keyof T]>(
+  record: T,
+  value: V,
+): Inverse<T>[V] {
+  for (const [k, v] of Object.entries(record)) {
+    if (v === value) {
+      return k as Inverse<T>[V];
+    }
+  }
+  throw new Error(
+    `invalid value: value=${String(value)} not in record=${record}`,
+  );
+}
+
 /**
  * Crate a new Array such as [0, 1, ..., `stop - 1`].
  *
