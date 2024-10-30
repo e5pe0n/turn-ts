@@ -1,7 +1,6 @@
 import { createSocket } from "node:dgram";
 import { createServer } from "node:net";
 import { describe, expect, it } from "vitest";
-import { addrFamilyRecord, compReqAttrTypeRecord } from "./attr.js";
 import {
   type ErrorResponse,
   type SuccessResponse,
@@ -68,7 +67,7 @@ describe("send", () => {
             },
             attrs: [
               {
-                type: compReqAttrTypeRecord["ERROR-CODE"],
+                type: "ERROR-CODE",
                 value: {
                   code: 401,
                   reason: "Unauthorized",
@@ -185,10 +184,10 @@ describe("send", () => {
               },
               attrs: [
                 {
-                  type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+                  type: "XOR-MAPPED-ADDRESS",
                   value: {
-                    family: addrFamilyRecord.ipV4,
-                    addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
+                    family: "IPv4",
+                    address: "222.62.247.70",
                     port: 54321,
                   },
                 },
@@ -244,10 +243,10 @@ describe("send", () => {
           },
           attrs: [
             {
-              type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+              type: "XOR-MAPPED-ADDRESS",
               value: {
-                family: addrFamilyRecord.ipV4,
-                addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
+                family: "IPv4",
+                address: "222.62.247.70",
                 port: 54321,
               },
             },
@@ -347,7 +346,7 @@ describe("send", () => {
               },
               attrs: [
                 {
-                  type: compReqAttrTypeRecord["ERROR-CODE"],
+                  type: "ERROR-CODE",
                   value: {
                     code: 401,
                     reason: "Unauthorized",
@@ -424,10 +423,10 @@ describe("send", () => {
               },
               attrs: [
                 {
-                  type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+                  type: "XOR-MAPPED-ADDRESS",
                   value: {
-                    family: addrFamilyRecord.ipV4,
-                    addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
+                    family: "IPv4",
+                    address: "222.62.247.70",
                     port: 54321,
                   },
                 },

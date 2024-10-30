@@ -2,10 +2,11 @@ import { createHash, createHmac } from "node:crypto";
 import { magicCookie } from "./consts.js";
 import type { Header } from "./header.js";
 import {
-  type ValueOf,
   assertValueOf,
-  isValueOf,
+  fAddr,
+  getKey,
   numToBuf,
+  pAddr,
   xorBufs,
 } from "./helpers.js";
 import type { RawStunMsg } from "./types.js";
@@ -13,7 +14,7 @@ import type { RawStunMsg } from "./types.js";
 const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
 
-export const compReqAttrTypeRecord = {
+export const attrTypeRecord = {
   "MAPPED-ADDRESS": 0x0001,
   USERNAME: 0x0006,
   "MESSAGE-INTEGRITY": 0x0008,
@@ -22,69 +23,33 @@ export const compReqAttrTypeRecord = {
   REALM: 0x0014,
   NONCE: 0x0015,
   "XOR-MAPPED-ADDRESS": 0x0020,
-} as const;
-type CompReqAttrType = ValueOf<typeof compReqAttrTypeRecord>;
-
-export const compOptAttrTypeRecord = {
+  // TODO: Separate into optional attribute records
   SOFTWARE: 0x8022,
   "ALTERNATE-SERVER": 0x8023,
   FINGERPRINT: 0x8028,
 } as const;
-type CompOptAttrType = ValueOf<typeof compOptAttrTypeRecord>;
-
-type AttrType = CompReqAttrType | CompOptAttrType;
-
-function isAttrType(x: number): x is AttrType {
-  return (
-    isValueOf(x, compReqAttrTypeRecord) || isValueOf(x, compOptAttrTypeRecord)
-  );
-}
-
-function fAttrType(
-  strings: TemplateStringsArray,
-  v: CompReqAttrType | CompOptAttrType,
-): string {
-  {
-    const [kv] = Object.entries(compReqAttrTypeRecord).filter(
-      ([, value]) => value === v,
-    );
-    if (kv) {
-      return kv[0];
-    }
-  }
-  {
-    const [kv] = Object.entries(compOptAttrTypeRecord).filter(
-      ([, value]) => value === v,
-    );
-    if (kv) {
-      return kv[0];
-    }
-    throw new Error(`invalid value: '${v}' is not a value of Attribute Type.`);
-  }
-}
+type AttrType = keyof typeof attrTypeRecord;
 
 export const addrFamilyRecord = {
-  ipV4: 0x01,
-  ipV6: 0x02,
+  IPv4: 0x01,
+  IPv6: 0x02,
 } as const;
-type AddrFamily = ValueOf<typeof addrFamilyRecord>;
+type AddrFamily = keyof typeof addrFamilyRecord;
 
 export type MappedAddressAttr = {
-  type: (typeof compReqAttrTypeRecord)["MAPPED-ADDRESS"];
+  type: "MAPPED-ADDRESS";
   length: number;
   value: {
     family: AddrFamily;
     port: number;
-    addr: Buffer;
+    address: string;
   };
 };
 
 export type UsernameAttr = {
-  type: (typeof compReqAttrTypeRecord)["USERNAME"];
+  type: "USERNAME";
   length: number;
-  value: {
-    username: string;
-  };
+  value: string;
 };
 
 type Credentials =
@@ -100,13 +65,13 @@ type Credentials =
     };
 
 export type MessageIntegrityAttr = {
-  type: (typeof compReqAttrTypeRecord)["MESSAGE-INTEGRITY"];
+  type: "MESSAGE-INTEGRITY";
   length: number;
   value: Credentials;
 };
 
 export type ErrorCodeAttr = {
-  type: (typeof compReqAttrTypeRecord)["ERROR-CODE"];
+  type: "ERROR-CODE";
   length: number;
   value: {
     code: number;
@@ -115,57 +80,47 @@ export type ErrorCodeAttr = {
 };
 
 type UnknownAttributesAttr = {
-  type: (typeof compReqAttrTypeRecord)["UNKNOWN-ATTRIBUTES"];
+  type: "UNKNOWN-ATTRIBUTES";
   length: number;
   value: unknown;
 };
 
 export type RealmAttr = {
-  type: (typeof compReqAttrTypeRecord)["REALM"];
+  type: "REALM";
   length: number;
-  value: {
-    realm: string;
-  };
+  value: string;
 };
 
 export type NonceAttr = {
-  type: (typeof compReqAttrTypeRecord)["NONCE"];
+  type: "NONCE";
   length: number;
-  value: {
-    nonce: string;
-  };
+  value: string;
 };
 
 export type XorMappedAddressAttr = {
-  type: (typeof compReqAttrTypeRecord)["XOR-MAPPED-ADDRESS"];
+  type: "XOR-MAPPED-ADDRESS";
   length: number;
-  value:
-    | {
-        family: (typeof addrFamilyRecord)["ipV4"];
-        port: number;
-        addr: Buffer; // 32 bits
-      }
-    | {
-        family: (typeof addrFamilyRecord)["ipV6"];
-        port: number;
-        addr: Buffer; // 128 bits
-      };
+  value: {
+    family: AddrFamily;
+    port: number;
+    address: string;
+  };
 };
 
 type SoftwareAttr = {
-  type: (typeof compOptAttrTypeRecord)["SOFTWARE"];
+  type: "SOFTWARE";
   length: number;
   value: unknown;
 };
 
 type AlternateServerAttr = {
-  type: (typeof compOptAttrTypeRecord)["ALTERNATE-SERVER"];
+  type: "ALTERNATE-SERVER";
   length: number;
   value: unknown;
 };
 
 type FingerprintAttr = {
-  type: (typeof compOptAttrTypeRecord)["FINGERPRINT"];
+  type: "FINGERPRINT";
   length: number;
   value: unknown;
 };
@@ -194,26 +149,26 @@ export type AttrWithoutLength =
 
 export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
   const tlBuf = Buffer.alloc(4);
-  tlBuf.writeUInt16BE(attr.type);
+  tlBuf.writeUInt16BE(attrTypeRecord[attr.type]);
 
   let vBuf: Buffer;
   switch (attr.type) {
-    case compReqAttrTypeRecord["MAPPED-ADDRESS"]:
+    case "MAPPED-ADDRESS":
       vBuf = encodeMappedAddressValue(attr.value);
       break;
-    case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]:
+    case "XOR-MAPPED-ADDRESS":
       vBuf = encodeXorMappedAddressValue(attr.value, trxId);
       break;
-    case compReqAttrTypeRecord["ERROR-CODE"]:
+    case "ERROR-CODE":
       vBuf = encodeErrorCodeValue(attr.value);
       break;
-    case compReqAttrTypeRecord.USERNAME:
+    case "USERNAME":
       vBuf = encodeUsernameValue(attr.value);
       break;
-    case compReqAttrTypeRecord.REALM:
+    case "REALM":
       vBuf = encodeRealmValue(attr.value);
       break;
-    case compReqAttrTypeRecord.NONCE:
+    case "NONCE":
       vBuf = encodeNonceValue(attr.value);
       break;
     default: {
@@ -231,57 +186,58 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
   let offset = 0;
   while (offset + 4 < buf.length) {
     const attrType = buf.subarray(offset, offset + 2).readUInt16BE();
-    if (!isAttrType(attrType)) {
-      // TODO: Distinguish between comprehension-required attributes
-      // and comprehension-optional attributes.
-      throw new Error(`invalid attr type; ${attrType} is not a attr type.`);
-    }
+    // TODO: Distinguish between comprehension-required attributes
+    // and comprehension-optional attributes.
+    assertValueOf(
+      attrType,
+      attrTypeRecord,
+      new Error(`invalid attr type; ${attrType} is not a attr type.`),
+    );
+    const kAttrType = getKey(attrTypeRecord, attrType);
     const length = buf.subarray(offset + 2, offset + 4).readUInt16BE();
     const restLength = buf.length - (offset + 4);
     if (!(restLength >= length)) {
       throw new Error(
-        `invalid attr length; given ${fAttrType`${attrType}`} value length is ${length}, but the actual value length is ${restLength}.`,
+        `invalid attr length; given ${kAttrType} value length is ${length}, but the actual value length is ${restLength}.`,
       );
     }
     const vBuf = Buffer.alloc(
       length,
       buf.subarray(offset + 4, offset + 4 + length),
     );
-    switch (attrType) {
-      case compReqAttrTypeRecord["MAPPED-ADDRESS"]: {
+    switch (kAttrType) {
+      case "MAPPED-ADDRESS": {
         const value = decodeMappedAddressValue(vBuf);
-        attrs.push({ type: attrType, length, value });
+        attrs.push({ type: kAttrType, length, value });
         break;
       }
-      case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]: {
+      case "XOR-MAPPED-ADDRESS": {
         const value = decodeXorMappedAddressValue(vBuf, header);
-        attrs.push({ type: attrType, length, value });
+        attrs.push({ type: kAttrType, length, value });
         break;
       }
-      case compReqAttrTypeRecord["ERROR-CODE"]: {
+      case "ERROR-CODE": {
         const value = decodeErrorCodeValue(vBuf);
-        attrs.push({ type: attrType, length, value });
+        attrs.push({ type: kAttrType, length, value });
         break;
       }
-      case compReqAttrTypeRecord.USERNAME: {
+      case "USERNAME": {
         const value = decodeUsernameValue(vBuf);
-        attrs.push({ type: attrType, length, value });
+        attrs.push({ type: kAttrType, length, value });
         break;
       }
-      case compReqAttrTypeRecord.REALM: {
+      case "REALM": {
         const value = decodeRealmValue(vBuf);
-        attrs.push({ type: attrType, length, value });
+        attrs.push({ type: kAttrType, length, value });
         break;
       }
-      case compReqAttrTypeRecord.NONCE: {
+      case "NONCE": {
         const value = decodeNonceValue(vBuf);
-        attrs.push({ type: attrType, length, value });
+        attrs.push({ type: kAttrType, length, value });
         break;
       }
       default:
-        throw new Error(
-          `invalid attr type; ${fAttrType`${attrType}`} is not supported.`,
-        );
+        throw new Error(`invalid attr type; ${kAttrType} is not supported.`);
     }
     offset += 4 + length;
   }
@@ -295,12 +251,12 @@ export function readAttrs(msg: RawStunMsg, header: Header): Attr[] {
 export function encodeMappedAddressValue(
   value: MappedAddressAttr["value"],
 ): Buffer {
-  const { family, port, addr } = value;
-  const buf = Buffer.alloc(family === addrFamilyRecord.ipV4 ? 8 : 20);
+  const { family, port, address: addr } = value;
+  const buf = Buffer.alloc(family === "IPv4" ? 8 : 20);
   buf.writeUint8(0);
-  buf.writeUint8(family, 1);
+  buf.writeUint8(addrFamilyRecord[family], 1);
   buf.writeUInt16BE(port, 2);
-  buf.fill(addr, 4);
+  buf.fill(pAddr(addr), 4);
   return buf;
 }
 
@@ -313,41 +269,43 @@ export function decodeMappedAddressValue(
     addrFamilyRecord,
     new Error(`invalid address family: '${family}' is not a address family.`),
   );
+  const kFamily = getKey(addrFamilyRecord, family);
   const port = buf.subarray(2, 4).readUInt16BE();
-  let addr: Buffer;
-  switch (family) {
-    case addrFamilyRecord.ipV4:
-      addr = Buffer.alloc(4, buf.subarray(4, 8));
+  let addr: string;
+  switch (kFamily) {
+    case "IPv4":
+      addr = fAddr(Buffer.alloc(4, buf.subarray(4, 8)));
       break;
-    case addrFamilyRecord.ipV6:
-      addr = Buffer.alloc(16, buf.subarray(4, 20));
+    case "IPv6":
+      addr = fAddr(Buffer.alloc(16, buf.subarray(4, 20)));
       break;
   }
-  return { family, addr, port };
+  return { family: kFamily, address: addr, port };
 }
 
 export function encodeXorMappedAddressValue(
   value: XorMappedAddressAttr["value"],
   trxId: Buffer,
 ): Buffer {
-  const { family, port, addr } = value;
+  const { family, port, address: addr } = value;
   const xPort = port ^ (magicCookie >>> 16);
-  const buf = Buffer.alloc(family === addrFamilyRecord.ipV4 ? 8 : 20);
+  const buf = Buffer.alloc(family === "IPv4" ? 8 : 20);
   buf.writeUint8(0);
-  buf.writeUint8(family, 1);
+  buf.writeUint8(addrFamilyRecord[family], 1);
   buf.writeUInt16BE(xPort, 2);
+  const addrBuf = pAddr(addr);
   switch (family) {
-    case addrFamilyRecord.ipV4:
+    case "IPv4":
       {
-        const xAddr = addr.readInt32BE() ^ magicCookie;
-        buf.writeInt32BE(xAddr, 4);
+        const xAddrBuf = addrBuf.readInt32BE() ^ magicCookie;
+        buf.writeInt32BE(xAddrBuf, 4);
       }
       return buf;
-    case addrFamilyRecord.ipV6:
+    case "IPv6":
       {
         const rand = Buffer.concat([numToBuf(magicCookie, 4), trxId]);
-        const xAddr = xorBufs(addr, rand);
-        buf.fill(xAddr, 4);
+        const xAddrBuf = xorBufs(addrBuf, rand);
+        buf.fill(xAddrBuf, 4);
       }
       return buf;
   }
@@ -363,19 +321,20 @@ export function decodeXorMappedAddressValue(
     addrFamilyRecord,
     new Error(`invalid address family: '${family}' is not a address family.`),
   );
+  const kFamily = getKey(addrFamilyRecord, family);
   const port = buf.subarray(2, 4).readUInt16BE() ^ (magicCookie >>> 16);
-  switch (family) {
-    case addrFamilyRecord.ipV4: {
+  switch (kFamily) {
+    case "IPv4": {
       const xres = buf.subarray(4, 8).readInt32BE() ^ magicCookie;
       const addr = Buffer.alloc(4);
       addr.writeInt32BE(xres);
-      return { port, family, addr };
+      return { port, family: kFamily, address: fAddr(addr) };
     }
-    case addrFamilyRecord.ipV6: {
+    case "IPv6": {
       const rand = Buffer.concat([numToBuf(magicCookie, 4), header.trxId]);
       const xored = xorBufs(buf.subarray(4, 20), rand);
       const addr = Buffer.alloc(16, xored);
-      return { port, family, addr };
+      return { port, family: kFamily, address: fAddr(addr) };
     }
   }
 }
@@ -425,7 +384,7 @@ export function decodeErrorCodeValue(buf: Buffer): ErrorCodeAttr["value"] {
 }
 
 export function encodeUsernameValue(value: UsernameAttr["value"]): Buffer {
-  const buf = Buffer.from(value.username, "utf8");
+  const buf = Buffer.from(value, "utf8");
   if (!(buf.length < 513)) {
     throw new Error(
       `invalid username; expected is < 513 bytes. actual is ${buf.length}.`,
@@ -434,13 +393,16 @@ export function encodeUsernameValue(value: UsernameAttr["value"]): Buffer {
   return buf;
 }
 
+export function decodeStrValue(buf: Buffer): string {
+  return buf.toString("utf8");
+}
+
 export function decodeUsernameValue(buf: Buffer): UsernameAttr["value"] {
-  const res = buf.toString("utf8");
-  return { username: res };
+  return decodeStrValue(buf);
 }
 
 export function encodeRealmValue(value: RealmAttr["value"]): Buffer {
-  const buf = Buffer.from(value.realm, "utf8");
+  const buf = Buffer.from(value, "utf8");
   if (!(buf.length <= 763)) {
     throw new Error(
       `invalid realm; expected is < 763 bytes. actual is ${buf.length}.`,
@@ -450,12 +412,11 @@ export function encodeRealmValue(value: RealmAttr["value"]): Buffer {
 }
 
 export function decodeRealmValue(buf: Buffer): RealmAttr["value"] {
-  const res = buf.toString("utf8");
-  return { realm: res };
+  return decodeStrValue(buf);
 }
 
 export function encodeNonceValue(value: NonceAttr["value"]): Buffer {
-  const buf = Buffer.from(value.nonce, "utf8");
+  const buf = Buffer.from(value, "utf8");
   if (!(buf.length <= 763)) {
     throw new Error(
       `invalid nonce; expected is < 763 bytes. actual is ${buf.length}.`,
@@ -465,8 +426,7 @@ export function encodeNonceValue(value: NonceAttr["value"]): Buffer {
 }
 
 export function decodeNonceValue(buf: Buffer): NonceAttr["value"] {
-  const res = buf.toString("utf8");
-  return { nonce: res };
+  return decodeStrValue(buf);
 }
 
 function calcMessageIntegrity(
@@ -503,7 +463,7 @@ export function encodeMessageIntegrityValue(
   const { msg } = arg;
 
   const tlBuf = Buffer.alloc(4);
-  tlBuf.writeUInt16BE(compReqAttrTypeRecord["MESSAGE-INTEGRITY"]);
+  tlBuf.writeUInt16BE(attrTypeRecord["MESSAGE-INTEGRITY"]);
   tlBuf.writeUInt16BE(MESSAGE_INTEGRITY_BYTES);
   const vBuf = Buffer.alloc(MESSAGE_INTEGRITY_BYTES);
 

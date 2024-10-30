@@ -1,9 +1,7 @@
 import { type Socket, createSocket } from "node:dgram";
-import { addrFamilyRecord, compReqAttrTypeRecord } from "./attr.js";
 import { classRecord, methodRecord } from "./header.js";
 import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
-import { pAddr } from "./helpers.js";
 
 export type ServerConfig = {
   protocol: Protocol;
@@ -32,13 +30,10 @@ export class Server {
             },
             attrs: [
               {
-                type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+                type: "XOR-MAPPED-ADDRESS",
                 value: {
-                  family:
-                    rinfo.family === "IPv4"
-                      ? addrFamilyRecord.ipV4
-                      : addrFamilyRecord.ipV6,
-                  addr: pAddr(rinfo.address),
+                  family: rinfo.family,
+                  address: rinfo.address,
                   port: rinfo.port,
                 },
               },

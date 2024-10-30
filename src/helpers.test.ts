@@ -13,8 +13,8 @@ import {
 } from "./helpers.js";
 
 const addrFamilyRecord = {
-  ipV4: 0x01,
-  ipV6: 0x02,
+  IPv4: 0x01,
+  IPv6: 0x02,
 } as const;
 type AddrFamilyRecord = typeof addrFamilyRecord;
 type AddrFamily = (typeof addrFamilyRecord)[keyof typeof addrFamilyRecord];
@@ -25,14 +25,14 @@ test("ValueOf", () => {
 
 test("Inverse", () => {
   expectTypeOf<Inverse<typeof addrFamilyRecord>>().toEqualTypeOf<{
-    0x01: "ipV4";
-    0x02: "ipV6";
+    0x01: "IPv4";
+    0x02: "IPv6";
   }>;
 });
 
 test("getKey", () => {
-  expectTypeOf(getKey(addrFamilyRecord, 1)).toEqualTypeOf("ipV4" as const);
-  expect(getKey(addrFamilyRecord, 1)).toMatch("ipV4");
+  expectTypeOf(getKey(addrFamilyRecord, 1)).toEqualTypeOf("IPv4" as const);
+  expect(getKey(addrFamilyRecord, 1)).toMatch("IPv4");
 });
 
 test("isValueOf", () => {

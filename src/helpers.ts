@@ -78,6 +78,23 @@ export function range(start: number, stop?: number, step?: number): number[] {
     : Array.from(new Array(len), (_, i) => _start + i * _step);
 }
 
+export function isKeyOf<R extends object, K extends keyof R>(
+  x: unknown,
+  r: R,
+): x is K {
+  return Object.keys(r).includes(x as string);
+}
+
+export function assertKeyOf<R extends object, V extends R[keyof R]>(
+  x: unknown,
+  r: R,
+  err: Error,
+): asserts x is V {
+  if (!isKeyOf(x, r)) {
+    throw err;
+  }
+}
+
 export function isValueOf<R extends object, V extends R[keyof R]>(
   x: unknown,
   r: R,

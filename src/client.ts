@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { type Socket, createSocket } from "node:dgram";
 import { createConnection } from "node:net";
-import { compReqAttrTypeRecord } from "./attr.js";
 import { classRecord, encodeHeader, methodRecord } from "./header.js";
 import { retry } from "./helpers.js";
 import { decodeStunMsg } from "./msg.js";
@@ -45,10 +44,6 @@ export type TcpClientConfig = {
 
 export type ClientConfig = UdpClientConfig | TcpClientConfig;
 
-function fAddr(buf: Buffer): string {
-  return Array.from(buf.values()).map(String).join(".");
-}
-
 function decodeResponse(buf: Buffer, trxId: Buffer): Response {
   const {
     header: { trxId: resTrxId },
@@ -61,13 +56,13 @@ function decodeResponse(buf: Buffer, trxId: Buffer): Response {
   }
   const { type, value } = attrs[0]!;
   switch (type) {
-    case compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"]:
+    case "XOR-MAPPED-ADDRESS":
       return {
         success: true,
         port: value.port,
-        address: fAddr(value.addr),
+        address: value.address,
       };
-    case compReqAttrTypeRecord["ERROR-CODE"]:
+    case "ERROR-CODE":
       return {
         success: false,
         code: value.code,

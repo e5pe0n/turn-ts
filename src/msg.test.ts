@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { addrFamilyRecord, compReqAttrTypeRecord } from "./attr.js";
 import { magicCookie } from "./consts.js";
 import { classRecord, methodRecord } from "./header.js";
 import { type StunMsg, decodeStunMsg, encodeStunMsg } from "./msg.js";
@@ -57,12 +56,12 @@ describe("decodeStunMsg", () => {
       // Attr Value
       0x00,
       0x01, // Family: IPv4
-      0x10, // X-Port
-      0x01,
-      0xff, // X-Address (IPv4)
-      0x2c,
-      0x53,
-      0x04,
+      0x11, // X-Port
+      0x2b,
+      0xe8, // X-Address (IPv4)
+      0xd5,
+      0x61,
+      0x1b,
     ]); // 12 bytes
     const buf = Buffer.concat([hBuf, attrBuf]);
     expect(decodeStunMsg(buf)).toEqual({
@@ -75,12 +74,12 @@ describe("decodeStunMsg", () => {
       },
       attrs: [
         {
-          type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+          type: "XOR-MAPPED-ADDRESS",
           length: 8,
           value: {
-            family: addrFamilyRecord.ipV4,
-            port: 0x3113,
-            addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
+            family: "IPv4",
+            port: 12345,
+            address: "201.199.197.89",
           },
         },
       ],
@@ -101,11 +100,11 @@ describe("encodeStunMsg", () => {
       },
       attrs: [
         {
-          type: compReqAttrTypeRecord["XOR-MAPPED-ADDRESS"],
+          type: "XOR-MAPPED-ADDRESS",
           value: {
-            family: addrFamilyRecord.ipV4,
-            addr: Buffer.from([0xde, 0x3e, 0xf7, 0x46]),
+            family: "IPv4",
             port: 12345,
+            address: "201.199.197.89",
           },
         },
       ],
@@ -135,10 +134,10 @@ describe("encodeStunMsg", () => {
           0x01, // Family (IPv4)
           0x11, // Port
           0x2b,
-          0xff, // X-Address (IPv4)
-          0x2c,
-          0x53,
-          0x04,
+          0xe8, // X-Address (IPv4)
+          0xd5,
+          0x61,
+          0x1b,
         ]),
       ]),
     );
