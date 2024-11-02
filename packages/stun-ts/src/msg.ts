@@ -1,6 +1,6 @@
 import {
-  type Attr,
-  type AttrWithoutLength,
+  type InputAttr,
+  type OutputAttr,
   encodeAttr,
   readAttrs,
 } from "./attr.js";
@@ -10,12 +10,13 @@ import {
   type Method,
   encodeHeader,
   readHeader,
+  writeMsgLength,
 } from "./header.js";
 import type { RawStunMsg } from "./types.js";
 
 export type StunMsg = {
   header: Header;
-  attrs: Attr[];
+  attrs: OutputAttr[];
 };
 
 export function decodeStunMsg(buf: Buffer): StunMsg {
@@ -45,19 +46,24 @@ export type EncodeStunMsgParams = {
     method: Method;
     trxId: Buffer;
   };
-  attrs: AttrWithoutLength[];
+  attrs: InputAttr[];
 };
 
 export function encodeStunMsg({
   header: { cls, method, trxId },
   attrs,
-}: EncodeStunMsgParams): Buffer {
-  const attrsBuf = Buffer.concat(attrs.map((attr) => encodeAttr(attr, trxId)));
+}: EncodeStunMsgParams): RawStunMsg {
   const hBuf = encodeHeader({
     cls,
     method,
     trxId,
-    length: attrsBuf.length,
+    length: 0,
   });
-  return Buffer.concat([hBuf, attrsBuf]);
+  let msgBuf = hBuf as RawStunMsg;
+  for (const attr of attrs) {
+    const attrBuf = encodeAttr(attr, msgBuf);
+    msgBuf = Buffer.concat([msgBuf, attrBuf]) as RawStunMsg;
+  }
+  writeMsgLength(msgBuf, msgBuf.length - hBuf.length);
+  return msgBuf;
 }

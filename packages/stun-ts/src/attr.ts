@@ -1,6 +1,6 @@
 import { createHash, createHmac } from "node:crypto";
 import { magicCookie } from "./consts.js";
-import type { Header } from "./header.js";
+import { type Header, readTrxId } from "./header.js";
 import {
   assertValueOf,
   fAddr,
@@ -64,10 +64,16 @@ type Credentials =
       password: string;
     };
 
-export type MessageIntegrityAttr = {
+export type InputMessageIntegrityAttr = {
   type: "MESSAGE-INTEGRITY";
   length: number;
-  value: Credentials;
+  params: Credentials;
+};
+
+export type OutputMessageIntegrityAttr = {
+  type: "MESSAGE-INTEGRITY";
+  length: number;
+  value: Buffer;
 };
 
 export type ErrorCodeAttr = {
@@ -125,10 +131,10 @@ type FingerprintAttr = {
   value: unknown;
 };
 
-export type Attr =
+export type OutputAttr =
   | MappedAddressAttr
   | UsernameAttr
-  | MessageIntegrityAttr
+  | OutputMessageIntegrityAttr
   | ErrorCodeAttr
   // | UnknownAttributesAttr
   | RealmAttr
@@ -138,16 +144,16 @@ export type Attr =
 // | AlternateServerAttr
 // | FingerprintAttr;
 
-export type AttrWithoutLength =
+export type InputAttr =
   | Omit<MappedAddressAttr, "length">
   | Omit<XorMappedAddressAttr, "length">
   | Omit<ErrorCodeAttr, "length">
   | Omit<UsernameAttr, "length">
   | Omit<RealmAttr, "length">
   | Omit<NonceAttr, "length">
-  | Omit<MessageIntegrityAttr, "length">;
+  | Omit<InputMessageIntegrityAttr, "length">;
 
-export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
+export function encodeAttr(attr: InputAttr, msg: RawStunMsg): Buffer {
   const tlBuf = Buffer.alloc(4);
   tlBuf.writeUInt16BE(attrTypeRecord[attr.type]);
 
@@ -157,7 +163,7 @@ export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
       vBuf = encodeMappedAddressValue(attr.value);
       break;
     case "XOR-MAPPED-ADDRESS":
-      vBuf = encodeXorMappedAddressValue(attr.value, trxId);
+      vBuf = encodeXorMappedAddressValue(attr.value, readTrxId(msg));
       break;
     case "ERROR-CODE":
       vBuf = encodeErrorCodeValue(attr.value);
@@ -171,6 +177,9 @@ export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
     case "NONCE":
       vBuf = encodeNonceValue(attr.value);
       break;
+    case "MESSAGE-INTEGRITY":
+      vBuf = encodeMessageIntegrityValue(attr.params, msg);
+      break;
     default: {
       throw new Error(`invalid attr: ${attr} is not supported.`);
     }
@@ -181,8 +190,8 @@ export function encodeAttr(attr: AttrWithoutLength, trxId: Buffer): Buffer {
   return resBuf;
 }
 
-export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
-  const attrs: Attr[] = [];
+export function decodeAttrs(buf: Buffer, header: Header): OutputAttr[] {
+  const attrs: OutputAttr[] = [];
   let offset = 0;
   while (offset + 4 < buf.length) {
     const attrType = buf.subarray(offset, offset + 2).readUInt16BE();
@@ -236,6 +245,10 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
         attrs.push({ type: kAttrType, length, value });
         break;
       }
+      case "MESSAGE-INTEGRITY": {
+        attrs.push({ type: kAttrType, length, value: vBuf });
+        break;
+      }
       default:
         throw new Error(`invalid attr type; ${kAttrType} is not supported.`);
     }
@@ -244,7 +257,7 @@ export function decodeAttrs(buf: Buffer, header: Header): Attr[] {
   return attrs;
 }
 
-export function readAttrs(msg: RawStunMsg, header: Header): Attr[] {
+export function readAttrs(msg: RawStunMsg, header: Header): OutputAttr[] {
   return decodeAttrs(msg.subarray(20, 20 + header.length), header);
 }
 
@@ -456,12 +469,9 @@ function calcMessageIntegrity(
 const MESSAGE_INTEGRITY_BYTES = 20;
 
 export function encodeMessageIntegrityValue(
-  arg: Credentials & {
-    msg: RawStunMsg;
-  },
-): Buffer {
-  const { msg } = arg;
-
+  params: InputMessageIntegrityAttr["params"],
+  msg: RawStunMsg,
+): OutputMessageIntegrityAttr["value"] {
   const tlBuf = Buffer.alloc(4);
   tlBuf.writeUInt16BE(attrTypeRecord["MESSAGE-INTEGRITY"]);
   tlBuf.writeUInt16BE(MESSAGE_INTEGRITY_BYTES);
@@ -470,7 +480,7 @@ export function encodeMessageIntegrityValue(
   const tmpMsg = Buffer.concat([Buffer.from(msg), tlBuf, vBuf]) as RawStunMsg;
   tmpMsg.writeUInt16BE(tmpMsg.length);
   const integrity = calcMessageIntegrity({
-    ...arg,
+    ...params,
     msg: tmpMsg,
   });
 

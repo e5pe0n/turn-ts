@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, test } from "vitest";
 import { magicCookie } from "./consts.js";
-import { classRecord, methodRecord } from "./header.js";
+import { classRecord, methodRecord, writeTrxId } from "./header.js";
 import { type StunMsg, decodeStunMsg, encodeStunMsg } from "./msg.js";
 
 describe("decodeStunMsg", () => {
@@ -141,5 +141,86 @@ describe("encodeStunMsg", () => {
         ]),
       ]),
     );
+  });
+});
+
+describe("message integrity should be changed if some part of a message is modified", () => {
+  test("long-term credentials", () => {
+    const trxId1 = Buffer.from([
+      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+    ]);
+    const msgBuf = encodeStunMsg({
+      header: {
+        cls: classRecord.successResponse,
+        method: methodRecord.binding,
+        trxId: trxId1,
+      },
+      attrs: [
+        {
+          type: "MESSAGE-INTEGRITY",
+          params: {
+            term: "long",
+            username: "user",
+            realm: "realm",
+            password: "pass",
+          },
+        },
+      ],
+    });
+
+    // modify the first byte x81 -> x80
+    const trxId2 = trxId1.fill(0x80, 0, 1);
+    writeTrxId(msgBuf, trxId2);
+
+    const msg1 = decodeStunMsg(msgBuf);
+    const msgIntegrityAttr1 = msg1.attrs.filter(
+      (v) => v.type === "MESSAGE-INTEGRITY",
+    )[0];
+    const msg2 = decodeStunMsg(msgBuf);
+    const msgIntegrityAttr2 = msg2.attrs.filter(
+      (v) => v.type === "MESSAGE-INTEGRITY",
+    )[0];
+
+    expect(msgIntegrityAttr1).not.toBeUndefined();
+    expect(msgIntegrityAttr2).not.toBeUndefined();
+    expect(msgIntegrityAttr1!.value).not.toBe(msgIntegrityAttr2!.value);
+  });
+  test("short-term credentials", () => {
+    const trxId1 = Buffer.from([
+      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+    ]);
+    const msgBuf = encodeStunMsg({
+      header: {
+        cls: classRecord.successResponse,
+        method: methodRecord.binding,
+        trxId: trxId1,
+      },
+      attrs: [
+        {
+          type: "MESSAGE-INTEGRITY",
+          params: {
+            term: "short",
+            password: "pass",
+          },
+        },
+      ],
+    });
+
+    // modify the first byte x81 -> x80
+    const trxId2 = trxId1.fill(0x80, 0, 1);
+    writeTrxId(msgBuf, trxId2);
+
+    const msg1 = decodeStunMsg(msgBuf);
+    const msgIntegrityAttr1 = msg1.attrs.filter(
+      (v) => v.type === "MESSAGE-INTEGRITY",
+    )[0];
+    const msg2 = decodeStunMsg(msgBuf);
+    const msgIntegrityAttr2 = msg2.attrs.filter(
+      (v) => v.type === "MESSAGE-INTEGRITY",
+    )[0];
+
+    expect(msgIntegrityAttr1).not.toBeUndefined();
+    expect(msgIntegrityAttr2).not.toBeUndefined();
+    expect(msgIntegrityAttr1!.value).not.toBe(msgIntegrityAttr2!.value);
   });
 });

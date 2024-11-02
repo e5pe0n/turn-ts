@@ -78,7 +78,11 @@ export function readMsgType(msg: RawStunMsg): MsgType {
 }
 
 export function readMsgLength(msg: RawStunMsg): number {
-  return msg.subarray(2, 4).readInt16BE();
+  return msg.subarray(2, 4).readUInt16BE();
+}
+
+export function writeMsgLength(msg: RawStunMsg, length: number): void {
+  msg.subarray(2, 4).writeUInt16BE(length);
 }
 
 export function readMagicCookie(msg: RawStunMsg): number {
@@ -87,6 +91,10 @@ export function readMagicCookie(msg: RawStunMsg): number {
 
 export function readTrxId(msg: RawStunMsg): Buffer {
   return Buffer.alloc(12, msg.subarray(8, 20));
+}
+
+export function writeTrxId(msg: RawStunMsg, trxId: Buffer): void {
+  msg.fill(trxId, 8, 20);
 }
 
 export function encodeHeader({

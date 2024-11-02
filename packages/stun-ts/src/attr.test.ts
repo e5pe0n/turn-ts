@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  type Attr,
   type ErrorCodeAttr,
   type MappedAddressAttr,
   type NonceAttr,
+  type OutputAttr,
   type RealmAttr,
   type UsernameAttr,
   type XorMappedAddressAttr,
@@ -24,6 +24,7 @@ import {
 } from "./attr.js";
 import { magicCookie } from "./consts.js";
 import { type Header, classRecord, methodRecord } from "./header.js";
+import type { RawStunMsg } from "./types.js";
 
 describe("encodeMappedAddressValue", () => {
   it("encodes IPv4 MAPPED-ADDRESS value", () => {
@@ -524,6 +525,19 @@ describe("encodeAttr", () => {
     const trxId = Buffer.from([
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
     ]);
+    const hBuf = Buffer.concat([
+      Buffer.from([
+        0x00, // STUN Message Type: Binding request
+        0x01,
+        0x00, // Message Length: 12 bytes
+        0x0c,
+        0x21, // Magic Cookie
+        0x12,
+        0xa4,
+        0x42,
+      ]),
+      trxId,
+    ]);
     const res = encodeAttr(
       {
         type: "XOR-MAPPED-ADDRESS",
@@ -533,7 +547,7 @@ describe("encodeAttr", () => {
           address: "201.199.197.89",
         },
       },
-      trxId,
+      hBuf as RawStunMsg,
     );
     expect(res).toEqual(
       Buffer.from([
@@ -619,6 +633,6 @@ describe("decodeAttrs", () => {
           address: "201.199.197.89",
         },
       },
-    ] satisfies Attr[]);
+    ] satisfies OutputAttr[]);
   });
 });
