@@ -11,30 +11,6 @@ importers:
       '@biomejs/biome':
         specifier: 1.9.0
         version: 1.9.0
-      typescript:
-        specifier: 5.6.2
-        version: 5.6.2
-
-  packages/stun-ts:
-    devDependencies:
-      '@biomejs/biome':
-        specifier: 1.9.0
-        version: 1.9.0
-      '@types/node':
-        specifier: '20'
-        version: 20.16.5
-      typescript:
-        specifier: 5.6.2
-        version: 5.6.2
-      vitest:
-        specifier: 2.1.1
-        version: 2.1.1(@types/node@20.16.5)
-
-  packages/turn-ts:
-    devDependencies:
-      '@biomejs/biome':
-        specifier: 1.9.0
-        version: 1.9.0
       '@types/node':
         specifier: '20'
         version: 20.16.5

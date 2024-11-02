@@ -1,0 +1,25 @@
+{
+  "name": "@e5pe0n/turn-ts",
+  "version": "0.0.0",
+  "description": "",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "type:check": "tsc --noEmit",
+    "check": "pnpm type:check && biome check",
+    "fix": "biome check --write",
+    "test": "vitest --run --typecheck",
+    "test:par": "vitest --run --typecheck --project parallel",
+    "test:seq": "vitest --run --typecheck --project sequential",
+    "test:all": "pnpm test:par && pnpm test:seq"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@biomejs/biome": "1.9.0",
+    "@types/node": "20",
+    "typescript": "5.6.2",
+    "vitest": "2.1.1"
+  }
+}
