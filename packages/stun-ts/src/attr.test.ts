@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  type ErrorCodeAttr,
-  type MappedAddressAttr,
-  type NonceAttr,
-  type OutputAttr,
-  type RealmAttr,
-  type UsernameAttr,
-  type XorMappedAddressAttr,
   decodeAttrs,
   decodeErrorCodeValue,
   decodeMappedAddressValue,
@@ -21,14 +14,21 @@ import {
   encodeRealmValue,
   encodeUsernameValue,
   encodeXorMappedAddressValue,
+  type InputErrorCodeAttr,
+  type InputMappedAddressAttr,
+  type InputNonceAttr,
+  type InputRealmAttr,
+  type InputUsernameAttr,
+  type InputXorMappedAddressAttr,
+  type OutputAttr,
 } from "./attr.js";
 import { magicCookie } from "./consts.js";
-import { type Header, msgClassRecord, msgMethodRecord } from "./header.js";
+import type { Header } from "./header.js";
 import type { RawStunMsg } from "./types.js";
 
 describe("encodeMappedAddressValue", () => {
   it("encodes IPv4 MAPPED-ADDRESS value", () => {
-    const value: MappedAddressAttr["value"] = {
+    const value: InputMappedAddressAttr["value"] = {
       family: "IPv4",
       port: 12345,
       address: "201.199.197.89",
@@ -47,7 +47,7 @@ describe("encodeMappedAddressValue", () => {
     );
   });
   it("encodes IPv6 MAPPED-ADDRESS value", () => {
-    const value: MappedAddressAttr["value"] = {
+    const value: InputMappedAddressAttr["value"] = {
       family: "IPv6",
       port: 12345,
       address: "2001:0:0:db8::1",
@@ -109,7 +109,7 @@ describe("decodeMappedAddressValue", () => {
       family: "IPv4",
       port: 12345,
       address: "201.199.197.89",
-    } satisfies MappedAddressAttr["value"]);
+    } satisfies InputMappedAddressAttr["value"]);
   });
   it("decodes IPv6 MAPPED-ADDRESS value", () => {
     const buf = Buffer.from([
@@ -138,7 +138,7 @@ describe("decodeMappedAddressValue", () => {
       family: "IPv6",
       port: 12345,
       address: "2001:0000:0000:0db8:0000:0000:0000:0001",
-    } satisfies MappedAddressAttr["value"]);
+    } satisfies InputMappedAddressAttr["value"]);
   });
 });
 
@@ -147,7 +147,7 @@ describe("encodeXorMappedAddressValue", () => {
     const trxId = Buffer.from([
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
     ]);
-    const value: XorMappedAddressAttr["value"] = {
+    const value: InputXorMappedAddressAttr["value"] = {
       family: "IPv4",
       port: 12345,
       address: "201.199.197.89",
@@ -169,7 +169,7 @@ describe("encodeXorMappedAddressValue", () => {
     const trxId = Buffer.from([
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
     ]);
-    const value: XorMappedAddressAttr["value"] = {
+    const value: InputXorMappedAddressAttr["value"] = {
       family: "IPv6",
       port: 12345,
       address: "2001:0:0:db8::1",
@@ -256,7 +256,7 @@ describe("decodeXorMappedAddressValue", () => {
       family: "IPv4",
       port: 12345,
       address: "201.199.197.89",
-    } satisfies XorMappedAddressAttr["value"]);
+    } satisfies InputXorMappedAddressAttr["value"]);
   });
   it("decodes IPv6 XOR-MAPPED-ADDRESS value", () => {
     const header: Header = {
@@ -301,13 +301,13 @@ describe("decodeXorMappedAddressValue", () => {
       family: "IPv6",
       port: 12345,
       address: "2001:0000:0000:0db8:0000:0000:0000:0001",
-    } satisfies XorMappedAddressAttr["value"]);
+    } satisfies InputXorMappedAddressAttr["value"]);
   });
 });
 
 describe("encodeErrorCodeValue", () => {
   it("throws an error if the given code is not in [300, 699]", () => {
-    const value: ErrorCodeAttr["value"] = {
+    const value: InputErrorCodeAttr["value"] = {
       code: 700,
       reason: "invalid attr type",
     };
@@ -316,7 +316,7 @@ describe("encodeErrorCodeValue", () => {
     );
   });
   it("throws an error if the given reason is not <= 763 bytes", () => {
-    const value: ErrorCodeAttr["value"] = {
+    const value: InputErrorCodeAttr["value"] = {
       code: 420,
       reason: "a".repeat(764),
     };
@@ -325,7 +325,7 @@ describe("encodeErrorCodeValue", () => {
     );
   });
   it("encodes ERROR-CODE value", () => {
-    const value: ErrorCodeAttr["value"] = {
+    const value: InputErrorCodeAttr["value"] = {
       code: 420,
       reason: "invalid attr type", // 17 bytes
     };
@@ -462,12 +462,12 @@ describe("decodeErrorCodeValue", () => {
 
 describe("encodeUsernameValue", () => {
   it("encodes USERNAME value", () => {
-    const value: UsernameAttr["value"] = "user1";
+    const value: InputUsernameAttr["value"] = "user1";
     const res = encodeUsernameValue(value);
     expect(res).toEqual(Buffer.from([0x75, 0x73, 0x65, 0x72, 0x31]));
   });
   it("throws an error if the given username is not < 513 bytes", () => {
-    const value: UsernameAttr["value"] = "u".repeat(513);
+    const value: InputUsernameAttr["value"] = "u".repeat(513);
     expect(() => encodeUsernameValue(value)).toThrowError(/invalid username/);
   });
 });
@@ -482,12 +482,12 @@ describe("decodeUsernameValue", () => {
 
 describe("encodeRealmValue", () => {
   it("encodes REALM value", () => {
-    const value: RealmAttr["value"] = "realm";
+    const value: InputRealmAttr["value"] = "realm";
     const res = encodeRealmValue(value);
     expect(res).toEqual(Buffer.from([0x72, 0x65, 0x61, 0x6c, 0x6d]));
   });
   it("throws an error if the given realm is not <= 763 bytes", () => {
-    const value: RealmAttr["value"] = "r".repeat(764);
+    const value: InputRealmAttr["value"] = "r".repeat(764);
     expect(() => encodeRealmValue(value)).toThrowError(/invalid realm/);
   });
 });
@@ -502,12 +502,12 @@ describe("decodeRealmValue", () => {
 
 describe("encodeNonceValue", () => {
   it("encodes NONCE value", () => {
-    const value: NonceAttr["value"] = "nonce";
+    const value: InputNonceAttr["value"] = "nonce";
     const res = encodeNonceValue(value);
     expect(res).toEqual(Buffer.from([0x6e, 0x6f, 0x6e, 0x63, 0x65]));
   });
   it("throws an error if the given nonce is not <= 763 bytes", () => {
-    const value: NonceAttr["value"] = "n".repeat(764);
+    const value: InputNonceAttr["value"] = "n".repeat(764);
     expect(() => encodeNonceValue(value)).toThrowError(/invalid nonce/);
   });
 });

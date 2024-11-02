@@ -36,20 +36,24 @@ export const addrFamilyRecord = {
 } as const;
 type AddrFamily = keyof typeof addrFamilyRecord;
 
-export type MappedAddressAttr = {
+export type InputMappedAddressAttr = {
   type: "MAPPED-ADDRESS";
-  length: number;
   value: {
     family: AddrFamily;
     port: number;
     address: string;
   };
 };
-
-export type UsernameAttr = {
-  type: "USERNAME";
+export type OutputMappedAddressAttr = InputMappedAddressAttr & {
   length: number;
+};
+
+export type InputUsernameAttr = {
+  type: "USERNAME";
   value: string;
+};
+export type OutputUsernameAttr = InputUsernameAttr & {
+  length: number;
 };
 
 type Credentials =
@@ -66,23 +70,23 @@ type Credentials =
 
 export type InputMessageIntegrityAttr = {
   type: "MESSAGE-INTEGRITY";
-  length: number;
   params: Credentials;
 };
-
 export type OutputMessageIntegrityAttr = {
   type: "MESSAGE-INTEGRITY";
   length: number;
   value: Buffer;
 };
 
-export type ErrorCodeAttr = {
+export type InputErrorCodeAttr = {
   type: "ERROR-CODE";
-  length: number;
   value: {
     code: number;
     reason: string;
   };
+};
+export type OutputErrorCodeAttr = InputErrorCodeAttr & {
+  length: number;
 };
 
 type UnknownAttributesAttr = {
@@ -91,26 +95,32 @@ type UnknownAttributesAttr = {
   value: unknown;
 };
 
-export type RealmAttr = {
+export type InputRealmAttr = {
   type: "REALM";
-  length: number;
   value: string;
 };
+export type OutputRealmAttr = InputRealmAttr & {
+  length: number;
+};
 
-export type NonceAttr = {
+export type InputNonceAttr = {
   type: "NONCE";
-  length: number;
   value: string;
 };
-
-export type XorMappedAddressAttr = {
-  type: "XOR-MAPPED-ADDRESS";
+export type OutputNonceAttr = InputNonceAttr & {
   length: number;
+};
+
+export type InputXorMappedAddressAttr = {
+  type: "XOR-MAPPED-ADDRESS";
   value: {
     family: AddrFamily;
     port: number;
     address: string;
   };
+};
+export type OutputXorMappedAddressAttr = InputXorMappedAddressAttr & {
+  length: number;
 };
 
 type SoftwareAttr = {
@@ -132,26 +142,26 @@ type FingerprintAttr = {
 };
 
 export type OutputAttr =
-  | MappedAddressAttr
-  | UsernameAttr
+  | OutputMappedAddressAttr
+  | OutputUsernameAttr
   | OutputMessageIntegrityAttr
-  | ErrorCodeAttr
+  | OutputErrorCodeAttr
   // | UnknownAttributesAttr
-  | RealmAttr
-  | NonceAttr
-  | XorMappedAddressAttr;
+  | OutputRealmAttr
+  | OutputNonceAttr
+  | OutputXorMappedAddressAttr;
 // | SoftwareAttr
 // | AlternateServerAttr
 // | FingerprintAttr;
 
 export type InputAttr =
-  | Omit<MappedAddressAttr, "length">
-  | Omit<XorMappedAddressAttr, "length">
-  | Omit<ErrorCodeAttr, "length">
-  | Omit<UsernameAttr, "length">
-  | Omit<RealmAttr, "length">
-  | Omit<NonceAttr, "length">
-  | Omit<InputMessageIntegrityAttr, "length">;
+  | InputMappedAddressAttr
+  | InputXorMappedAddressAttr
+  | InputErrorCodeAttr
+  | InputUsernameAttr
+  | InputRealmAttr
+  | InputNonceAttr
+  | InputMessageIntegrityAttr;
 
 export function encodeAttr(attr: InputAttr, msg: RawStunMsg): Buffer {
   const tlBuf = Buffer.alloc(4);
@@ -262,7 +272,7 @@ export function readAttrs(msg: RawStunMsg, header: Header): OutputAttr[] {
 }
 
 export function encodeMappedAddressValue(
-  value: MappedAddressAttr["value"],
+  value: InputMappedAddressAttr["value"],
 ): Buffer {
   const { family, port, address: addr } = value;
   const buf = Buffer.alloc(family === "IPv4" ? 8 : 20);
@@ -275,7 +285,7 @@ export function encodeMappedAddressValue(
 
 export function decodeMappedAddressValue(
   buf: Buffer,
-): MappedAddressAttr["value"] {
+): InputMappedAddressAttr["value"] {
   const family = buf[1]!;
   assertValueOf(
     family,
@@ -297,7 +307,7 @@ export function decodeMappedAddressValue(
 }
 
 export function encodeXorMappedAddressValue(
-  value: XorMappedAddressAttr["value"],
+  value: InputXorMappedAddressAttr["value"],
   trxId: Buffer,
 ): Buffer {
   const { family, port, address: addr } = value;
@@ -327,7 +337,7 @@ export function encodeXorMappedAddressValue(
 export function decodeXorMappedAddressValue(
   buf: Buffer,
   header: Header,
-): XorMappedAddressAttr["value"] {
+): InputXorMappedAddressAttr["value"] {
   const family = buf[1]!;
   assertValueOf(
     family,
@@ -352,7 +362,9 @@ export function decodeXorMappedAddressValue(
   }
 }
 
-export function encodeErrorCodeValue(value: ErrorCodeAttr["value"]): Buffer {
+export function encodeErrorCodeValue(
+  value: InputErrorCodeAttr["value"],
+): Buffer {
   const { code, reason } = value;
   if (!(300 <= code && code <= 699)) {
     throw new Error(
@@ -373,7 +385,7 @@ export function encodeErrorCodeValue(value: ErrorCodeAttr["value"]): Buffer {
   return resBuf;
 }
 
-export function decodeErrorCodeValue(buf: Buffer): ErrorCodeAttr["value"] {
+export function decodeErrorCodeValue(buf: Buffer): InputErrorCodeAttr["value"] {
   const cls = buf.subarray(2, 3).readUInt8();
   if (!(3 <= cls && cls <= 6)) {
     throw new Error(
@@ -396,7 +408,7 @@ export function decodeErrorCodeValue(buf: Buffer): ErrorCodeAttr["value"] {
   return { code: cls * 100 + num, reason };
 }
 
-export function encodeUsernameValue(value: UsernameAttr["value"]): Buffer {
+export function encodeUsernameValue(value: InputUsernameAttr["value"]): Buffer {
   const buf = Buffer.from(value, "utf8");
   if (!(buf.length < 513)) {
     throw new Error(
@@ -410,11 +422,11 @@ export function decodeStrValue(buf: Buffer): string {
   return buf.toString("utf8");
 }
 
-export function decodeUsernameValue(buf: Buffer): UsernameAttr["value"] {
+export function decodeUsernameValue(buf: Buffer): OutputUsernameAttr["value"] {
   return decodeStrValue(buf);
 }
 
-export function encodeRealmValue(value: RealmAttr["value"]): Buffer {
+export function encodeRealmValue(value: OutputRealmAttr["value"]): Buffer {
   const buf = Buffer.from(value, "utf8");
   if (!(buf.length <= 763)) {
     throw new Error(
@@ -424,11 +436,11 @@ export function encodeRealmValue(value: RealmAttr["value"]): Buffer {
   return buf;
 }
 
-export function decodeRealmValue(buf: Buffer): RealmAttr["value"] {
+export function decodeRealmValue(buf: Buffer): OutputRealmAttr["value"] {
   return decodeStrValue(buf);
 }
 
-export function encodeNonceValue(value: NonceAttr["value"]): Buffer {
+export function encodeNonceValue(value: OutputNonceAttr["value"]): Buffer {
   const buf = Buffer.from(value, "utf8");
   if (!(buf.length <= 763)) {
     throw new Error(
@@ -438,7 +450,7 @@ export function encodeNonceValue(value: NonceAttr["value"]): Buffer {
   return buf;
 }
 
-export function decodeNonceValue(buf: Buffer): NonceAttr["value"] {
+export function decodeNonceValue(buf: Buffer): OutputNonceAttr["value"] {
   return decodeStrValue(buf);
 }
 
