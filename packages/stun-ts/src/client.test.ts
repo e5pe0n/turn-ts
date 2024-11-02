@@ -6,7 +6,6 @@ import {
   type SuccessResponse,
   createClient,
 } from "./client.js";
-import { classRecord, methodRecord } from "./header.js";
 import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 
 describe("send", () => {
@@ -29,7 +28,7 @@ describe("send", () => {
           server.bind(12345, "127.0.0.1");
 
           // Act
-          await client.send("indication", "binding");
+          await client.send("Indication", "Binding");
           const buf = await res;
 
           // Assert
@@ -61,7 +60,7 @@ describe("send", () => {
           const { header, attrs } = decodeStunMsg(msg);
           const res = encodeStunMsg({
             header: {
-              cls: classRecord.errorResponse,
+              cls: "ErrorResponse",
               method: header.method,
               trxId: header.trxId,
             },
@@ -90,7 +89,7 @@ describe("send", () => {
           server.bind(12345, "127.0.0.1");
 
           // Act
-          const res = await client.send("request", "binding");
+          const res = await client.send("Request", "Binding");
 
           // Assert
           expect(res).toEqual({
@@ -123,7 +122,7 @@ describe("send", () => {
 
           // Act & Assert
           const startedAt = Date.now();
-          await expect(client.send("request", "binding")).rejects.toThrowError(
+          await expect(client.send("Request", "Binding")).rejects.toThrowError(
             /timeout/i,
           );
           expect(resAts).toHaveLength(4);
@@ -156,7 +155,7 @@ describe("send", () => {
 
           // Act && Assert
           const startedAt = Date.now();
-          await expect(client.send("request", "binding")).rejects.toThrowError(
+          await expect(client.send("Request", "Binding")).rejects.toThrowError(
             /retries/i,
           );
           expect(resAts).toHaveLength(4);
@@ -178,8 +177,8 @@ describe("send", () => {
           if (resAts.length === 2) {
             const res = encodeStunMsg({
               header: {
-                cls: classRecord.successResponse,
-                method: methodRecord.binding,
+                cls: "SuccessResponse",
+                method: "Binding",
                 trxId: header.trxId,
               },
               attrs: [
@@ -214,7 +213,7 @@ describe("send", () => {
 
           // Act
           const startedAt = Date.now();
-          const res = await client.send("request", "binding");
+          const res = await client.send("Request", "Binding");
 
           // Assert
           expect(res).toEqual({
@@ -237,8 +236,8 @@ describe("send", () => {
         const { header, attrs } = decodeStunMsg(msg);
         const res = encodeStunMsg({
           header: {
-            cls: classRecord.successResponse,
-            method: methodRecord.binding,
+            cls: "SuccessResponse",
+            method: "Binding",
             trxId: header.trxId,
           },
           attrs: [
@@ -267,7 +266,7 @@ describe("send", () => {
         server.bind(12345, "127.0.0.1");
 
         // Act
-        const res = await client.send("request", "binding");
+        const res = await client.send("Request", "Binding");
 
         // Assert
         expect(res).toEqual({
@@ -307,7 +306,7 @@ describe("send", () => {
           server.listen(12345, "127.0.0.1");
 
           // Act
-          await client.send("indication", "binding");
+          await client.send("Indication", "Binding");
           const buf = await p;
 
           // Assert
@@ -340,7 +339,7 @@ describe("send", () => {
             const { header } = decodeStunMsg(data);
             const res = encodeStunMsg({
               header: {
-                cls: classRecord.errorResponse,
+                cls: "ErrorResponse",
                 method: header.method,
                 trxId: header.trxId,
               },
@@ -370,7 +369,7 @@ describe("send", () => {
           server.listen(12345, "127.0.0.1");
 
           // Act
-          const res = await client.send("request", "binding");
+          const res = await client.send("Request", "Binding");
 
           // Assert
           expect(res).toEqual({
@@ -397,7 +396,7 @@ describe("send", () => {
           server.listen(12345, "127.0.0.1");
 
           // Act and Assert
-          await expect(client.send("request", "binding")).rejects.toThrowError(
+          await expect(client.send("Request", "Binding")).rejects.toThrowError(
             /timeout/i,
           );
         } finally {
@@ -417,8 +416,8 @@ describe("send", () => {
             } = decodeStunMsg(data);
             const res = encodeStunMsg({
               header: {
-                cls: classRecord.successResponse,
-                method: methodRecord.binding,
+                cls: "SuccessResponse",
+                method: "Binding",
                 trxId,
               },
               attrs: [
@@ -449,7 +448,7 @@ describe("send", () => {
           server.listen(12345, "127.0.0.1");
 
           // Act
-          const res = await client.send("request", "binding");
+          const res = await client.send("Request", "Binding");
           const reqBuf = await p;
 
           // Assert

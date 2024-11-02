@@ -10,7 +10,7 @@ it("receives a request then return a response", async () => {
     address: "127.0.0.1",
     protocol: "udp",
   });
-  const res = await client.send("request", "binding");
+  const res = await client.send("Request", "Binding");
   expect(res).toEqual({
     success: true,
     address: "127.0.0.1",

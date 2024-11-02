@@ -1,16 +1,10 @@
 import { randomBytes } from "node:crypto";
-import { type Socket, createSocket } from "node:dgram";
+import { createSocket, type Socket } from "node:dgram";
 import { createConnection } from "node:net";
-import { classRecord, encodeHeader, methodRecord } from "./header.js";
+import { encodeHeader, type MsgClass, type MsgMethod } from "./header.js";
 import { retry } from "./helpers.js";
 import { decodeStunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
-
-export type MessageClass = Extract<
-  keyof typeof classRecord,
-  "request" | "indication"
->;
-export type MessageMethod = keyof typeof methodRecord;
 
 export type ErrorResponse = {
   success: false;
@@ -103,28 +97,25 @@ class UdpClient {
   }
 
   async send(
-    cls: Extract<MessageClass, "indication">,
-    method: MessageMethod,
+    cls: Extract<MsgClass, "Indication">,
+    method: MsgMethod,
   ): Promise<undefined>;
   async send(
-    cls: Extract<MessageClass, "request">,
-    method: MessageMethod,
+    cls: Extract<MsgClass, "Request">,
+    method: MsgMethod,
   ): Promise<Response>;
-  async send(
-    cls: MessageClass,
-    method: MessageMethod,
-  ): Promise<undefined | Response> {
+  async send(cls: MsgClass, method: MsgMethod): Promise<undefined | Response> {
     const trxId = randomBytes(12);
     const hBuf = encodeHeader({
-      cls: classRecord[cls],
-      method: methodRecord[method],
+      cls,
+      method,
       trxId,
       length: 0,
     });
     this.#sock.bind();
     try {
       switch (cls) {
-        case "indication":
+        case "Indication":
           await new Promise<void>((resolve, reject) => {
             this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
               if (err) {
@@ -134,7 +125,7 @@ class UdpClient {
             });
           });
           return;
-        case "request": {
+        case "Request": {
           const _res = async (): Promise<Buffer> =>
             new Promise((resolve, reject) => {
               this.#sock.on("message", (msg) => {
@@ -184,26 +175,23 @@ class TcpClient {
   }
 
   async send(
-    cls: Extract<MessageClass, "indication">,
-    method: MessageMethod,
+    cls: Extract<MsgClass, "Indication">,
+    method: MsgMethod,
   ): Promise<undefined>;
   async send(
-    cls: Extract<MessageClass, "request">,
-    method: MessageMethod,
+    cls: Extract<MsgClass, "Request">,
+    method: MsgMethod,
   ): Promise<Response>;
-  async send(
-    cls: MessageClass,
-    method: MessageMethod,
-  ): Promise<undefined | Response> {
+  async send(cls: MsgClass, method: MsgMethod): Promise<undefined | Response> {
     const trxId = randomBytes(12);
     const hBuf = encodeHeader({
-      cls: classRecord[cls],
-      method: methodRecord[method],
+      cls,
+      method,
       trxId,
       length: 0,
     });
     switch (cls) {
-      case "indication": {
+      case "Indication": {
         await new Promise<void>((resolve, reject) => {
           const sock = createConnection(this.#port, this.#address, () => {
             sock.write(hBuf);
@@ -217,7 +205,7 @@ class TcpClient {
         });
         return;
       }
-      case "request": {
+      case "Request": {
         const resBuf = await new Promise<Buffer>((resolve, reject) => {
           const sock = createConnection(
             { port: this.#port, host: this.#address, timeout: this.#tiMs },

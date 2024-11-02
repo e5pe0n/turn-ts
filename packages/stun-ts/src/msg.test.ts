@@ -1,6 +1,6 @@
 import { describe, expect, it, test } from "vitest";
 import { magicCookie } from "./consts.js";
-import { classRecord, methodRecord, writeTrxId } from "./header.js";
+import { writeTrxId } from "./header.js";
 import { type StunMsg, decodeStunMsg, encodeStunMsg } from "./msg.js";
 
 describe("decodeStunMsg", () => {
@@ -66,8 +66,8 @@ describe("decodeStunMsg", () => {
     const buf = Buffer.concat([hBuf, attrBuf]);
     expect(decodeStunMsg(buf)).toEqual({
       header: {
-        cls: classRecord.request,
-        method: methodRecord.binding,
+        cls: "Request",
+        method: "Binding",
         length: 12,
         magicCookie,
         trxId,
@@ -94,8 +94,8 @@ describe("encodeStunMsg", () => {
     ]);
     const res = encodeStunMsg({
       header: {
-        cls: classRecord.successResponse,
-        method: methodRecord.binding,
+        cls: "SuccessResponse",
+        method: "Binding",
         trxId,
       },
       attrs: [
@@ -151,8 +151,8 @@ describe("message integrity should be changed if some part of a message is modif
     ]);
     const msgBuf = encodeStunMsg({
       header: {
-        cls: classRecord.successResponse,
-        method: methodRecord.binding,
+        cls: "SuccessResponse",
+        method: "Binding",
         trxId: trxId1,
       },
       attrs: [
@@ -191,8 +191,8 @@ describe("message integrity should be changed if some part of a message is modif
     ]);
     const msgBuf = encodeStunMsg({
       header: {
-        cls: classRecord.successResponse,
-        method: methodRecord.binding,
+        cls: "SuccessResponse",
+        method: "Binding",
         trxId: trxId1,
       },
       attrs: [

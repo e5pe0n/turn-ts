@@ -2,11 +2,11 @@ import { describe, expect, it, test } from "vitest";
 import {
   type Header,
   type MsgType,
-  classRecord,
+  msgClassRecord,
   decodeMsgType,
   encodeHeader,
   encodeMsgType,
-  methodRecord,
+  msgMethodRecord,
   readHeader,
 } from "./header.js";
 import type { RawStunMsg } from "./types.js";
@@ -14,34 +14,26 @@ import type { RawStunMsg } from "./types.js";
 describe("encodeMsgType", () => {
   test.each([
     {
-      arg: { method: methodRecord.binding, cls: classRecord.request },
+      arg: { method: "Binding", cls: "Request" },
       expected: Buffer.from([0b00_000000, 0b00000001]),
-      methodName: "Binding",
-      className: "request",
     },
     {
       arg: {
-        method: methodRecord.binding,
-        cls: classRecord.successResponse,
+        method: "Binding",
+        cls: "SuccessResponse",
       },
       expected: Buffer.from([0b00_000001, 0b00000001]),
-      methodName: "Binding",
-      className: "success response",
     },
     {
       arg: {
-        method: methodRecord.binding,
-        cls: classRecord.errorResponse,
+        method: "Binding",
+        cls: "ErrorResponse",
       },
       expected: Buffer.from([0b00_000001, 0b00010001]),
-      methodName: "Binding",
-      className: "error response",
     },
   ] satisfies {
     arg: MsgType;
     expected: Buffer;
-    methodName: string;
-    className: string;
   }[])("encodes a $methodName $className message type", ({ arg, expected }) => {
     expect(encodeMsgType(arg)).toEqual(expected);
   });
@@ -52,32 +44,35 @@ describe("decodeMsgType", () => {
     [
       {
         arg: Buffer.from([0b000000, 0b00000001]),
-        expected: { method: methodRecord.binding, cls: classRecord.request },
-        methodName: "Binding",
-        className: "request",
-      },
+        expected: {
+          method: "Binding",
+          cls: "Request",
+        },
+      } as const,
       {
         arg: Buffer.from([0b000001, 0b00000001]),
         expected: {
-          method: methodRecord.binding,
-          cls: classRecord.successResponse,
+          method: "binding",
+          cls: "successResponse",
         },
-        methodName: "Binding",
-        className: "success response",
-      },
+      } as const,
       {
         arg: Buffer.from([0b000001, 0b00010001]),
         expected: {
-          method: methodRecord.binding,
-          cls: classRecord.errorResponse,
+          method: "binding",
+          cls: "errorResponse",
         },
-        methodName: "Binding",
-        className: "error response",
-      },
+      } as const,
     ],
   ])(
-    "decodes a $methodName $className message type",
-    ({ arg, expected, methodName, className }) => {
+    "decodes a $expected.method $expected.cls message type",
+    ({
+      arg,
+      expected,
+    }: {
+      arg: Buffer;
+      expected: MsgType;
+    }) => {
       expect(decodeMsgType(arg)).toEqual(expected);
     },
   );
@@ -92,7 +87,12 @@ describe("encodeHeader", () => {
     const trxId = Buffer.from([
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
     ]);
-    const res = encodeHeader({ cls: 0b10, method: 0x0001, length: 28, trxId });
+    const res = encodeHeader({
+      cls: "SuccessResponse",
+      method: "Binding",
+      length: 28,
+      trxId,
+    });
     expect(res).toEqual(
       Buffer.concat([
         Buffer.from([
@@ -150,8 +150,8 @@ describe("readHeader", () => {
     ]) as RawStunMsg;
     const res = readHeader(buf);
     expect(res).toEqual({
-      cls: classRecord.request,
-      method: methodRecord.binding,
+      cls: "Request",
+      method: "Binding",
       length: 0x1011,
       magicCookie: 0x2112a442,
       trxId,

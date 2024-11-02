@@ -1,5 +1,4 @@
 import { type Socket, createSocket } from "node:dgram";
-import { classRecord, methodRecord } from "./header.js";
 import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
 
@@ -21,11 +20,11 @@ export class Server {
       } = decodeStunMsg(msg);
       let res: Buffer;
       switch (method) {
-        case methodRecord.binding:
+        case "Binding":
           res = encodeStunMsg({
             header: {
-              cls: classRecord.successResponse,
-              method: methodRecord.binding,
+              cls: "SuccessResponse",
+              method: "Binding",
               trxId: trxId,
             },
             attrs: [

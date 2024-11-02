@@ -1,47 +1,55 @@
 import { magicCookie } from "./consts.js";
-import { type ValueOf, assertValueOf, numToBuf } from "./helpers.js";
+import { assertKeyOf, assertValueOf, getKey, numToBuf } from "./helpers.js";
 import type { RawStunMsg } from "./types.js";
 
-export const classRecord = {
-  request: 0b00,
-  indication: 0b01,
-  successResponse: 0b10,
-  errorResponse: 0b11,
+export const msgClassRecord = {
+  Request: 0b00,
+  Indication: 0b01,
+  SuccessResponse: 0b10,
+  ErrorResponse: 0b11,
 } as const;
+export type MsgClass = keyof typeof msgClassRecord;
 
-export type Class = ValueOf<typeof classRecord>;
-
-export const methodRecord = {
-  binding: 0x0001,
+export const msgMethodRecord = {
+  Binding: 0x0001,
 } as const;
-
-export type Method = ValueOf<typeof methodRecord>;
+export type MsgMethod = keyof typeof msgMethodRecord;
 
 export type MsgType = {
-  cls: Class;
-  method: Method;
+  cls: MsgClass;
+  method: MsgMethod;
 };
 
 export type Header = {
-  cls: Class;
-  method: Method;
+  cls: MsgClass;
+  method: MsgMethod;
   length: number; // bytes
   magicCookie: typeof magicCookie;
   trxId: Buffer;
 };
 
 export function encodeMsgType({ cls, method }: MsgType): Buffer {
+  assertKeyOf(
+    cls,
+    msgClassRecord,
+    new Error(`invalid class; ${cls} is not a valid class.`),
+  );
+  assertKeyOf(
+    method,
+    msgMethodRecord,
+    new Error(`invalid method; ${method} is not a valid method.`),
+  );
   const buf = Buffer.alloc(2);
   let n = 0;
-  n |= method & 0b1111;
-  if (cls & 0b01) {
+  n |= msgMethodRecord[method] & 0b1111;
+  if (msgClassRecord[cls] & 0b01) {
     n |= 1 << 4;
   }
-  n |= method & (0b111 << 5);
-  if (cls & 0b10) {
+  n |= msgMethodRecord[method] & (0b111 << 5);
+  if (msgClassRecord[cls] & 0b10) {
     n |= 1 << 8;
   }
-  n |= method & (0b11111 << 9);
+  n |= msgMethodRecord[method] & (0b11111 << 9);
   buf.writeUInt16BE(n);
   return buf;
 }
@@ -64,12 +72,19 @@ export function decodeMsgType(buf: Buffer): MsgType {
 
   assertValueOf(
     m,
-    methodRecord,
+    msgMethodRecord,
     new Error(`${m.toString(2)} is not a method.`),
   );
-  assertValueOf(c, classRecord, new Error(`${c.toString(2)} is not a class.`));
+  assertValueOf(
+    c,
+    msgClassRecord,
+    new Error(`${c.toString(2)} is not a class.`),
+  );
 
-  return { method: m, cls: c };
+  return {
+    method: getKey(msgMethodRecord, m),
+    cls: getKey(msgClassRecord, c),
+  };
 }
 
 export function readMsgType(msg: RawStunMsg): MsgType {
@@ -102,7 +117,12 @@ export function encodeHeader({
   method,
   length,
   trxId,
-}: { cls: Class; method: Method; length: number; trxId: Buffer }): Buffer {
+}: {
+  cls: MsgClass;
+  method: MsgMethod;
+  length: number;
+  trxId: Buffer;
+}): Buffer {
   const msgTypeBuf = encodeMsgType({ cls, method });
   const lenBuf = numToBuf(length, 2);
   const cookieBuf = numToBuf(magicCookie, 4);

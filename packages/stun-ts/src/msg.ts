@@ -5,9 +5,9 @@ import {
   readAttrs,
 } from "./attr.js";
 import {
-  type Class,
+  type MsgClass,
   type Header,
-  type Method,
+  type MsgMethod,
   encodeHeader,
   readHeader,
   writeMsgLength,
@@ -42,8 +42,8 @@ export function decodeStunMsg(buf: Buffer): StunMsg {
 
 export type EncodeStunMsgParams = {
   header: {
-    cls: Class;
-    method: Method;
+    cls: MsgClass;
+    method: MsgMethod;
     trxId: Buffer;
   };
   attrs: InputAttr[];

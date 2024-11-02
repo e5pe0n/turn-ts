@@ -23,7 +23,7 @@ import {
   encodeXorMappedAddressValue,
 } from "./attr.js";
 import { magicCookie } from "./consts.js";
-import { type Header, classRecord, methodRecord } from "./header.js";
+import { type Header, msgClassRecord, msgMethodRecord } from "./header.js";
 import type { RawStunMsg } from "./types.js";
 
 describe("encodeMappedAddressValue", () => {
@@ -210,8 +210,8 @@ describe("encodeXorMappedAddressValue", () => {
 describe("decodeXorMappedAddressValue", () => {
   it("throws an error if an invalid address family given", () => {
     const header: Header = {
-      cls: classRecord.request,
-      method: methodRecord.binding,
+      cls: "Request",
+      method: "Binding",
       length: 8, // bytes
       magicCookie,
       trxId: Buffer.from([
@@ -234,8 +234,8 @@ describe("decodeXorMappedAddressValue", () => {
   });
   it("decodes IPv4 XOR-MAPPED-ADDRESS value", () => {
     const header: Header = {
-      cls: classRecord.request,
-      method: methodRecord.binding,
+      cls: "Request",
+      method: "Binding",
       length: 8, // bytes
       magicCookie,
       trxId: Buffer.from([
@@ -260,8 +260,8 @@ describe("decodeXorMappedAddressValue", () => {
   });
   it("decodes IPv6 XOR-MAPPED-ADDRESS value", () => {
     const header: Header = {
-      cls: classRecord.request,
-      method: methodRecord.binding,
+      cls: "Request",
+      method: "Binding",
       length: 20, // bytes
       magicCookie,
       trxId: Buffer.from([
@@ -572,8 +572,8 @@ describe("encodeAttr", () => {
 describe("decodeAttrs", () => {
   it("throws an error if the value length is not enough", () => {
     const header: Header = {
-      cls: classRecord.request,
-      method: methodRecord.binding,
+      cls: "Request",
+      method: "Binding",
       length: 11,
       magicCookie,
       trxId: Buffer.from([
@@ -600,8 +600,8 @@ describe("decodeAttrs", () => {
   // TODO: Decode multiple attrs.
   it("decodes attrs", () => {
     const header: Header = {
-      cls: classRecord.request,
-      method: methodRecord.binding,
+      cls: "Request",
+      method: "Binding",
       length: 12,
       magicCookie,
       trxId: Buffer.from([

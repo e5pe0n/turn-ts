@@ -6,7 +6,7 @@ import { createClient } from "stun-ts";
     port: 19302,
     protocol: "udp",
   });
-  const res = await client.send("request", "binding");
+  const res = await client.send("Request", "Binding");
   // biome-ignore lint/suspicious/noConsole: example code
   console.log(res);
 }

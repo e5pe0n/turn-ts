@@ -85,11 +85,11 @@ export function isKeyOf<R extends object, K extends keyof R>(
   return Object.keys(r).includes(x as string);
 }
 
-export function assertKeyOf<R extends object, V extends R[keyof R]>(
+export function assertKeyOf<R extends object, K extends keyof R>(
   x: unknown,
   r: R,
   err: Error,
-): asserts x is V {
+): asserts x is K {
   if (!isKeyOf(x, r)) {
     throw err;
   }
