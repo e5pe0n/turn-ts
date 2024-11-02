@@ -142,6 +142,60 @@ describe("encodeStunMsg", () => {
       ]),
     );
   });
+  it("does not throw an error if FINGERPRINT attribute is at the last in attrs", () => {
+    const trxId = Buffer.from([
+      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+    ]);
+    expect(() =>
+      encodeStunMsg({
+        header: {
+          cls: "SuccessResponse",
+          method: "Binding",
+          trxId,
+        },
+        attrs: [
+          {
+            type: "XOR-MAPPED-ADDRESS",
+            value: {
+              family: "IPv4",
+              port: 12345,
+              address: "201.199.197.89",
+            },
+          },
+          {
+            type: "FINGERPRINT",
+          },
+        ],
+      }),
+    ).not.toThrowError(/fingerprint/i);
+  });
+  it("throws an error if FINGERPRINT attribute is not at the last in attrs", () => {
+    const trxId = Buffer.from([
+      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+    ]);
+    expect(() =>
+      encodeStunMsg({
+        header: {
+          cls: "SuccessResponse",
+          method: "Binding",
+          trxId,
+        },
+        attrs: [
+          {
+            type: "FINGERPRINT",
+          },
+          {
+            type: "XOR-MAPPED-ADDRESS",
+            value: {
+              family: "IPv4",
+              port: 12345,
+              address: "201.199.197.89",
+            },
+          },
+        ],
+      }),
+    ).toThrowError(/fingerprint/i);
+  });
 });
 
 describe("message integrity should be changed if some part of a message is modified", () => {

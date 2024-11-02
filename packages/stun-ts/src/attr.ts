@@ -10,6 +10,7 @@ import {
   xorBufs,
 } from "./helpers.js";
 import type { RawStunMsg } from "./types.js";
+import { crc32 } from "node:zlib";
 
 const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
@@ -135,10 +136,12 @@ type AlternateServerAttr = {
   value: unknown;
 };
 
-type FingerprintAttr = {
+type InputFingerprintAttr = {
   type: "FINGERPRINT";
+};
+type OutputFingerprintAttr = InputFingerprintAttr & {
   length: number;
-  value: unknown;
+  value: number;
 };
 
 export type OutputAttr =
@@ -149,10 +152,10 @@ export type OutputAttr =
   // | UnknownAttributesAttr
   | OutputRealmAttr
   | OutputNonceAttr
-  | OutputXorMappedAddressAttr;
-// | SoftwareAttr
-// | AlternateServerAttr
-// | FingerprintAttr;
+  | OutputXorMappedAddressAttr
+  // | SoftwareAttr
+  // | AlternateServerAttr
+  | OutputFingerprintAttr;
 
 export type InputAttr =
   | InputMappedAddressAttr
@@ -161,7 +164,8 @@ export type InputAttr =
   | InputUsernameAttr
   | InputRealmAttr
   | InputNonceAttr
-  | InputMessageIntegrityAttr;
+  | InputMessageIntegrityAttr
+  | InputFingerprintAttr;
 
 export function encodeAttr(attr: InputAttr, msg: RawStunMsg): Buffer {
   const tlBuf = Buffer.alloc(4);
@@ -189,6 +193,9 @@ export function encodeAttr(attr: InputAttr, msg: RawStunMsg): Buffer {
       break;
     case "MESSAGE-INTEGRITY":
       vBuf = encodeMessageIntegrityValue(attr.params, msg);
+      break;
+    case "FINGERPRINT":
+      vBuf = encodeFingerprintValue(msg);
       break;
     default: {
       throw new Error(`invalid attr: ${attr} is not supported.`);
@@ -257,6 +264,11 @@ export function decodeAttrs(buf: Buffer, header: Header): OutputAttr[] {
       }
       case "MESSAGE-INTEGRITY": {
         attrs.push({ type: kAttrType, length, value: vBuf });
+        break;
+      }
+      case "FINGERPRINT": {
+        const value = vBuf.readInt32BE();
+        attrs.push({ type: kAttrType, length, value });
         break;
       }
       default:
@@ -497,4 +509,14 @@ export function encodeMessageIntegrityValue(
   });
 
   return integrity;
+}
+
+// https://datatracker.ietf.org/doc/html/rfc5389#section-15.5
+const FINGERPRINT_XORER = 0x5354554e;
+
+export function encodeFingerprintValue(msg: RawStunMsg): Buffer {
+  const buf = Buffer.alloc(4);
+  const fingerprint = crc32(msg) ^ FINGERPRINT_XORER;
+  buf.writeInt32BE(fingerprint);
+  return buf;
 }

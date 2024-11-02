@@ -60,6 +60,14 @@ export function encodeStunMsg({
     length: 0,
   });
   let msgBuf = hBuf as RawStunMsg;
+  if (attrs.length >= 2) {
+    const idx = attrs.findIndex((v) => v.type === "FINGERPRINT");
+    if (idx !== -1 && idx !== attrs.length - 1) {
+      throw new Error(
+        "invalid attrs; FINGERPRINT must be at the last in `attrs`",
+      );
+    }
+  }
   for (const attr of attrs) {
     const attrBuf = encodeAttr(attr, msgBuf);
     msgBuf = Buffer.concat([msgBuf, attrBuf]) as RawStunMsg;
