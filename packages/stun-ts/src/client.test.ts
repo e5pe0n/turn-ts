@@ -1,6 +1,7 @@
 import { createSocket } from "node:dgram";
 import { createServer } from "node:net";
 import { describe, expect, it } from "vitest";
+import { assertStunMSg } from "./agent.js";
 import {
   type ErrorResponse,
   type SuccessResponse,
@@ -57,6 +58,7 @@ describe("send", () => {
         // Arrange
         const server = createSocket("udp4");
         server.on("message", (msg, rinfo) => {
+          assertStunMSg(msg);
           const { header, attrs } = decodeStunMsg(msg);
           const res = encodeStunMsg({
             header: {
@@ -107,6 +109,7 @@ describe("send", () => {
         const resAts: number[] = [];
         server.on("message", (msg, rinfo) => {
           resAts.push(Date.now());
+          assertStunMSg(msg);
           const { header, attrs } = decodeStunMsg(msg);
         });
         const client = createClient({
@@ -140,6 +143,7 @@ describe("send", () => {
         const resAts: number[] = [];
         server.on("message", (msg, rinfo) => {
           resAts.push(Date.now());
+          assertStunMSg(msg);
           const { header, attrs } = decodeStunMsg(msg);
         });
         const client = createClient({
@@ -173,6 +177,7 @@ describe("send", () => {
         const resAts: number[] = [];
         server.on("message", (msg, rinfo) => {
           resAts.push(Date.now());
+          assertStunMSg(msg);
           const { header, attrs } = decodeStunMsg(msg);
           if (resAts.length === 2) {
             const res = encodeStunMsg({
@@ -233,6 +238,7 @@ describe("send", () => {
       // Arrange
       const server = createSocket("udp4");
       server.on("message", (msg, rinfo) => {
+        assertStunMSg(msg);
         const { header, attrs } = decodeStunMsg(msg);
         const res = encodeStunMsg({
           header: {
@@ -336,6 +342,7 @@ describe("send", () => {
         // Arrange
         const server = createServer((conn) => {
           conn.on("data", (data) => {
+            assertStunMSg(data);
             const { header } = decodeStunMsg(data);
             const res = encodeStunMsg({
               header: {
@@ -411,6 +418,7 @@ describe("send", () => {
         });
         const server = createServer((conn) => {
           conn.on("data", (data) => {
+            assertStunMSg(data);
             const {
               header: { trxId },
             } = decodeStunMsg(data);

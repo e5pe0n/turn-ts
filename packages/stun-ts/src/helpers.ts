@@ -78,6 +78,18 @@ export function range(start: number, stop?: number, step?: number): number[] {
     : Array.from(new Array(len), (_, i) => _start + i * _step);
 }
 
+export function assert(exp: boolean | (() => boolean), err: Error): void {
+  let res: boolean;
+  if (typeof exp === "function") {
+    res = exp();
+  } else {
+    res = exp;
+  }
+  if (!res) {
+    throw err;
+  }
+}
+
 export function isKeyOf<R extends object, K extends keyof R>(
   x: unknown,
   r: R,

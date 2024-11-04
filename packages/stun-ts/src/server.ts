@@ -1,4 +1,5 @@
 import { type Socket, createSocket } from "node:dgram";
+import { assertStunMSg } from "./agent.js";
 import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
 
@@ -14,6 +15,7 @@ export class Server {
     this.#protocol = config.protocol;
     this.#sock = createSocket("udp4");
     this.#sock.on("message", (msg, rinfo) => {
+      assertStunMSg(msg);
       const {
         header: { cls, method, trxId },
         attrs,

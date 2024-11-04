@@ -110,25 +110,6 @@ describe("encodeHeader", () => {
 });
 
 describe("readHeader", () => {
-  it("throws error if STUN message header does not include valid magic cookie", () => {
-    const trxId = Buffer.from([
-      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-    ]);
-    const buf = Buffer.concat([
-      Buffer.from([
-        0x00, // STUN Message Type
-        0x01,
-        0x10, // Message Length
-        0x11,
-        0x21, // Magic Cookie
-        0x12,
-        0xa4,
-        0x41,
-      ]),
-      trxId,
-    ]) as RawStunMsg;
-    expect(() => readHeader(buf)).toThrowError(/invalid magic cookie/);
-  });
   it("extracts then decodes a header from a STUN message", () => {
     const trxId = Buffer.from([
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,

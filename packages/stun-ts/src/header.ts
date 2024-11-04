@@ -132,12 +132,6 @@ export function encodeHeader({
 export function readHeader(msg: RawStunMsg): Header {
   const { method, cls } = readMsgType(msg);
   const length = readMsgLength(msg);
-  const maybeMagicCookie = readMagicCookie(msg);
-  if (maybeMagicCookie !== magicCookie) {
-    throw new Error(
-      `invalid magic cookie; magic cookie must be '${magicCookie}'. the given value is '0x${maybeMagicCookie.toString(16)}'`,
-    );
-  }
   const trxId = readTrxId(msg);
   return { method, cls, length, magicCookie, trxId };
 }

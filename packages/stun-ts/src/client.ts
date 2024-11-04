@@ -1,10 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { type Socket, createSocket } from "node:dgram";
 import { createConnection } from "node:net";
+import { assertStunMSg } from "./agent.js";
 import { type MsgClass, type MsgMethod, encodeHeader } from "./header.js";
 import { retry } from "./helpers.js";
 import { decodeStunMsg } from "./msg.js";
-import type { Protocol } from "./types.js";
+import type { Protocol, RawStunMsg } from "./types.js";
 
 export type ErrorResponse = {
   success: false;
@@ -38,7 +39,7 @@ export type TcpClientConfig = {
 
 export type ClientConfig = UdpClientConfig | TcpClientConfig;
 
-function decodeResponse(buf: Buffer, trxId: Buffer): Response {
+function decodeResponse(buf: RawStunMsg, trxId: Buffer): Response {
   const {
     header: { trxId: resTrxId },
     attrs,
@@ -151,6 +152,7 @@ class UdpClient {
             ),
             _res(),
           ])) as Buffer;
+          assertStunMSg(resMsg);
           const res = decodeResponse(resMsg, trxId);
           return res;
         }
@@ -226,6 +228,7 @@ class TcpClient {
             reject(new Error("reached timeout"));
           });
         });
+        assertStunMSg(resBuf);
         const res = decodeResponse(resBuf, trxId);
         return res;
       }

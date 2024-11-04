@@ -2,35 +2,9 @@ import { describe, expect, it, test } from "vitest";
 import { magicCookie } from "./consts.js";
 import { writeTrxId } from "./header.js";
 import { type StunMsg, decodeStunMsg, encodeStunMsg } from "./msg.js";
+import type { RawStunMsg } from "./types.js";
 
 describe("decodeStunMsg", () => {
-  it("throws an error if the STUN message is not >= 20 bytes", () => {
-    const buf = Buffer.from([
-      // 8 bytes
-      0x00, // STUN Message Type
-      0x01,
-      0x00, // Message Length
-      0x08,
-      0x21, // Magic Cookie
-      0x12,
-      0xa4,
-      0x42,
-      // Trx Id (12 - 1 bytes)
-      0x81,
-      0x4c,
-      0x72,
-      0x09,
-      0xa7,
-      0x68,
-      0xf9,
-      0x89,
-      0xf8,
-      0x0b,
-      0x73,
-      // 0xbd		-1 byte
-    ]);
-    expect(() => decodeStunMsg(buf)).toThrowError(/invalid header/);
-  });
   it("decodes a STUN message", () => {
     const trxId = Buffer.from([
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
@@ -63,7 +37,7 @@ describe("decodeStunMsg", () => {
       0x61,
       0x1b,
     ]); // 12 bytes
-    const buf = Buffer.concat([hBuf, attrBuf]);
+    const buf = Buffer.concat([hBuf, attrBuf]) as RawStunMsg;
     expect(decodeStunMsg(buf)).toEqual({
       header: {
         cls: "Request",

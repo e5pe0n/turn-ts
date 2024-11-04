@@ -19,20 +19,8 @@ export type StunMsg = {
   attrs: OutputAttr[];
 };
 
-export function decodeStunMsg(buf: Buffer): StunMsg {
-  if (!(buf.length >= 20)) {
-    throw new Error(
-      `invalid header; expected message length is >= 20. actual is ${buf.length}.`,
-    );
-  }
-  const msg = buf as RawStunMsg;
+export function decodeStunMsg(msg: RawStunMsg): StunMsg {
   const header = readHeader(msg);
-  const restBufLength = msg.length - 20;
-  if (!(header.length <= restBufLength)) {
-    throw new Error(
-      `invalid attrs; expected message length is ${header.length}. actual is ${restBufLength}.`,
-    );
-  }
   const attrs = readAttrs(msg, header);
   return {
     header,
