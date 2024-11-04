@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
-import { createSocket, type Socket } from "node:dgram";
+import { type Socket, createSocket } from "node:dgram";
 import { createConnection } from "node:net";
-import { encodeHeader, type MsgClass, type MsgMethod } from "./header.js";
+import { type MsgClass, type MsgMethod, encodeHeader } from "./header.js";
 import { retry } from "./helpers.js";
 import { decodeStunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";

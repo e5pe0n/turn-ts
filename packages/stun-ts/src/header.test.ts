@@ -2,11 +2,9 @@ import { describe, expect, it, test } from "vitest";
 import {
   type Header,
   type MsgType,
-  msgClassRecord,
   decodeMsgType,
   encodeHeader,
   encodeMsgType,
-  msgMethodRecord,
   readHeader,
 } from "./header.js";
 import type { RawStunMsg } from "./types.js";

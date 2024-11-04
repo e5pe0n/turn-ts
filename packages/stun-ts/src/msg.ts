@@ -5,8 +5,8 @@ import {
   readAttrs,
 } from "./attr.js";
 import {
-  type MsgClass,
   type Header,
+  type MsgClass,
   type MsgMethod,
   encodeHeader,
   readHeader,

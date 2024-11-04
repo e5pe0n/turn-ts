@@ -1,4 +1,5 @@
 import { createHash, createHmac } from "node:crypto";
+import { crc32 } from "node:zlib";
 import { magicCookie } from "./consts.js";
 import { type Header, readTrxId } from "./header.js";
 import {
@@ -10,7 +11,6 @@ import {
   xorBufs,
 } from "./helpers.js";
 import type { RawStunMsg } from "./types.js";
-import { crc32 } from "node:zlib";
 
 const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
@@ -90,10 +90,12 @@ export type OutputErrorCodeAttr = InputErrorCodeAttr & {
   length: number;
 };
 
-type UnknownAttributesAttr = {
+export type InputUnknownAttributesAttr = {
   type: "UNKNOWN-ATTRIBUTES";
+  value: number[];
+};
+export type OutputUnknownAttributesAttr = InputUnknownAttributesAttr & {
   length: number;
-  value: unknown;
 };
 
 export type InputRealmAttr = {
@@ -519,4 +521,31 @@ export function encodeFingerprintValue(msg: RawStunMsg): Buffer {
   const fingerprint = crc32(msg) ^ FINGERPRINT_XORER;
   buf.writeInt32BE(fingerprint);
   return buf;
+}
+
+export function encodeUnknownAttributesValue(
+  value: InputUnknownAttributesAttr["value"],
+): Buffer {
+  const requiredBytes = 2 * value.length;
+  const alignedBytes = requiredBytes + (4 - (requiredBytes % 4));
+  const buf = Buffer.alloc(alignedBytes);
+  for (const [i, v] of value.entries()) {
+    buf.writeUInt16BE(v, i * 2);
+  }
+  return buf;
+}
+
+export function decodeUnknownAttributeValue(
+  buf: Buffer,
+): OutputUnknownAttributesAttr["value"] {
+  const res: OutputUnknownAttributesAttr["value"] = [];
+  for (let i = 0; i < buf.length; i += 2) {
+    const n = buf.readInt16BE(i);
+    if (n === 0) {
+      // padding
+      break;
+    }
+    res.push(n);
+  }
+  return res;
 }

@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
+  type InputErrorCodeAttr,
+  type InputMappedAddressAttr,
+  type InputNonceAttr,
+  type InputRealmAttr,
+  type InputUnknownAttributesAttr,
+  type InputUsernameAttr,
+  type InputXorMappedAddressAttr,
+  type OutputAttr,
   decodeAttrs,
   decodeErrorCodeValue,
   decodeMappedAddressValue,
   decodeNonceValue,
   decodeRealmValue,
+  decodeUnknownAttributeValue,
   decodeUsernameValue,
   decodeXorMappedAddressValue,
   encodeAttr,
@@ -12,15 +21,9 @@ import {
   encodeMappedAddressValue,
   encodeNonceValue,
   encodeRealmValue,
+  encodeUnknownAttributesValue,
   encodeUsernameValue,
   encodeXorMappedAddressValue,
-  type InputErrorCodeAttr,
-  type InputMappedAddressAttr,
-  type InputNonceAttr,
-  type InputRealmAttr,
-  type InputUsernameAttr,
-  type InputXorMappedAddressAttr,
-  type OutputAttr,
 } from "./attr.js";
 import { magicCookie } from "./consts.js";
 import type { Header } from "./header.js";
@@ -517,6 +520,44 @@ describe("decodeNonceValue", () => {
     const buf = Buffer.from([0x6e, 0x6f, 0x6e, 0x63, 0x65]);
     const res = decodeNonceValue(buf);
     expect(res).toEqual("nonce");
+  });
+});
+
+describe("encodeUnknownAttributesValue", () => {
+  it("encodes UNKNOWN-ATTRIBUTES value", () => {
+    const value: InputUnknownAttributesAttr["value"] = [0x0002, 0x0003, 0x0004];
+    const res = encodeUnknownAttributesValue(value);
+
+    // should be aligned by multiple of 4 bytes
+    expect(res).toEqual(
+      Buffer.from([
+        0x00, // Attr Type 1
+        0x02,
+        0x00, // Attr Type 2
+        0x03,
+        0x00, // Attr Type 3
+        0x04,
+        0, // Paddings
+        0,
+      ]),
+    );
+  });
+});
+
+describe("decodeUnknownAttributesValue", () => {
+  it("decodes UNKNOWN-ATTRIBUTES value", () => {
+    const buf = Buffer.from([
+      0x00, // Attr Type 1
+      0x02,
+      0x00, // Attr Type 2
+      0x03,
+      0x00, // Attr Type 3
+      0x04,
+      0, // Paddings
+      0,
+    ]);
+    const res = decodeUnknownAttributeValue(buf);
+    expect(res).toEqual([0x0002, 0x0003, 0x0004]);
   });
 });
 
