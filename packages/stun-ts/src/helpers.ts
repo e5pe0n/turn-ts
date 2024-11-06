@@ -168,7 +168,7 @@ export async function retry<T>(
   fn: () => Promise<T>,
   maxAttempts: number,
   intervalMs: number | ((numAttempts: number) => number),
-  attemptTimeoutMs: number | ((numAttemps: number) => number),
+  attemptTimeoutMs: number | ((numAttempts: number) => number),
   timeoutMs?: number,
 ): Promise<T> {
   const _retry = async (): Promise<Result<T>> => {

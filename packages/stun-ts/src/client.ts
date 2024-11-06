@@ -127,19 +127,15 @@ class UdpClient {
           });
           return;
         case "Request": {
-          const _res = async (): Promise<Buffer> =>
-            new Promise((resolve, reject) => {
-              this.#sock.on("message", (msg) => {
-                return resolve(msg);
-              });
+          const _res = new Promise<Buffer>((resolve, reject) => {
+            this.#sock.on("message", (msg) => {
+              return resolve(msg);
             });
+          });
           const _req = async (): Promise<void> =>
             new Promise((resolve, reject) => {
               this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
-                if (err) {
-                  reject(err);
-                }
-                reject();
+                reject(err);
               });
             });
 
@@ -147,10 +143,10 @@ class UdpClient {
             retry(
               _req,
               this.#rc,
-              (numAttemps: number) => this.#rtoMs * numAttemps,
+              (numAttempts: number) => this.#rtoMs * numAttempts,
               this.#rtoMs * this.#rm,
             ),
-            _res(),
+            _res,
           ])) as Buffer;
           assertStunMSg(resMsg);
           const res = decodeResponse(resMsg, trxId);
