@@ -1,11 +1,11 @@
 import { randomBytes } from "node:crypto";
-import { type Socket, createSocket } from "node:dgram";
-import { createConnection } from "node:net";
-import { assertStunMSg } from "./agent.js";
-import { type MsgClass, type MsgMethod, encodeHeader } from "./header.js";
-import { retry } from "./helpers.js";
-import { decodeStunMsg } from "./msg.js";
-import type { Protocol, RawStunMsg } from "./types.js";
+import {
+  TcpAgent,
+  type TcpAgentInitConfig,
+  UdpAgent,
+  type UdpAgentInitConfig,
+} from "./agent.js";
+import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 
 export type ErrorResponse = {
   success: false;
@@ -15,219 +15,98 @@ export type ErrorResponse = {
 
 export type SuccessResponse = {
   success: true;
+  family: "IPv4" | "IPv6";
   address: string; // Reflexive Transport Address
   port: number;
 };
 
 export type Response = SuccessResponse | ErrorResponse;
 
-export type UdpClientConfig = {
+export type UdpClientInitConfig = UdpAgentInitConfig & {
   protocol: "udp";
-  address: string;
-  port: number;
-  rtoMs?: number;
-  rc?: number;
-  rm?: number;
 };
 
-export type TcpClientConfig = {
+export type TcpClientInitConfig = TcpAgentInitConfig & {
   protocol: "tcp";
-  address: string;
-  port: number;
-  tiMs?: number;
 };
+
+export type ClientInitConfig = UdpClientInitConfig | TcpClientInitConfig;
+
+export type UdpClientConfig = Required<UdpClientInitConfig>;
+
+export type TcpClientConfig = Required<TcpClientInitConfig>;
 
 export type ClientConfig = UdpClientConfig | TcpClientConfig;
 
-function decodeResponse(buf: RawStunMsg, trxId: Buffer): Response {
-  const {
-    header: { trxId: resTrxId },
-    attrs,
-  } = decodeStunMsg(buf);
-  if (!trxId.equals(resTrxId)) {
-    throw new Error(
-      `invalid transaction id; expected: ${trxId}, actual: ${resTrxId}.`,
-    );
+export class Client {
+  #agent: UdpAgent | TcpAgent;
+  #config: ClientConfig;
+
+  constructor(config: ClientInitConfig) {
+    switch (config.protocol) {
+      case "tcp":
+        this.#agent = new TcpAgent(config);
+        this.#config = { ...config, ...this.#agent.config };
+        break;
+      case "udp":
+        this.#agent = new UdpAgent(config);
+        this.#config = { ...config, ...this.#agent.config };
+        break;
+    }
   }
-  const { type, value } = attrs[0]!;
-  switch (type) {
-    case "XOR-MAPPED-ADDRESS":
+
+  get config(): ClientConfig {
+    return structuredClone(this.#config);
+  }
+
+  async indicate(): Promise<undefined> {
+    const trxId = randomBytes(12);
+    const msg = encodeStunMsg({
+      header: {
+        cls: "Indication",
+        method: "Binding",
+        trxId,
+      },
+      attrs: [],
+    });
+    await this.#agent.indicate(msg);
+  }
+
+  async request(): Promise<Response> {
+    const trxId = randomBytes(12);
+    const msg = encodeStunMsg({
+      header: {
+        cls: "Request",
+        method: "Binding",
+        trxId,
+      },
+      attrs: [],
+    });
+    const resBuf = await this.#agent.request(msg);
+    const resMsg = decodeStunMsg(resBuf);
+    if (!trxId.equals(resMsg.header.trxId)) {
+      throw new Error(
+        `invalid transaction id; expected: ${trxId}, actual: ${resMsg.header.trxId}.`,
+      );
+    }
+    const xorMappedAddrAttr = resMsg.attrs.find(
+      (attr) => attr.type === "XOR-MAPPED-ADDRESS",
+    );
+    if (xorMappedAddrAttr) {
       return {
         success: true,
-        port: value.port,
-        address: value.address,
-      };
-    case "ERROR-CODE":
+        ...xorMappedAddrAttr.value,
+      } satisfies SuccessResponse;
+    }
+    const errCodeAttr = resMsg.attrs.find((attr) => attr.type === "ERROR-CODE");
+    if (errCodeAttr) {
       return {
         success: false,
-        code: value.code,
-        reason: value.reason,
-      };
-    default:
-      throw new Error(`invalid attr type: ${type} is not supported.`);
-  }
-}
-
-export function createClient(config: UdpClientConfig): UdpClient;
-export function createClient(config: TcpClientConfig): TcpClient;
-export function createClient(config: ClientConfig): UdpClient | TcpClient {
-  switch (config.protocol) {
-    case "udp":
-      return new UdpClient(config);
-    case "tcp":
-      return new TcpClient(config);
-  }
-}
-class UdpClient {
-  #protocol: Protocol;
-  #address: string;
-  #port: number;
-  #sock: Socket;
-  #rtoMs = 3000;
-  #rc = 7;
-  #rm = 16;
-
-  constructor(config: UdpClientConfig) {
-    this.#address = config.address;
-    this.#port = config.port;
-    this.#protocol = config.protocol;
-    this.#sock = createSocket("udp4");
-    this.#rtoMs = config.rtoMs ?? this.#rtoMs;
-    this.#rc = config.rc ?? this.#rc;
-    this.#rm = config.rm ?? this.#rm;
-  }
-
-  async send(
-    cls: Extract<MsgClass, "Indication">,
-    method: MsgMethod,
-  ): Promise<undefined>;
-  async send(
-    cls: Extract<MsgClass, "Request">,
-    method: MsgMethod,
-  ): Promise<Response>;
-  async send(cls: MsgClass, method: MsgMethod): Promise<undefined | Response> {
-    const trxId = randomBytes(12);
-    const hBuf = encodeHeader({
-      cls,
-      method,
-      trxId,
-      length: 0,
-    });
-    this.#sock.bind();
-    try {
-      switch (cls) {
-        case "Indication":
-          await new Promise<void>((resolve, reject) => {
-            this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
-              if (err) {
-                reject(err);
-              }
-              resolve();
-            });
-          });
-          return;
-        case "Request": {
-          const _res = new Promise<Buffer>((resolve, reject) => {
-            this.#sock.on("message", (msg) => {
-              return resolve(msg);
-            });
-          });
-          const _req = async (): Promise<void> =>
-            new Promise((resolve, reject) => {
-              this.#sock.send(hBuf, this.#port, this.#address, (err, bytes) => {
-                reject(err);
-              });
-            });
-
-          const resMsg = (await Promise.race([
-            retry(
-              _req,
-              this.#rc,
-              (numAttempts: number) => this.#rtoMs * numAttempts,
-              this.#rtoMs * this.#rm,
-            ),
-            _res,
-          ])) as Buffer;
-          assertStunMSg(resMsg);
-          const res = decodeResponse(resMsg, trxId);
-          return res;
-        }
-      }
-    } finally {
-      this.#sock.close();
+        ...errCodeAttr.value,
+      } satisfies ErrorResponse;
     }
-  }
-}
-
-class TcpClient {
-  #protocol: Protocol;
-  #address: string;
-  #port: number;
-  #tiMs = 39_500;
-
-  constructor(config: TcpClientConfig) {
-    this.#protocol = config.protocol;
-    this.#address = config.address;
-    this.#port = config.port;
-    this.#tiMs = config.tiMs ?? this.#tiMs;
-  }
-
-  async send(
-    cls: Extract<MsgClass, "Indication">,
-    method: MsgMethod,
-  ): Promise<undefined>;
-  async send(
-    cls: Extract<MsgClass, "Request">,
-    method: MsgMethod,
-  ): Promise<Response>;
-  async send(cls: MsgClass, method: MsgMethod): Promise<undefined | Response> {
-    const trxId = randomBytes(12);
-    const hBuf = encodeHeader({
-      cls,
-      method,
-      trxId,
-      length: 0,
-    });
-    switch (cls) {
-      case "Indication": {
-        await new Promise<void>((resolve, reject) => {
-          const sock = createConnection(this.#port, this.#address, () => {
-            sock.write(hBuf);
-            sock.end();
-            resolve();
-          });
-          sock.on("error", (err) => {
-            sock.end();
-            reject(err);
-          });
-        });
-        return;
-      }
-      case "Request": {
-        const resBuf = await new Promise<Buffer>((resolve, reject) => {
-          const sock = createConnection(
-            { port: this.#port, host: this.#address, timeout: this.#tiMs },
-            () => {
-              sock.write(hBuf);
-            },
-          );
-          sock.on("data", (data) => {
-            sock.end();
-            resolve(data);
-          });
-          sock.on("error", (err) => {
-            sock.end();
-            throw err;
-          });
-          sock.on("timeout", () => {
-            sock.end();
-            reject(new Error("reached timeout"));
-          });
-        });
-        assertStunMSg(resBuf);
-        const res = decodeResponse(resBuf, trxId);
-        return res;
-      }
-    }
+    throw new Error(
+      "invalid response; neither XOR-MAPPED-ADDRESS nor ERROR-CODE exist",
+    );
   }
 }

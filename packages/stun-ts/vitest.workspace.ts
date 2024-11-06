@@ -7,6 +7,7 @@ export default defineWorkspace([
       exclude: [
         ...configDefaults.exclude,
         "./src/client.test.ts",
+        "./src/agent.test.ts",
         "./src/server.test.ts",
       ],
     },
@@ -14,7 +15,11 @@ export default defineWorkspace([
   {
     test: {
       name: "sequential",
-      include: ["./src/client.test.ts", "./src/server.test.ts"],
+      include: [
+        "./src/client.test.ts",
+        "./src/agent.test.ts",
+        "./src/server.test.ts",
+      ],
       pool: "forks",
       poolOptions: {
         forks: {

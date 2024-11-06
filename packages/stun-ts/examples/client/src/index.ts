@@ -1,12 +1,14 @@
-import { createClient } from "stun-ts";
+import { Client } from "stun-ts";
 
 {
-  const client = createClient({
-    address: "74.125.250.129", // stun.l.google.com
-    port: 19302,
+  const client = new Client({
     protocol: "udp",
+    dest: {
+      address: "74.125.250.129", // stun.l.google.com
+      port: 19302,
+    },
   });
-  const res = await client.send("Request", "Binding");
+  const res = await client.request();
   // biome-ignore lint/suspicious/noConsole: example code
   console.log(res);
 }
