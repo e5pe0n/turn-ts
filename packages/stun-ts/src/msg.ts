@@ -1,7 +1,9 @@
 import {
   type InputAttr,
   type OutputAttr,
-  encodeAttr,
+  attrTypeRecord,
+  buildAttrEncoder,
+  attrValueEncoder,
   readAttrs,
 } from "./attr.js";
 import {
@@ -56,10 +58,19 @@ export function encodeStunMsg({
       );
     }
   }
+  // for (const attr of attrs) {
+  //   const attrBuf = encodeAttr(attr, msgBuf);
+  //   msgBuf = Buffer.concat([msgBuf, attrBuf]) as RawStunMsg;
+  // }
+  const attrEncoder = buildAttrEncoder<typeof attrTypeRecord, InputAttr>(
+    attrTypeRecord,
+    attrValueEncoder,
+  );
   for (const attr of attrs) {
-    const attrBuf = encodeAttr(attr, msgBuf);
+    const attrBuf = attrEncoder(attr, msgBuf);
     msgBuf = Buffer.concat([msgBuf, attrBuf]) as RawStunMsg;
   }
+
   writeMsgLength(msgBuf, msgBuf.length - hBuf.length);
   return msgBuf;
 }

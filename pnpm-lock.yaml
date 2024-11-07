@@ -31,6 +31,10 @@ importers:
         version: 2.1.1(@types/node@20.16.5)
 
   packages/turn-ts:
+    dependencies:
+      '@e5pe0n/stun-ts':
+        specifier: workspace:*
+        version: link:../stun-ts
     devDependencies:
       '@biomejs/biome':
         specifier: 1.9.0

@@ -25,11 +25,11 @@ export const attrTypeRecord = {
   NONCE: 0x0015,
   "XOR-MAPPED-ADDRESS": 0x0020,
   // TODO: Separate into optional attribute records
-  SOFTWARE: 0x8022,
-  "ALTERNATE-SERVER": 0x8023,
+  // SOFTWARE: 0x8022,
+  // "ALTERNATE-SERVER": 0x8023,
   FINGERPRINT: 0x8028,
 } as const;
-type AttrType = keyof typeof attrTypeRecord;
+export type AttrType = keyof typeof attrTypeRecord;
 
 export const addrFamilyRecord = {
   IPv4: 0x01,
@@ -161,11 +161,13 @@ export type OutputAttr =
 
 export type InputAttr =
   | InputMappedAddressAttr
-  | InputXorMappedAddressAttr
-  | InputErrorCodeAttr
   | InputUsernameAttr
+  | InputMessageIntegrityAttr
+  | InputErrorCodeAttr
+  | InputUnknownAttributesAttr
   | InputRealmAttr
   | InputNonceAttr
+  | InputXorMappedAddressAttr
   | InputMessageIntegrityAttr
   | InputFingerprintAttr;
 
@@ -207,6 +209,47 @@ export function encodeAttr(attr: InputAttr, msg: RawStunMsg): Buffer {
   tlBuf.writeUInt16BE(vBuf.length, 2);
   const resBuf = Buffer.concat([tlBuf, vBuf]);
   return resBuf;
+}
+
+export function attrValueEncoder(attr: InputAttr, msg: RawStunMsg): Buffer {
+  switch (attr.type) {
+    case "MAPPED-ADDRESS":
+      return encodeMappedAddressValue(attr.value);
+    case "XOR-MAPPED-ADDRESS":
+      return encodeXorMappedAddressValue(attr.value, readTrxId(msg));
+    case "ERROR-CODE":
+      return encodeErrorCodeValue(attr.value);
+    case "USERNAME":
+      return encodeUsernameValue(attr.value);
+    case "REALM":
+      return encodeRealmValue(attr.value);
+    case "NONCE":
+      return encodeNonceValue(attr.value);
+    case "MESSAGE-INTEGRITY":
+      return encodeMessageIntegrityValue(attr.params, msg);
+    case "FINGERPRINT":
+      return encodeFingerprintValue(msg);
+    default: {
+      throw new Error(`invalid attr: ${attr} is not supported.`);
+    }
+  }
+}
+
+export function buildAttrEncoder<
+  R extends Record<string, number>,
+  IA extends { type: keyof R },
+>(
+  attrTypeRecord: R,
+  attrValueEncoder: (attr: IA, msg: RawStunMsg) => Buffer,
+): (attr: IA, msg: RawStunMsg) => Buffer {
+  return (attr: IA, msg: RawStunMsg) => {
+    const tlBuf = Buffer.alloc(4);
+    tlBuf.writeUInt16BE(attrTypeRecord[attr.type]!);
+    const vBuf = attrValueEncoder(attr, msg);
+    tlBuf.writeUInt16BE(vBuf.length, 2);
+    const resBuf = Buffer.concat([tlBuf, vBuf]);
+    return resBuf;
+  };
 }
 
 export function decodeAttrs(buf: Buffer, header: Header): OutputAttr[] {
