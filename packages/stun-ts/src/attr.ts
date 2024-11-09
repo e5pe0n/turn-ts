@@ -171,161 +171,97 @@ export type InputAttr =
   | InputMessageIntegrityAttr
   | InputFingerprintAttr;
 
-export function encodeAttr(attr: InputAttr, msg: RawStunMsg): Buffer {
-  const tlBuf = Buffer.alloc(4);
-  tlBuf.writeUInt16BE(attrTypeRecord[attr.type]);
+export type AttrvEncoders<IA extends { type: string }> = {
+  [AT in IA["type"]]: (
+    attr: Extract<IA, { type: AT }>,
+    msg: RawStunMsg,
+  ) => Buffer;
+};
 
-  let vBuf: Buffer;
-  switch (attr.type) {
-    case "MAPPED-ADDRESS":
-      vBuf = encodeMappedAddressValue(attr.value);
-      break;
-    case "XOR-MAPPED-ADDRESS":
-      vBuf = encodeXorMappedAddressValue(attr.value, readTrxId(msg));
-      break;
-    case "ERROR-CODE":
-      vBuf = encodeErrorCodeValue(attr.value);
-      break;
-    case "USERNAME":
-      vBuf = encodeUsernameValue(attr.value);
-      break;
-    case "REALM":
-      vBuf = encodeRealmValue(attr.value);
-      break;
-    case "NONCE":
-      vBuf = encodeNonceValue(attr.value);
-      break;
-    case "MESSAGE-INTEGRITY":
-      vBuf = encodeMessageIntegrityValue(attr.params, msg);
-      break;
-    case "FINGERPRINT":
-      vBuf = encodeFingerprintValue(msg);
-      break;
-    default: {
-      throw new Error(`invalid attr: ${attr} is not supported.`);
-    }
-  }
+export const attrValueEncoders: AttrvEncoders<InputAttr> = {
+  "MAPPED-ADDRESS": (attr) => encodeMappedAddressValue(attr.value),
+  USERNAME: (attr) => encodeUsernameValue(attr.value),
+  "ERROR-CODE": (attr) => encodeErrorCodeValue(attr.value),
+  FINGERPRINT: (_, msg) => encodeFingerprintValue(msg),
+  "MESSAGE-INTEGRITY": (attr, msg) =>
+    encodeMessageIntegrityValue(attr.params, msg),
+  REALM: (attr) => encodeRealmValue(attr.value),
+  NONCE: (attr) => encodeNonceValue(attr.value),
+  "XOR-MAPPED-ADDRESS": (attr, msg) =>
+    encodeXorMappedAddressValue(attr.value, msg),
+  "UNKNOWN-ATTRIBUTES": (attr) => encodeUnknownAttributesValue(attr.value),
+};
 
-  tlBuf.writeUInt16BE(vBuf.length, 2);
-  const resBuf = Buffer.concat([tlBuf, vBuf]);
-  return resBuf;
-}
-
-export function attrValueEncoder(attr: InputAttr, msg: RawStunMsg): Buffer {
-  switch (attr.type) {
-    case "MAPPED-ADDRESS":
-      return encodeMappedAddressValue(attr.value);
-    case "XOR-MAPPED-ADDRESS":
-      return encodeXorMappedAddressValue(attr.value, readTrxId(msg));
-    case "ERROR-CODE":
-      return encodeErrorCodeValue(attr.value);
-    case "USERNAME":
-      return encodeUsernameValue(attr.value);
-    case "REALM":
-      return encodeRealmValue(attr.value);
-    case "NONCE":
-      return encodeNonceValue(attr.value);
-    case "MESSAGE-INTEGRITY":
-      return encodeMessageIntegrityValue(attr.params, msg);
-    case "FINGERPRINT":
-      return encodeFingerprintValue(msg);
-    default: {
-      throw new Error(`invalid attr: ${attr} is not supported.`);
-    }
-  }
-}
-
-export function buildAttrEncoder<
-  R extends Record<string, number>,
-  IA extends { type: keyof R },
->(
-  attrTypeRecord: R,
-  attrValueEncoder: (attr: IA, msg: RawStunMsg) => Buffer,
+export function buildAttrEncoder<IA extends { type: string }>(
+  attrTypes: Record<IA["type"], number>,
+  attrValueEncoders: AttrvEncoders<IA>,
 ): (attr: IA, msg: RawStunMsg) => Buffer {
   return (attr: IA, msg: RawStunMsg) => {
     const tlBuf = Buffer.alloc(4);
-    tlBuf.writeUInt16BE(attrTypeRecord[attr.type]!);
-    const vBuf = attrValueEncoder(attr, msg);
+    tlBuf.writeUInt16BE(attrTypes[attr.type as IA["type"]]);
+    const vBuf = attrValueEncoders[attr.type as IA["type"]](
+      attr as Extract<IA, { type: IA["type"] }>,
+      msg,
+    );
     tlBuf.writeUInt16BE(vBuf.length, 2);
     const resBuf = Buffer.concat([tlBuf, vBuf]);
     return resBuf;
   };
 }
 
-export function decodeAttrs(buf: Buffer, header: Header): OutputAttr[] {
-  const attrs: OutputAttr[] = [];
-  let offset = 0;
-  while (offset + 4 < buf.length) {
-    const attrType = buf.subarray(offset, offset + 2).readUInt16BE();
-    // TODO: Distinguish between comprehension-required attributes
-    // and comprehension-optional attributes.
-    assertValueOf(
-      attrType,
-      attrTypeRecord,
-      new Error(`invalid attr type; ${attrType} is not a attr type.`),
-    );
-    const kAttrType = getKey(attrTypeRecord, attrType);
-    const length = buf.subarray(offset + 2, offset + 4).readUInt16BE();
-    const restLength = buf.length - (offset + 4);
-    if (!(restLength >= length)) {
-      throw new Error(
-        `invalid attr length; given ${kAttrType} value length is ${length}, but the actual value length is ${restLength}.`,
-      );
-    }
-    const vBuf = Buffer.alloc(
-      length,
-      buf.subarray(offset + 4, offset + 4 + length),
-    );
-    switch (kAttrType) {
-      case "MAPPED-ADDRESS": {
-        const value = decodeMappedAddressValue(vBuf);
-        attrs.push({ type: kAttrType, length, value });
-        break;
-      }
-      case "XOR-MAPPED-ADDRESS": {
-        const value = decodeXorMappedAddressValue(vBuf, header);
-        attrs.push({ type: kAttrType, length, value });
-        break;
-      }
-      case "ERROR-CODE": {
-        const value = decodeErrorCodeValue(vBuf);
-        attrs.push({ type: kAttrType, length, value });
-        break;
-      }
-      case "USERNAME": {
-        const value = decodeUsernameValue(vBuf);
-        attrs.push({ type: kAttrType, length, value });
-        break;
-      }
-      case "REALM": {
-        const value = decodeRealmValue(vBuf);
-        attrs.push({ type: kAttrType, length, value });
-        break;
-      }
-      case "NONCE": {
-        const value = decodeNonceValue(vBuf);
-        attrs.push({ type: kAttrType, length, value });
-        break;
-      }
-      case "MESSAGE-INTEGRITY": {
-        attrs.push({ type: kAttrType, length, value: vBuf });
-        break;
-      }
-      case "FINGERPRINT": {
-        const value = vBuf.readInt32BE();
-        attrs.push({ type: kAttrType, length, value });
-        break;
-      }
-      default:
-        throw new Error(`invalid attr type; ${kAttrType} is not supported.`);
-    }
-    offset += 4 + length;
-  }
-  return attrs;
-}
+export type AttrvDecoders<OA extends { type: string; value: unknown }> = {
+  [AT in OA["type"]]: (
+    attrv: Buffer,
+    header: Header,
+  ) => Extract<OA, { type: AT }>["value"];
+};
 
-export function readAttrs(msg: RawStunMsg, header: Header): OutputAttr[] {
-  return decodeAttrs(msg.subarray(20, 20 + header.length), header);
+export const attrValueDecoders: AttrvDecoders<OutputAttr> = {
+  "ERROR-CODE": (buf) => decodeErrorCodeValue(buf),
+  FINGERPRINT: (buf) => buf.readInt32BE(),
+  "MAPPED-ADDRESS": (buf) => decodeMappedAddressValue(buf),
+  NONCE: (buf) => decodeStrValue(buf),
+  REALM: (buf) => decodeStrValue(buf),
+  USERNAME: (buf) => decodeStrValue(buf),
+  "MESSAGE-INTEGRITY": (buf) => buf,
+  "XOR-MAPPED-ADDRESS": (buf, header) =>
+    decodeXorMappedAddressValue(buf, header),
+};
+
+export function buildAttrsDecoder<OA extends { type: string; value: unknown }>(
+  attrTypes: Record<OA["type"], number>,
+  attrvDecoders: AttrvDecoders<OA>,
+): (buf: Buffer, header: Header) => OA[] {
+  return (buf, header) => {
+    const attrs: OA[] = [];
+    let offset = 0;
+    while (offset + 4 < buf.length) {
+      const attrType = buf.subarray(offset, offset + 2).readUInt16BE();
+      // TODO: Distinguish between comprehension-required attributes
+      // and comprehension-optional attributes.
+      assertValueOf(
+        attrType,
+        attrTypes,
+        new Error(`invalid attr type; ${attrType} is not a attr type.`),
+      );
+      const kAttrType = getKey(attrTypes, attrType);
+      const length = buf.subarray(offset + 2, offset + 4).readUInt16BE();
+      const restLength = buf.length - (offset + 4);
+      if (!(restLength >= length)) {
+        throw new Error(
+          `invalid attr length; given ${kAttrType} value length is ${length}, but the actual value length is ${restLength}.`,
+        );
+      }
+      const vBuf = Buffer.alloc(
+        length,
+        buf.subarray(offset + 4, offset + 4 + length),
+      );
+      const attrv = attrvDecoders[kAttrType as OA["type"]](vBuf, header);
+      attrs.push({ type: kAttrType, value: attrv, length } as unknown as OA);
+      offset += 4 + length;
+    }
+    return attrs;
+  };
 }
 
 export function encodeMappedAddressValue(
@@ -365,8 +301,9 @@ export function decodeMappedAddressValue(
 
 export function encodeXorMappedAddressValue(
   value: InputXorMappedAddressAttr["value"],
-  trxId: Buffer,
+  msg: RawStunMsg,
 ): Buffer {
+  const trxId = readTrxId(msg);
   const { family, port, address: addr } = value;
   const xPort = port ^ (magicCookie >>> 16);
   const buf = Buffer.alloc(family === "IPv4" ? 8 : 20);
