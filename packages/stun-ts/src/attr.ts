@@ -3,6 +3,7 @@ import { crc32 } from "node:zlib";
 import { magicCookie } from "./consts.js";
 import { type Header, readTrxId } from "./header.js";
 import {
+  assert,
   assertValueOf,
   fAddr,
   getKey,
@@ -25,7 +26,7 @@ export const attrTypeRecord = {
   NONCE: 0x0015,
   "XOR-MAPPED-ADDRESS": 0x0020,
   // TODO: Separate into optional attribute records
-  // SOFTWARE: 0x8022,
+  SOFTWARE: 0x8022,
   // "ALTERNATE-SERVER": 0x8023,
   FINGERPRINT: 0x8028,
 } as const;
@@ -128,8 +129,7 @@ export type OutputXorMappedAddressAttr = InputXorMappedAddressAttr & {
 
 type SoftwareAttr = {
   type: "SOFTWARE";
-  length: number;
-  value: unknown;
+  value: string;
 };
 
 type AlternateServerAttr = {
@@ -151,11 +151,11 @@ export type OutputAttr =
   | OutputUsernameAttr
   | OutputMessageIntegrityAttr
   | OutputErrorCodeAttr
-  // | UnknownAttributesAttr
+  | OutputUnknownAttributesAttr
   | OutputRealmAttr
   | OutputNonceAttr
   | OutputXorMappedAddressAttr
-  // | SoftwareAttr
+  | SoftwareAttr
   // | AlternateServerAttr
   | OutputFingerprintAttr;
 
@@ -169,7 +169,8 @@ export type InputAttr =
   | InputNonceAttr
   | InputXorMappedAddressAttr
   | InputMessageIntegrityAttr
-  | InputFingerprintAttr;
+  | InputFingerprintAttr
+  | SoftwareAttr;
 
 export type AttrvEncoders<IA extends { type: string }> = {
   [AT in IA["type"]]: (
@@ -190,6 +191,7 @@ export const attrValueEncoders: AttrvEncoders<InputAttr> = {
   "XOR-MAPPED-ADDRESS": (attr, msg) =>
     encodeXorMappedAddressValue(attr.value, msg),
   "UNKNOWN-ATTRIBUTES": (attr) => encodeUnknownAttributesValue(attr.value),
+  SOFTWARE: (attr) => encodeSoftwareValue(attr.value),
 };
 
 export function buildAttrEncoder<IA extends { type: string }>(
@@ -226,6 +228,8 @@ export const attrValueDecoders: AttrvDecoders<OutputAttr> = {
   "MESSAGE-INTEGRITY": (buf) => buf,
   "XOR-MAPPED-ADDRESS": (buf, header) =>
     decodeXorMappedAddressValue(buf, header),
+  "UNKNOWN-ATTRIBUTES": (buf) => decodeUnknownAttributeValue(buf),
+  SOFTWARE: (buf) => decodeStrValue(buf),
 };
 
 export function buildAttrsDecoder<OA extends { type: string; value: unknown }>(
@@ -445,6 +449,21 @@ export function encodeNonceValue(value: OutputNonceAttr["value"]): Buffer {
 }
 
 export function decodeNonceValue(buf: Buffer): OutputNonceAttr["value"] {
+  return decodeStrValue(buf);
+}
+
+export function encodeSoftwareValue(value: SoftwareAttr["value"]): Buffer {
+  const buf = Buffer.from(value, "utf8");
+  assert(
+    buf.length <= 763,
+    new Error(
+      `invalid realm; expected is < 763 bytes. actual is ${buf.length}.`,
+    ),
+  );
+  return buf;
+}
+
+export function decodeSoftwareValue(buf: Buffer): SoftwareAttr["value"] {
   return decodeStrValue(buf);
 }
 
