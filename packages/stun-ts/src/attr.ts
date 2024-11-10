@@ -10,7 +10,7 @@ import {
   xorBufs,
 } from "@e5pe0n/lib";
 import { magicCookie } from "./consts.js";
-import { type Header, readTrxId } from "./header.js";
+import { readTrxId } from "./header.js";
 import type { RawStunMsg } from "./types.js";
 
 const compReqRange = [0x0000, 0x7fff] as const;
@@ -162,7 +162,7 @@ export type AttrvEncoders<IA extends { type: string }> = {
   ) => Buffer;
 };
 
-export const attrValueEncoders: AttrvEncoders<InputAttr> = {
+export const attrvEncoders: AttrvEncoders<InputAttr> = {
   "MAPPED-ADDRESS": (attr) => encodeMappedAddressValue(attr.value),
   USERNAME: (attr) => encodeUsernameValue(attr.value),
   "ERROR-CODE": (attr) => encodeErrorCodeValue(attr.value),
@@ -197,11 +197,11 @@ export function buildAttrEncoder<IA extends { type: string }>(
 export type AttrvDecoders<OA extends { type: string; value: unknown }> = {
   [AT in OA["type"]]: (
     attrv: Buffer,
-    header: Header,
+    trxId: Buffer,
   ) => Extract<OA, { type: AT }>["value"];
 };
 
-export const attrValueDecoders: AttrvDecoders<OutputAttr> = {
+export const attrvDecoders: AttrvDecoders<OutputAttr> = {
   "ERROR-CODE": (buf) => decodeErrorCodeValue(buf),
   FINGERPRINT: (buf) => buf.readInt32BE(),
   "MAPPED-ADDRESS": (buf) => decodeMappedAddressValue(buf),
@@ -209,8 +209,7 @@ export const attrValueDecoders: AttrvDecoders<OutputAttr> = {
   REALM: (buf) => decodeStrValue(buf),
   USERNAME: (buf) => decodeStrValue(buf),
   "MESSAGE-INTEGRITY": (buf) => buf,
-  "XOR-MAPPED-ADDRESS": (buf, header) =>
-    decodeXorMappedAddressValue(buf, header),
+  "XOR-MAPPED-ADDRESS": (buf, trxId) => decodeXorMappedAddressValue(buf, trxId),
   "UNKNOWN-ATTRIBUTES": (buf) => decodeUnknownAttributeValue(buf),
   SOFTWARE: (buf) => decodeStrValue(buf),
 };
@@ -218,7 +217,7 @@ export const attrValueDecoders: AttrvDecoders<OutputAttr> = {
 export function buildAttrsDecoder<OA extends { type: string; value: unknown }>(
   attrTypes: Record<OA["type"], number>,
   attrvDecoders: AttrvDecoders<OA>,
-): (buf: Buffer, header: Header) => OA[] {
+): (buf: Buffer, trxId: Buffer) => OA[] {
   return (buf, header) => {
     const attrs: OA[] = [];
     let offset = 0;
@@ -317,7 +316,7 @@ export function encodeXorMappedAddressValue(
 
 export function decodeXorMappedAddressValue(
   buf: Buffer,
-  header: Header,
+  trxId: Buffer,
 ): InputXorMappedAddressAttr["value"] {
   const family = buf[1]!;
   assertValueOf(
@@ -335,7 +334,7 @@ export function decodeXorMappedAddressValue(
       return { port, family: kFamily, address: fAddr(addr) };
     }
     case "IPv6": {
-      const rand = Buffer.concat([numToBuf(magicCookie, 4), header.trxId]);
+      const rand = Buffer.concat([numToBuf(magicCookie, 4), trxId]);
       const xored = xorBufs(buf.subarray(4, 20), rand);
       const addr = Buffer.alloc(16, xored);
       return { port, family: kFamily, address: fAddr(addr) };

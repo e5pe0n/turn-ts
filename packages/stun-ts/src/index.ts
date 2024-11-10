@@ -25,4 +25,17 @@ export {
 export {
   encodeStunMsg,
   decodeStunMsg,
+  buildMsgDecoder,
+  buildMsgEncoder,
+  type StunMsg,
 } from "./msg.js";
+export {
+  type AttrvEncoders,
+  type AttrvDecoders,
+  type InputAttr,
+  type OutputAttr,
+  attrvDecoders,
+  attrvEncoders,
+  attrTypeRecord,
+} from "./attr.js";
+export { magicCookie } from "./consts.js";

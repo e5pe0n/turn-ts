@@ -9,7 +9,7 @@ import {
   type InputXorMappedAddressAttr,
   type OutputAttr,
   attrTypeRecord,
-  attrValueDecoders,
+  attrvDecoders,
   buildAttrsDecoder,
   decodeErrorCodeValue,
   decodeMappedAddressValue,
@@ -26,8 +26,7 @@ import {
   encodeUsernameValue,
   encodeXorMappedAddressValue,
 } from "./attr.js";
-import { magicCookie } from "./consts.js";
-import { type Header, encodeHeader } from "./header.js";
+import { encodeHeader } from "./header.js";
 import type { RawStunMsg } from "./types.js";
 
 describe("encodeMappedAddressValue", () => {
@@ -225,15 +224,9 @@ describe("encodeXorMappedAddressValue", () => {
 });
 describe("decodeXorMappedAddressValue", () => {
   it("throws an error if an invalid address family given", () => {
-    const header: Header = {
-      cls: "Request",
-      method: "Binding",
-      length: 8, // bytes
-      magicCookie,
-      trxId: Buffer.from([
-        0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-      ]),
-    };
+    const trxId = Buffer.from([
+      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+    ]);
     const buf = Buffer.from([
       0x00,
       0x00, // invalid Family
@@ -244,20 +237,14 @@ describe("decodeXorMappedAddressValue", () => {
       0x61,
       0x1b,
     ]);
-    expect(() => decodeXorMappedAddressValue(buf, header)).toThrowError(
+    expect(() => decodeXorMappedAddressValue(buf, trxId)).toThrowError(
       /invalid address family/,
     );
   });
   it("decodes IPv4 XOR-MAPPED-ADDRESS value", () => {
-    const header: Header = {
-      cls: "Request",
-      method: "Binding",
-      length: 8, // bytes
-      magicCookie,
-      trxId: Buffer.from([
-        0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-      ]),
-    };
+    const trxId = Buffer.from([
+      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+    ]);
     const buf = Buffer.from([
       0x00,
       0x01, // Family: IPv4
@@ -268,22 +255,16 @@ describe("decodeXorMappedAddressValue", () => {
       0x61,
       0x1b,
     ]);
-    expect(decodeXorMappedAddressValue(buf, header)).toEqual({
+    expect(decodeXorMappedAddressValue(buf, trxId)).toEqual({
       family: "IPv4",
       port: 12345,
       address: "201.199.197.89",
     } satisfies InputXorMappedAddressAttr["value"]);
   });
   it("decodes IPv6 XOR-MAPPED-ADDRESS value", () => {
-    const header: Header = {
-      cls: "Request",
-      method: "Binding",
-      length: 20, // bytes
-      magicCookie,
-      trxId: Buffer.from([
-        0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-      ]),
-    };
+    const trxId = Buffer.from([
+      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+    ]);
     const buf = Buffer.from([
       0x00,
       0x02, // Family: IPv6
@@ -313,7 +294,7 @@ describe("decodeXorMappedAddressValue", () => {
       0x73,
       0xbc,
     ]);
-    expect(decodeXorMappedAddressValue(buf, header)).toEqual({
+    expect(decodeXorMappedAddressValue(buf, trxId)).toEqual({
       family: "IPv6",
       port: 12345,
       address: "2001:0000:0000:0db8:0000:0000:0000:0001",
@@ -576,21 +557,12 @@ describe("decodeUnknownAttributesValue", () => {
 
 describe("buildAttrsDecoder", () => {
   const ctx = {
-    attrsDecoder: buildAttrsDecoder<OutputAttr>(
-      attrTypeRecord,
-      attrValueDecoders,
-    ),
+    attrsDecoder: buildAttrsDecoder<OutputAttr>(attrTypeRecord, attrvDecoders),
   };
   it("throws an error if the value length is not enough", () => {
-    const header: Header = {
-      cls: "Request",
-      method: "Binding",
-      length: 11,
-      magicCookie,
-      trxId: Buffer.from([
-        0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-      ]),
-    };
+    const trxId = Buffer.from([
+      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+    ]);
     const buf = Buffer.from([
       0x00, // Type: XOR-MAPPED-ADDRESS
       0x20,
@@ -606,21 +578,15 @@ describe("buildAttrsDecoder", () => {
       0x53,
       // 0x04,	-1 bytes
     ]);
-    expect(() => ctx.attrsDecoder(buf, header)).toThrowError(
+    expect(() => ctx.attrsDecoder(buf, trxId)).toThrowError(
       /invalid attr length/,
     );
   });
   // TODO: Decode multiple attrs.
   it("decodes attrs", () => {
-    const header: Header = {
-      cls: "Request",
-      method: "Binding",
-      length: 12,
-      magicCookie,
-      trxId: Buffer.from([
-        0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-      ]),
-    };
+    const trxId = Buffer.from([
+      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+    ]);
     const buf = Buffer.from([
       0x00, // Type: XOR-MAPPED-ADDRESS
       0x20,
@@ -636,7 +602,7 @@ describe("buildAttrsDecoder", () => {
       0x61,
       0x1b,
     ]); // 12 bytes
-    expect(ctx.attrsDecoder(buf, header)).toEqual([
+    expect(ctx.attrsDecoder(buf, trxId)).toEqual([
       {
         type: "XOR-MAPPED-ADDRESS",
         value: {

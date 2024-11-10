@@ -74,7 +74,7 @@ describe("decodeMsgType", () => {
   );
   it("throws error if result is not a method", () => {
     const arg = Buffer.from([0x00, 0x00]);
-    expect(() => decodeMsgType(arg)).toThrowError(/not a method/);
+    expect(() => decodeMsgType(arg)).toThrowError(/invalid method/);
   });
 });
 

@@ -4,34 +4,46 @@ import {
   type InputAttr,
   type OutputAttr,
   attrTypeRecord,
-  attrValueDecoders,
-  attrValueEncoders,
+  attrvDecoders,
+  attrvEncoders,
   buildAttrEncoder,
   buildAttrsDecoder,
 } from "./attr.js";
 import {
   type Header,
   type MsgClass,
-  type MsgMethod,
-  encodeHeader,
-  readHeader,
+  type MsgMethods,
+  buildHeaderDecoder,
+  buildHeaderEncoder,
+  msgMethodRecord,
   writeMsgLength,
 } from "./header.js";
 import type { RawStunMsg } from "./types.js";
 
-export type StunMsg<OA = OutputAttr> = {
-  header: Header;
+export type StunMsg<
+  Ms extends Record<string, number> = MsgMethods,
+  OA = OutputAttr,
+> = {
+  header: Header<Ms>;
   attrs: OA[];
 };
 
-export function buildMsgDecoder<OA extends { type: string; value: unknown }>(
+export function buildMsgDecoder<
+  Ms extends Record<string, number>,
+  OA extends { type: string; value: unknown },
+>(
+  msgMethods: Ms,
   attrTypes: Record<OA["type"], number>,
   attrvDecoders: AttrvDecoders<OA>,
-): (msg: RawStunMsg) => StunMsg<OA> {
+): (msg: RawStunMsg) => StunMsg<Ms, OA> {
+  const hDecoder = buildHeaderDecoder(msgMethods);
   const attrsDecoder = buildAttrsDecoder<OA>(attrTypes, attrvDecoders);
   return (msg: RawStunMsg) => {
-    const header = readHeader(msg);
-    const attrs = attrsDecoder(msg.subarray(20, 20 + header.length), header);
+    const header = hDecoder(msg);
+    const attrs = attrsDecoder(
+      msg.subarray(20, 20 + header.length),
+      header.trxId,
+    );
     return {
       header,
       attrs,
@@ -39,24 +51,31 @@ export function buildMsgDecoder<OA extends { type: string; value: unknown }>(
   };
 }
 
-export const decodeStunMsg: (msg: RawStunMsg) => StunMsg =
-  buildMsgDecoder<OutputAttr>(attrTypeRecord, attrValueDecoders);
+export const decodeStunMsg: (msg: RawStunMsg) => StunMsg = buildMsgDecoder<
+  MsgMethods,
+  OutputAttr
+>(msgMethodRecord, attrTypeRecord, attrvDecoders);
 
-export function buildMsgEncoder<IA extends { type: string }>(
+export function buildMsgEncoder<
+  Ms extends Record<string, number>,
+  IA extends { type: string },
+>(
+  msgMethods: Ms,
   attrTypes: Record<IA["type"], number>,
   attrvEncoders: AttrvEncoders<IA>,
 ): (args: {
   header: {
     cls: MsgClass;
-    method: MsgMethod;
+    method: Extract<keyof Ms, string>;
     trxId: Buffer;
   };
   attrs: IA[];
 }) => RawStunMsg {
+  const hEncoder = buildHeaderEncoder(msgMethods);
   const attrEncoder = buildAttrEncoder<IA>(attrTypes, attrvEncoders);
 
   return ({ header: { cls, method, trxId }, attrs }) => {
-    const hBuf = encodeHeader({
+    const hBuf = hEncoder({
       cls,
       method,
       trxId,
@@ -82,7 +101,8 @@ export function buildMsgEncoder<IA extends { type: string }>(
   };
 }
 
-export const encodeStunMsg = buildMsgEncoder<InputAttr>(
+export const encodeStunMsg = buildMsgEncoder<MsgMethods, InputAttr>(
+  msgMethodRecord,
   attrTypeRecord,
-  attrValueEncoders,
+  attrvEncoders,
 );
