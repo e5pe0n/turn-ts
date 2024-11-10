@@ -46,17 +46,13 @@ export type InputMappedAddressAttr = {
     address: string;
   };
 };
-export type OutputMappedAddressAttr = InputMappedAddressAttr & {
-  length: number;
-};
+export type OutputMappedAddressAttr = InputMappedAddressAttr;
 
 export type InputUsernameAttr = {
   type: "USERNAME";
   value: string;
 };
-export type OutputUsernameAttr = InputUsernameAttr & {
-  length: number;
-};
+export type OutputUsernameAttr = InputUsernameAttr;
 
 type Credentials =
   | {
@@ -76,7 +72,6 @@ export type InputMessageIntegrityAttr = {
 };
 export type OutputMessageIntegrityAttr = {
   type: "MESSAGE-INTEGRITY";
-  length: number;
   value: Buffer;
 };
 
@@ -87,33 +82,25 @@ export type InputErrorCodeAttr = {
     reason: string;
   };
 };
-export type OutputErrorCodeAttr = InputErrorCodeAttr & {
-  length: number;
-};
+export type OutputErrorCodeAttr = InputErrorCodeAttr;
 
 export type InputUnknownAttributesAttr = {
   type: "UNKNOWN-ATTRIBUTES";
   value: number[];
 };
-export type OutputUnknownAttributesAttr = InputUnknownAttributesAttr & {
-  length: number;
-};
+export type OutputUnknownAttributesAttr = InputUnknownAttributesAttr;
 
 export type InputRealmAttr = {
   type: "REALM";
   value: string;
 };
-export type OutputRealmAttr = InputRealmAttr & {
-  length: number;
-};
+export type OutputRealmAttr = InputRealmAttr;
 
 export type InputNonceAttr = {
   type: "NONCE";
   value: string;
 };
-export type OutputNonceAttr = InputNonceAttr & {
-  length: number;
-};
+export type OutputNonceAttr = InputNonceAttr;
 
 export type InputXorMappedAddressAttr = {
   type: "XOR-MAPPED-ADDRESS";
@@ -123,9 +110,7 @@ export type InputXorMappedAddressAttr = {
     address: string;
   };
 };
-export type OutputXorMappedAddressAttr = InputXorMappedAddressAttr & {
-  length: number;
-};
+export type OutputXorMappedAddressAttr = InputXorMappedAddressAttr;
 
 type SoftwareAttr = {
   type: "SOFTWARE";
@@ -134,7 +119,6 @@ type SoftwareAttr = {
 
 type AlternateServerAttr = {
   type: "ALTERNATE-SERVER";
-  length: number;
   value: unknown;
 };
 
@@ -142,7 +126,6 @@ type InputFingerprintAttr = {
   type: "FINGERPRINT";
 };
 type OutputFingerprintAttr = InputFingerprintAttr & {
-  length: number;
   value: number;
 };
 
@@ -261,7 +244,7 @@ export function buildAttrsDecoder<OA extends { type: string; value: unknown }>(
         buf.subarray(offset + 4, offset + 4 + length),
       );
       const attrv = attrvDecoders[kAttrType as OA["type"]](vBuf, header);
-      attrs.push({ type: kAttrType, value: attrv, length } as unknown as OA);
+      attrs.push({ type: kAttrType, value: attrv } as unknown as OA);
       offset += 4 + length;
     }
     return attrs;

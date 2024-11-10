@@ -639,7 +639,6 @@ describe("buildAttrsDecoder", () => {
     expect(ctx.attrsDecoder(buf, header)).toEqual([
       {
         type: "XOR-MAPPED-ADDRESS",
-        length: 8,
         value: {
           family: "IPv4",
           port: 12345,

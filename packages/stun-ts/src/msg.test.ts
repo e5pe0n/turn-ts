@@ -49,7 +49,6 @@ describe("decodeStunMsg", () => {
       attrs: [
         {
           type: "XOR-MAPPED-ADDRESS",
-          length: 8,
           value: {
             family: "IPv4",
             port: 12345,

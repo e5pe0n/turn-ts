@@ -282,7 +282,6 @@ describe("send", () => {
             attrs: [
               {
                 type: "XOR-MAPPED-ADDRESS",
-                length: 8,
                 value: {
                   family: "IPv4",
                   address: "222.62.247.70",
@@ -360,7 +359,6 @@ describe("send", () => {
           attrs: [
             {
               type: "XOR-MAPPED-ADDRESS",
-              length: 8,
               value: {
                 family: "IPv4",
                 address: "222.62.247.70",
@@ -550,7 +548,6 @@ describe("send", () => {
             attrs: [
               {
                 type: "XOR-MAPPED-ADDRESS",
-                length: 8,
                 value: {
                   family: "IPv4",
                   address: "222.62.247.70",
