@@ -39,29 +39,27 @@ describe("encodeMsgType", () => {
 
 describe("decodeMsgType", () => {
   test.each([
-    [
-      {
-        arg: Buffer.from([0b000000, 0b00000001]),
-        expected: {
-          method: "Binding",
-          cls: "Request",
-        },
-      } as const,
-      {
-        arg: Buffer.from([0b000001, 0b00000001]),
-        expected: {
-          method: "binding",
-          cls: "successResponse",
-        },
-      } as const,
-      {
-        arg: Buffer.from([0b000001, 0b00010001]),
-        expected: {
-          method: "binding",
-          cls: "errorResponse",
-        },
-      } as const,
-    ],
+    {
+      arg: Buffer.from([0b000000, 0b00000001]),
+      expected: {
+        method: "Binding",
+        cls: "Request",
+      },
+    } as const,
+    {
+      arg: Buffer.from([0b000001, 0b00000001]),
+      expected: {
+        method: "Binding",
+        cls: "SuccessResponse",
+      },
+    } as const,
+    {
+      arg: Buffer.from([0b000001, 0b00010001]),
+      expected: {
+        method: "Binding",
+        cls: "ErrorResponse",
+      },
+    } as const,
   ])(
     "decodes a $expected.method $expected.cls message type",
     ({
