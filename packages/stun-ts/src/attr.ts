@@ -11,7 +11,7 @@ import {
 } from "@e5pe0n/lib";
 import { magicCookie } from "./consts.js";
 import { readTrxId } from "./header.js";
-import type { RawStunMsg } from "./types.js";
+import type { RawStunFmtMsg } from "./types.js";
 
 const compReqRange = [0x0000, 0x7fff] as const;
 const compOptRange = [0x8000, 0xffff] as const;
@@ -158,7 +158,7 @@ export type InputAttr =
 export type AttrvEncoders<IA extends { type: string }> = {
   [AT in IA["type"]]: (
     attr: Extract<IA, { type: AT }>,
-    msg: RawStunMsg,
+    msg: RawStunFmtMsg,
   ) => Buffer;
 };
 
@@ -180,8 +180,8 @@ export const attrvEncoders: AttrvEncoders<InputAttr> = {
 export function buildAttrEncoder<IA extends { type: string }>(
   attrTypes: Record<IA["type"], number>,
   attrValueEncoders: AttrvEncoders<IA>,
-): (attr: IA, msg: RawStunMsg) => Buffer {
-  return (attr: IA, msg: RawStunMsg) => {
+): (attr: IA, msg: RawStunFmtMsg) => Buffer {
+  return (attr: IA, msg: RawStunFmtMsg) => {
     const tlBuf = Buffer.alloc(4);
     tlBuf.writeUInt16BE(attrTypes[attr.type as IA["type"]]);
     const vBuf = attrValueEncoders[attr.type as IA["type"]](
@@ -287,7 +287,7 @@ export function decodeMappedAddressValue(
 
 export function encodeXorMappedAddressValue(
   value: InputXorMappedAddressAttr["value"],
-  msg: RawStunMsg,
+  msg: RawStunFmtMsg,
 ): Buffer {
   const trxId = readTrxId(msg);
   const { family, port, address: addr } = value;
@@ -451,7 +451,7 @@ export function decodeSoftwareValue(buf: Buffer): SoftwareAttr["value"] {
 
 function calcMessageIntegrity(
   arg: Credentials & {
-    msg: RawStunMsg;
+    msg: RawStunFmtMsg;
   },
 ): Buffer {
   let key: Buffer;
@@ -477,14 +477,18 @@ const MESSAGE_INTEGRITY_BYTES = 20;
 
 export function encodeMessageIntegrityValue(
   params: InputMessageIntegrityAttr["params"],
-  msg: RawStunMsg,
+  msg: RawStunFmtMsg,
 ): OutputMessageIntegrityAttr["value"] {
   const tlBuf = Buffer.alloc(4);
   tlBuf.writeUInt16BE(attrTypeRecord["MESSAGE-INTEGRITY"]);
   tlBuf.writeUInt16BE(MESSAGE_INTEGRITY_BYTES);
   const vBuf = Buffer.alloc(MESSAGE_INTEGRITY_BYTES);
 
-  const tmpMsg = Buffer.concat([Buffer.from(msg), tlBuf, vBuf]) as RawStunMsg;
+  const tmpMsg = Buffer.concat([
+    Buffer.from(msg),
+    tlBuf,
+    vBuf,
+  ]) as RawStunFmtMsg;
   tmpMsg.writeUInt16BE(tmpMsg.length);
   const integrity = calcMessageIntegrity({
     ...params,
@@ -497,7 +501,7 @@ export function encodeMessageIntegrityValue(
 // https://datatracker.ietf.org/doc/html/rfc5389#section-15.5
 const FINGERPRINT_XORER = 0x5354554e;
 
-export function encodeFingerprintValue(msg: RawStunMsg): Buffer {
+export function encodeFingerprintValue(msg: RawStunFmtMsg): Buffer {
   const buf = Buffer.alloc(4);
   const fingerprint = crc32(msg) ^ FINGERPRINT_XORER;
   buf.writeInt32BE(fingerprint);

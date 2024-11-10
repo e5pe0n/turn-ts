@@ -2,7 +2,7 @@ import { describe, expect, it, test } from "vitest";
 import { magicCookie } from "./consts.js";
 import { writeTrxId } from "./header.js";
 import { type StunMsg, decodeStunMsg, encodeStunMsg } from "./msg.js";
-import type { RawStunMsg } from "./types.js";
+import type { RawStunFmtMsg } from "./types.js";
 
 describe("decodeStunMsg", () => {
   it("decodes a STUN message", () => {
@@ -37,7 +37,7 @@ describe("decodeStunMsg", () => {
       0x61,
       0x1b,
     ]); // 12 bytes
-    const buf = Buffer.concat([hBuf, attrBuf]) as RawStunMsg;
+    const buf = Buffer.concat([hBuf, attrBuf]) as RawStunFmtMsg;
     expect(decodeStunMsg(buf)).toEqual({
       header: {
         cls: "Request",

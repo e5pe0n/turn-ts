@@ -18,7 +18,7 @@ import {
   msgMethodRecord,
   writeMsgLength,
 } from "./header.js";
-import type { RawStunMsg } from "./types.js";
+import type { RawStunFmtMsg } from "./types.js";
 
 export type StunMsg<
   Ms extends Record<string, number> = MsgMethods,
@@ -28,17 +28,17 @@ export type StunMsg<
   attrs: OA[];
 };
 
-export function buildMsgDecoder<
+export function buildStunMsgDecoder<
   Ms extends Record<string, number>,
   OA extends { type: string; value: unknown },
 >(
   msgMethods: Ms,
   attrTypes: Record<OA["type"], number>,
   attrvDecoders: AttrvDecoders<OA>,
-): (msg: RawStunMsg) => StunMsg<Ms, OA> {
+): (msg: RawStunFmtMsg) => StunMsg<Ms, OA> {
   const hDecoder = buildHeaderDecoder(msgMethods);
   const attrsDecoder = buildAttrsDecoder<OA>(attrTypes, attrvDecoders);
-  return (msg: RawStunMsg) => {
+  return (msg: RawStunFmtMsg) => {
     const header = hDecoder(msg);
     const attrs = attrsDecoder(
       msg.subarray(20, 20 + header.length),
@@ -51,12 +51,14 @@ export function buildMsgDecoder<
   };
 }
 
-export const decodeStunMsg: (msg: RawStunMsg) => StunMsg = buildMsgDecoder<
-  MsgMethods,
-  OutputAttr
->(msgMethodRecord, attrTypeRecord, attrvDecoders);
+export const decodeStunMsg: (msg: RawStunFmtMsg) => StunMsg =
+  buildStunMsgDecoder<MsgMethods, OutputAttr>(
+    msgMethodRecord,
+    attrTypeRecord,
+    attrvDecoders,
+  );
 
-export function buildMsgEncoder<
+export function buildStunMsgEncoder<
   Ms extends Record<string, number>,
   IA extends { type: string },
 >(
@@ -70,7 +72,7 @@ export function buildMsgEncoder<
     trxId: Buffer;
   };
   attrs: IA[];
-}) => RawStunMsg {
+}) => RawStunFmtMsg {
   const hEncoder = buildHeaderEncoder(msgMethods);
   const attrEncoder = buildAttrEncoder<IA>(attrTypes, attrvEncoders);
 
@@ -81,7 +83,7 @@ export function buildMsgEncoder<
       trxId,
       length: 0,
     });
-    let msgBuf = hBuf as RawStunMsg;
+    let msgBuf = hBuf as RawStunFmtMsg;
     if (attrs.length >= 2) {
       const idx = attrs.findIndex((v) => v.type === "FINGERPRINT");
       if (idx !== -1 && idx !== attrs.length - 1) {
@@ -93,7 +95,7 @@ export function buildMsgEncoder<
 
     for (const attr of attrs) {
       const attrBuf = attrEncoder(attr, msgBuf);
-      msgBuf = Buffer.concat([msgBuf, attrBuf]) as RawStunMsg;
+      msgBuf = Buffer.concat([msgBuf, attrBuf]) as RawStunFmtMsg;
     }
 
     writeMsgLength(msgBuf, msgBuf.length - hBuf.length);
@@ -101,7 +103,7 @@ export function buildMsgEncoder<
   };
 }
 
-export const encodeStunMsg = buildMsgEncoder<MsgMethods, InputAttr>(
+export const encodeStunMsg = buildStunMsgEncoder<MsgMethods, InputAttr>(
   msgMethodRecord,
   attrTypeRecord,
   attrvEncoders,

@@ -25,8 +25,8 @@ export {
 export {
   encodeStunMsg,
   decodeStunMsg,
-  buildMsgDecoder,
-  buildMsgEncoder,
+  buildStunMsgDecoder,
+  buildStunMsgEncoder,
   type StunMsg,
 } from "./msg.js";
 export {
@@ -39,3 +39,4 @@ export {
   attrTypeRecord,
 } from "./attr.js";
 export { magicCookie } from "./consts.js";
+export type { RawStunFmtMsg } from "./types.js";

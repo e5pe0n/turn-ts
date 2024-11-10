@@ -1,6 +1,6 @@
 import { assertKeyOf, assertValueOf, getKey, numToBuf } from "@e5pe0n/lib";
 import { magicCookie } from "./consts.js";
-import type { RawStunMsg } from "./types.js";
+import type { RawStunFmtMsg } from "./types.js";
 
 export const msgClassRecord = {
   Request: 0b00,
@@ -105,28 +105,28 @@ export function buildMsgTypeDecoder<Ms extends Record<string, number>>(
 export const decodeMsgType: (buf: Buffer) => MsgType =
   buildMsgTypeDecoder(msgMethodRecord);
 
-export function readMsgType(msg: RawStunMsg): MsgType {
+export function readMsgType(msg: RawStunFmtMsg): MsgType {
   const { method, cls } = decodeMsgType(msg.subarray(0, 2));
   return { method, cls };
 }
 
-export function readMsgLength(msg: RawStunMsg): number {
+export function readMsgLength(msg: RawStunFmtMsg): number {
   return msg.subarray(2, 4).readUInt16BE();
 }
 
-export function writeMsgLength(msg: RawStunMsg, length: number): void {
+export function writeMsgLength(msg: RawStunFmtMsg, length: number): void {
   msg.subarray(2, 4).writeUInt16BE(length);
 }
 
-export function readMagicCookie(msg: RawStunMsg): number {
+export function readMagicCookie(msg: RawStunFmtMsg): number {
   return msg.subarray(4, 8).readInt32BE();
 }
 
-export function readTrxId(msg: RawStunMsg): Buffer {
+export function readTrxId(msg: RawStunFmtMsg): Buffer {
   return Buffer.alloc(12, msg.subarray(8, 20));
 }
 
-export function writeTrxId(msg: RawStunMsg, trxId: Buffer): void {
+export function writeTrxId(msg: RawStunFmtMsg, trxId: Buffer): void {
   msg.fill(trxId, 8, 20);
 }
 
@@ -166,7 +166,7 @@ export const encodeHeader: ({
 
 export function buildHeaderDecoder<Ms extends Record<string, number>>(
   msgMethods: Ms,
-): (msg: RawStunMsg) => Header<Ms> {
+): (msg: RawStunFmtMsg) => Header<Ms> {
   const msgTypeDecoder = buildMsgTypeDecoder(msgMethods);
   return (msg) => {
     const { method, cls } = msgTypeDecoder(msg);
@@ -176,7 +176,7 @@ export function buildHeaderDecoder<Ms extends Record<string, number>>(
   };
 }
 
-export function readHeader(msg: RawStunMsg): Header {
+export function readHeader(msg: RawStunFmtMsg): Header {
   const { method, cls } = readMsgType(msg);
   const length = readMsgLength(msg);
   const trxId = readTrxId(msg);

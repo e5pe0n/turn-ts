@@ -7,7 +7,7 @@ import {
   encodeMsgType,
   readHeader,
 } from "./header.js";
-import type { RawStunMsg } from "./types.js";
+import type { RawStunFmtMsg } from "./types.js";
 
 describe("encodeMsgType", () => {
   test.each([
@@ -124,7 +124,7 @@ describe("readHeader", () => {
         0x42,
       ]),
       trxId,
-    ]) as RawStunMsg;
+    ]) as RawStunFmtMsg;
     const res = readHeader(buf);
     expect(res).toEqual({
       cls: "Request",

@@ -27,7 +27,7 @@ import {
   encodeXorMappedAddressValue,
 } from "./attr.js";
 import { encodeHeader } from "./header.js";
-import type { RawStunMsg } from "./types.js";
+import type { RawStunFmtMsg } from "./types.js";
 
 describe("encodeMappedAddressValue", () => {
   it("encodes IPv4 MAPPED-ADDRESS value", () => {
@@ -161,7 +161,7 @@ describe("encodeXorMappedAddressValue", () => {
       port: 12345,
       address: "201.199.197.89",
     };
-    expect(encodeXorMappedAddressValue(value, hBuf as RawStunMsg)).toEqual(
+    expect(encodeXorMappedAddressValue(value, hBuf as RawStunFmtMsg)).toEqual(
       Buffer.from([
         0x00,
         0x01, // Family (IPv4)
@@ -189,7 +189,7 @@ describe("encodeXorMappedAddressValue", () => {
       port: 12345,
       address: "2001:0:0:db8::1",
     };
-    expect(encodeXorMappedAddressValue(value, hBuf as RawStunMsg)).toEqual(
+    expect(encodeXorMappedAddressValue(value, hBuf as RawStunFmtMsg)).toEqual(
       Buffer.from([
         0x00,
         0x02, // Family (IPv6)

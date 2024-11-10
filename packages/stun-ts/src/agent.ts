@@ -3,9 +3,9 @@ import { createConnection } from "node:net";
 import { assert, retry } from "@e5pe0n/lib";
 import { magicCookie } from "./consts.js";
 import { readMagicCookie } from "./header.js";
-import type { RawStunMsg } from "./types.js";
+import type { RawStunFmtMsg } from "./types.js";
 
-export function assertStunMSg(msg: Buffer): asserts msg is RawStunMsg {
+export function assertStunMSg(msg: Buffer): asserts msg is RawStunFmtMsg {
   assert(
     msg.length >= 20,
     new Error(
@@ -26,7 +26,7 @@ export function assertStunMSg(msg: Buffer): asserts msg is RawStunMsg {
     ),
   );
 
-  const stunMsg = msg as RawStunMsg;
+  const stunMsg = msg as RawStunFmtMsg;
   const cookie = readMagicCookie(stunMsg);
   assert(
     cookie === magicCookie,
@@ -66,7 +66,7 @@ export class UdpAgent {
     return structuredClone(this.#config);
   }
 
-  async indicate(msg: RawStunMsg): Promise<undefined> {
+  async indicate(msg: RawStunFmtMsg): Promise<undefined> {
     this.#sock.bind();
     try {
       await new Promise<void>((resolve, reject) => {
@@ -87,7 +87,7 @@ export class UdpAgent {
     }
   }
 
-  async request(msg: RawStunMsg): Promise<RawStunMsg> {
+  async request(msg: RawStunFmtMsg): Promise<RawStunFmtMsg> {
     this.#sock.bind();
     try {
       const _res = new Promise<Buffer>((resolve, reject) => {
@@ -148,7 +148,7 @@ export class TcpAgent {
     return structuredClone(this.#config);
   }
 
-  async indicate(msg: RawStunMsg): Promise<undefined> {
+  async indicate(msg: RawStunFmtMsg): Promise<undefined> {
     await new Promise<void>((resolve, reject) => {
       const sock = createConnection(
         this.#config.dest.port,
@@ -167,7 +167,7 @@ export class TcpAgent {
     return;
   }
 
-  async request(msg: RawStunMsg): Promise<RawStunMsg> {
+  async request(msg: RawStunFmtMsg): Promise<RawStunFmtMsg> {
     const resBuf = await new Promise<Buffer>((resolve, reject) => {
       const sock = createConnection(
         {
