@@ -1,7 +1,5 @@
 import { createHash, createHmac } from "node:crypto";
 import { crc32 } from "node:zlib";
-import { magicCookie } from "./consts.js";
-import { type Header, readTrxId } from "./header.js";
 import {
   assert,
   assertValueOf,
@@ -10,7 +8,9 @@ import {
   numToBuf,
   pAddr,
   xorBufs,
-} from "./helpers.js";
+} from "@e5pe0n/lib";
+import { magicCookie } from "./consts.js";
+import { type Header, readTrxId } from "./header.js";
 import type { RawStunMsg } from "./types.js";
 
 const compReqRange = [0x0000, 0x7fff] as const;

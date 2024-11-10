@@ -1,5 +1,5 @@
+import { assertKeyOf, assertValueOf, getKey, numToBuf } from "@e5pe0n/lib";
 import { magicCookie } from "./consts.js";
-import { assertKeyOf, assertValueOf, getKey, numToBuf } from "./helpers.js";
 import type { RawStunMsg } from "./types.js";
 
 export const msgClassRecord = {

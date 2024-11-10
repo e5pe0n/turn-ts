@@ -1,10 +1,10 @@
+import { randomBytes } from "node:crypto";
 import {
-  encodeStunMsg,
   TcpAgent,
   type TcpAgentInitConfig,
+  encodeStunMsg,
 } from "@e5pe0n/stun-ts";
 import type { MsgMethod } from "./method.js";
-import { randomBytes } from "node:crypto";
 
 type ClientConfig = TcpAgentInitConfig & {
   username: string;

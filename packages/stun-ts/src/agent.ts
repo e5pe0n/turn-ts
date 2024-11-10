@@ -1,8 +1,8 @@
 import { type Socket, createSocket } from "node:dgram";
 import { createConnection } from "node:net";
+import { assert, retry } from "@e5pe0n/lib";
 import { magicCookie } from "./consts.js";
 import { readMagicCookie } from "./header.js";
-import { assert, retry } from "./helpers.js";
 import type { RawStunMsg } from "./types.js";
 
 export function assertStunMSg(msg: Buffer): asserts msg is RawStunMsg {

@@ -16,6 +16,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "@e5pe0n/lib": "workspace:^"
+  },
   "devDependencies": {
     "@biomejs/biome": "1.9.0",
     "@types/node": "20",

@@ -10,7 +10,7 @@ import {
   numToBuf,
   pAddr,
   xorBufs,
-} from "./helpers.js";
+} from "./index.js";
 
 const addrFamilyRecord = {
   IPv4: 0x01,
