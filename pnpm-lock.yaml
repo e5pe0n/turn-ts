@@ -51,6 +51,9 @@ importers:
 
   packages/turn-ts:
     dependencies:
+      '@e5pe0n/lib':
+        specifier: workspace:*
+        version: link:../lib
       '@e5pe0n/stun-ts':
         specifier: workspace:*
         version: link:../stun-ts

@@ -60,67 +60,62 @@ export class UdpAgent {
       ...config,
     };
     this.#sock = createSocket("udp4");
+    this.#sock.bind();
   }
 
   get config(): UdpAgentConfig {
     return structuredClone(this.#config);
   }
 
+  close(): void {
+    this.#sock.close();
+  }
+
   async indicate(msg: RawStunFmtMsg): Promise<undefined> {
-    this.#sock.bind();
-    try {
-      await new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
+      this.#sock.send(
+        msg,
+        this.#config.dest.port,
+        this.#config.dest.address,
+        (err, bytes) => {
+          if (err) {
+            reject(err);
+          }
+          resolve();
+        },
+      );
+    });
+  }
+
+  async request(msg: RawStunFmtMsg): Promise<RawStunFmtMsg> {
+    const _res = new Promise<Buffer>((resolve, reject) => {
+      this.#sock.on("message", (msg) => {
+        resolve(msg);
+      });
+    });
+    const _req = async (): Promise<void> =>
+      new Promise((resolve, reject) => {
         this.#sock.send(
           msg,
           this.#config.dest.port,
           this.#config.dest.address,
           (err, bytes) => {
-            if (err) {
-              reject(err);
-            }
-            resolve();
+            reject(err);
           },
         );
       });
-    } finally {
-      this.#sock.close();
-    }
-  }
 
-  async request(msg: RawStunFmtMsg): Promise<RawStunFmtMsg> {
-    this.#sock.bind();
-    try {
-      const _res = new Promise<Buffer>((resolve, reject) => {
-        this.#sock.on("message", (msg) => {
-          resolve(msg);
-        });
-      });
-      const _req = async (): Promise<void> =>
-        new Promise((resolve, reject) => {
-          this.#sock.send(
-            msg,
-            this.#config.dest.port,
-            this.#config.dest.address,
-            (err, bytes) => {
-              reject(err);
-            },
-          );
-        });
-
-      const resBuf = (await Promise.race([
-        retry(
-          _req,
-          this.#config.rc,
-          (numAttempts: number) => this.#config.rtoMs * numAttempts,
-          this.#config.rtoMs * this.#config.rm,
-        ),
-        _res,
-      ])) as Buffer;
-      assertStunMSg(resBuf);
-      return resBuf;
-    } finally {
-      this.#sock.close();
-    }
+    const resBuf = (await Promise.race([
+      retry(
+        _req,
+        this.#config.rc,
+        (numAttempts: number) => this.#config.rtoMs * numAttempts,
+        this.#config.rtoMs * this.#config.rm,
+      ),
+      _res,
+    ])) as Buffer;
+    assertStunMSg(resBuf);
+    return resBuf;
   }
 }
 

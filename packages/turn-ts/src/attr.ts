@@ -1,8 +1,11 @@
 import {
+  type AddrFamily,
   type AttrvDecoders,
   type AttrvEncoders,
   type InputAttr as InputStunAttr,
   type OutputAttr as OutputStunAttr,
+  decodeXorMappedAddressValue,
+  encodeXorMappedAddressValue,
   attrTypeRecord as stunAttrTypeRecord,
   attrvDecoders as stunAttrvDecoders,
   attrvEncoders as stunAttrvEncoders,
@@ -13,7 +16,7 @@ export const turnAttrTypeRecord = {
   LIFETIME: 0x000d,
   // "XOR-PEER-ADDRESS": 0x0012,
   // DATA: 0x0013,
-  // "XOR-RELAYED-ADDRESS": 0x0016,
+  "XOR-RELAYED-ADDRESS": 0x0016,
   // "EVEN-PORT": 0x0018,
   "REQUESTED-TRANSPORT": 0x0019,
   "DONT-FRAGMENT": 0x001a,
@@ -41,22 +44,36 @@ export type OutputDontFragmentAttr = InputDontFragmentAttr & {
   value: undefined;
 };
 
+export type InputXorRelayedAddressAttrValue = {
+  type: "XOR-RELAYED-ADDRESS";
+  value: {
+    family: AddrFamily;
+    port: number;
+    address: string;
+  };
+};
+export type OutputXorRelayedAddressAttrValue = InputXorRelayedAddressAttrValue;
+
 export type InputTurnAttr =
   | InputLifetimeAttr
   | InputRequestTransportAttr
   | InputDontFragmentAttr
-  | InputStunAttr;
+  | InputStunAttr
+  | InputXorRelayedAddressAttrValue;
 
 export type OutputTurnAttr =
   | OutputLifetimeAttr
   | OutputRequestTransportAttr
   | OutputDontFragmentAttr
-  | OutputStunAttr;
+  | OutputStunAttr
+  | OutputXorRelayedAddressAttrValue;
 
 export const turnAttrvEncoders: AttrvEncoders<InputTurnAttr> = {
   LIFETIME: (attr) => encodeLifetimeAttrv(attr.value),
   "REQUESTED-TRANSPORT": (attr) => encodeRequestTransportAttrv(attr.value),
   "DONT-FRAGMENT": () => Buffer.alloc(0),
+  "XOR-RELAYED-ADDRESS": (attr, msg) =>
+    encodeXorMappedAddressValue(attr.value, msg),
   ...stunAttrvEncoders,
 };
 
@@ -64,6 +81,7 @@ export const turnAttrvDecoders: AttrvDecoders<OutputTurnAttr> = {
   LIFETIME: decodeLifetimeAttrv,
   "REQUESTED-TRANSPORT": decodeRequestTransportAttrv,
   "DONT-FRAGMENT": () => undefined,
+  "XOR-RELAYED-ADDRESS": decodeXorMappedAddressValue,
   ...stunAttrvDecoders,
 };
 

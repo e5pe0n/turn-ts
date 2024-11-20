@@ -95,9 +95,9 @@ describe("send", () => {
             port: 12345,
           },
         });
-        try {
-          server.bind(12345, "127.0.0.1");
+        server.bind(12345, "127.0.0.1");
 
+        try {
           // Act
           const msg = encodeStunMsg({
             header: {
@@ -128,6 +128,7 @@ describe("send", () => {
           );
         } finally {
           server.close();
+          agent.close();
         }
       });
     });
@@ -149,9 +150,9 @@ describe("send", () => {
           rc: 7,
           rm: 3,
         });
-        try {
-          server.bind(12345, "127.0.0.1");
+        server.bind(12345, "127.0.0.1");
 
+        try {
           // Act & Assert
           const msg = encodeStunMsg({
             header: {
@@ -170,6 +171,7 @@ describe("send", () => {
           expect(100 * 3 - (resAts[3]! - resAts[2]!)).toBeLessThan(5);
         } finally {
           server.close();
+          agent.close();
         }
       });
       it("retransmits requests according to the RTO=100ms, Rc=4 and Rm=16, then throws a no response error due to Rc", async () => {
@@ -189,9 +191,9 @@ describe("send", () => {
           rc: 4,
           rm: 16,
         });
-        try {
-          server.bind(12345, "127.0.0.1");
+        server.bind(12345, "127.0.0.1");
 
+        try {
           // Act && Assert
           const msg = encodeStunMsg({
             header: {
@@ -210,6 +212,7 @@ describe("send", () => {
           expect(100 * 3 - (resAts[3]! - resAts[2]!)).toBeLessThan(5);
         } finally {
           server.close();
+          agent.close();
         }
       });
       it("retransmits requests according to the RTO=100ms, Rc=7 and Rm=16, then return a success response", async () => {
@@ -255,9 +258,9 @@ describe("send", () => {
           rc: 4,
           rm: 16,
         });
-        try {
-          server.bind(12345, "127.0.0.1");
+        server.bind(12345, "127.0.0.1");
 
+        try {
           // Act
           const msg = encodeStunMsg({
             header: {
@@ -294,6 +297,7 @@ describe("send", () => {
           expect(resAts[0]! - startedAt).toBeLessThan(5);
           expect(100 * 1 - (resAts[1]! - resAts[0]!)).toBeLessThan(5);
         } finally {
+          agent.close();
           server.close();
         }
       });
@@ -327,15 +331,15 @@ describe("send", () => {
           }
         });
       });
-      try {
-        const agent = new UdpAgent({
-          dest: {
-            address: "127.0.0.1",
-            port: 12345,
-          },
-        });
-        server.bind(12345, "127.0.0.1");
+      const agent = new UdpAgent({
+        dest: {
+          address: "127.0.0.1",
+          port: 12345,
+        },
+      });
+      server.bind(12345, "127.0.0.1");
 
+      try {
         // Act
         const msg = encodeStunMsg({
           header: {
@@ -369,6 +373,7 @@ describe("send", () => {
         } satisfies StunMsg);
       } finally {
         server.close();
+        agent.close();
       }
     });
   });

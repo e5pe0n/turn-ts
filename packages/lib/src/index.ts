@@ -78,7 +78,10 @@ export function range(start: number, stop?: number, step?: number): number[] {
     : Array.from(new Array(len), (_, i) => _start + i * _step);
 }
 
-export function assert(exp: boolean | (() => boolean), err: Error): void {
+export function assert(
+  exp: boolean | (() => boolean),
+  err: Error,
+): asserts exp {
   let res: boolean;
   if (typeof exp === "function") {
     res = exp();
@@ -285,4 +288,15 @@ export function pAddr(addr: string): Buffer {
     }
     return buf;
   }
+}
+
+export function withResolvers<T>() {
+  let resolve: (value: T | PromiseLike<T>) => void;
+  let reject: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  // @ts-ignore: ts(2454)
+  return { promise, resolve, reject };
 }

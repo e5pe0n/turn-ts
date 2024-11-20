@@ -1,6 +1,6 @@
+import type { RawStunFmtMsg } from "@e5pe0n/stun-ts";
 import { describe, expect, it } from "vitest";
 import { decodeTurnMsg, encodeTurnMsg } from "./msg.js";
-import type { RawStunFmtMsg } from "@e5pe0n/stun-ts";
 
 describe("encodeTurnMsg", () => {
   it("encodes a turn msg", () => {

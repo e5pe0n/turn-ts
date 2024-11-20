@@ -36,7 +36,7 @@ export const addrFamilyRecord = {
   IPv4: 0x01,
   IPv6: 0x02,
 } as const;
-type AddrFamily = keyof typeof addrFamilyRecord;
+export type AddrFamily = keyof typeof addrFamilyRecord;
 
 export type InputMappedAddressAttr = {
   type: "MAPPED-ADDRESS";
@@ -221,7 +221,7 @@ export function buildAttrsDecoder<OA extends { type: string; value: unknown }>(
   return (buf, header) => {
     const attrs: OA[] = [];
     let offset = 0;
-    while (offset + 4 < buf.length) {
+    while (offset + 4 <= buf.length) {
       const attrType = buf.subarray(offset, offset + 2).readUInt16BE();
       // TODO: Distinguish between comprehension-required attributes
       // and comprehension-optional attributes.
