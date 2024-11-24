@@ -163,11 +163,11 @@ export class Client {
             },
             {
               type: "REALM",
-              value: realmAttr!.value,
+              value: realmAttr.value,
             },
             {
               type: "NONCE",
-              value: nonceAttr!.value,
+              value: nonceAttr.value,
             },
             {
               type: "MESSAGE-INTEGRITY",
@@ -175,7 +175,7 @@ export class Client {
                 term: "long",
                 username: this.#config.username,
                 password: this.#config.password,
-                realm: realmAttr!.value,
+                realm: realmAttr.value,
               },
             },
           ],
@@ -215,9 +215,9 @@ export class Client {
         );
         return {
           success: true,
-          relayedAddress: relayedAddrAttr!.value,
-          mappedAddress: mappedAddrAttr!.value,
-          lifetime: lifetimeAttr!.value,
+          relayedAddress: relayedAddrAttr.value,
+          mappedAddress: mappedAddrAttr.value,
+          lifetime: lifetimeAttr.value,
         };
       }
       default:
