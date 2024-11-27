@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { Client, type SuccessResponse } from "./client.js";
 import { Server } from "./server.js";
 
-it("receives a request then return a response", async () => {
+it("receives a Binding request then return a success response", async () => {
   const server = new Server({ protocol: "udp" });
   server.listen(12345);
   const client = new Client({

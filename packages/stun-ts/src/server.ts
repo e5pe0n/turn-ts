@@ -15,36 +15,40 @@ export class Server {
     this.#protocol = config.protocol;
     this.#sock = createSocket("udp4");
     this.#sock.on("message", (msg, rinfo) => {
-      assertStunMSg(msg);
-      const {
-        header: { cls, method, trxId },
-        attrs,
-      } = decodeStunMsg(msg);
-      let res: Buffer;
-      switch (method) {
-        case "Binding":
-          res = encodeStunMsg({
-            header: {
-              cls: "SuccessResponse",
-              method: "Binding",
-              trxId: trxId,
-            },
-            attrs: [
-              {
-                type: "XOR-MAPPED-ADDRESS",
-                value: {
-                  family: rinfo.family,
-                  address: rinfo.address,
-                  port: rinfo.port,
-                },
+      try {
+        assertStunMSg(msg);
+        const {
+          header: { cls, method, trxId },
+          attrs,
+        } = decodeStunMsg(msg);
+        let res: Buffer;
+        switch (method) {
+          case "Binding":
+            res = encodeStunMsg({
+              header: {
+                cls: "SuccessResponse",
+                method: "Binding",
+                trxId: trxId,
               },
-            ],
-          });
-          break;
-        default:
-          throw new Error(`invalid method: ${method} is not supported.`);
+              attrs: [
+                {
+                  type: "XOR-MAPPED-ADDRESS",
+                  value: {
+                    family: rinfo.family,
+                    address: rinfo.address,
+                    port: rinfo.port,
+                  },
+                },
+              ],
+            });
+            break;
+          default:
+            throw new Error(`invalid method: ${method} is not supported.`);
+        }
+        this.#sock.send(res, rinfo.port, rinfo.address);
+      } catch (err) {
+        console.error(err);
       }
-      this.#sock.send(res, rinfo.port, rinfo.address);
     });
   }
 
