@@ -1,7 +1,6 @@
-import { type Socket, createSocket } from "node:dgram";
-import { assertStunMSg } from "./agent.js";
-import { decodeStunMsg, encodeStunMsg } from "./msg.js";
-import type { Protocol } from "./types.js";
+import { createListener, type Listener } from "./listener.js";
+import { encodeStunMsg } from "./msg.js";
+import type { Protocol, RawStunFmtMsg } from "./types.js";
 
 export type ServerConfig = {
   protocol: Protocol;
@@ -9,54 +8,47 @@ export type ServerConfig = {
 
 export class Server {
   #protocol: Protocol;
-  #sock: Socket;
+  #listener: Listener;
 
   constructor(config: ServerConfig) {
     this.#protocol = config.protocol;
-    this.#sock = createSocket("udp4");
-    this.#sock.on("message", (msg, rinfo) => {
-      try {
-        assertStunMSg(msg);
-        const {
-          header: { cls, method, trxId },
-          attrs,
-        } = decodeStunMsg(msg);
-        let res: Buffer;
-        switch (method) {
-          case "Binding":
-            res = encodeStunMsg({
-              header: {
-                cls: "SuccessResponse",
-                method: "Binding",
-                trxId: trxId,
-              },
-              attrs: [
-                {
-                  type: "XOR-MAPPED-ADDRESS",
-                  value: {
-                    family: rinfo.family,
-                    address: rinfo.address,
-                    port: rinfo.port,
-                  },
+    this.#listener = createListener(this.#protocol, (msg, rinfo) => {
+      const {
+        header: { method, trxId },
+      } = msg;
+      let res: RawStunFmtMsg;
+      switch (method) {
+        case "Binding":
+          res = encodeStunMsg({
+            header: {
+              cls: "SuccessResponse",
+              method: "Binding",
+              trxId: trxId,
+            },
+            attrs: [
+              {
+                type: "XOR-MAPPED-ADDRESS",
+                value: {
+                  family: rinfo.family,
+                  address: rinfo.address,
+                  port: rinfo.port,
                 },
-              ],
-            });
-            break;
-          default:
-            throw new Error(`invalid method: ${method} is not supported.`);
-        }
-        this.#sock.send(res, rinfo.port, rinfo.address);
-      } catch (err) {
-        console.error(err);
+              },
+            ],
+          });
+          break;
+        default:
+          throw new Error(`invalid method: ${method} is not supported.`);
       }
+      return res;
     });
   }
 
-  listen(port: number) {
-    this.#sock.bind(port);
+  listen(port: number, host?: string) {
+    this.#listener.listen(port, host);
   }
 
   close() {
-    this.#sock.close();
+    this.#listener.close();
   }
 }

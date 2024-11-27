@@ -1,11 +1,11 @@
 import { type Socket, createSocket } from "node:dgram";
-import { createConnection } from "node:net";
+import { type Socket as TcpSocket, createConnection } from "node:net";
 import { assert, retry } from "@e5pe0n/lib";
 import { magicCookie } from "./consts.js";
 import { readMagicCookie } from "./header.js";
-import type { RawStunFmtMsg } from "./types.js";
+import type { Protocol, RawStunFmtMsg } from "./types.js";
 
-export function assertStunMSg(msg: Buffer): asserts msg is RawStunFmtMsg {
+export function assertRawStunFmtMsg(msg: Buffer): asserts msg is RawStunFmtMsg {
   assert(
     msg.length >= 20,
     new Error(
@@ -36,6 +36,24 @@ export function assertStunMSg(msg: Buffer): asserts msg is RawStunFmtMsg {
   );
 }
 
+export interface Agent {
+  protocol: Protocol;
+  config: UdpAgentConfig | TcpAgentConfig;
+  close(): void;
+  indicate(msg: RawStunFmtMsg): Promise<undefined>;
+  request(msg: RawStunFmtMsg): Promise<RawStunFmtMsg>;
+}
+
+export interface IUdpAgent extends Agent {
+  protocol: "udp";
+  config: UdpAgentConfig;
+}
+
+export interface ITcpAgent extends Agent {
+  protocol: "tcp";
+  config: TcpAgentConfig;
+}
+
 export type UdpAgentInitConfig = {
   dest: {
     address: string;
@@ -48,9 +66,10 @@ export type UdpAgentInitConfig = {
 
 export type UdpAgentConfig = Required<UdpAgentInitConfig>;
 
-export class UdpAgent {
+export class UdpAgent implements IUdpAgent {
   #config: UdpAgentConfig;
   #sock: Socket;
+  #protocol = "udp" as const;
 
   constructor(config: UdpAgentInitConfig) {
     this.#config = {
@@ -61,6 +80,10 @@ export class UdpAgent {
     };
     this.#sock = createSocket("udp4");
     this.#sock.bind();
+  }
+
+  get protocol(): IUdpAgent["protocol"] {
+    return this.#protocol;
   }
 
   get config(): UdpAgentConfig {
@@ -114,7 +137,7 @@ export class UdpAgent {
       ),
       _res,
     ])) as Buffer;
-    assertStunMSg(resBuf);
+    assertRawStunFmtMsg(resBuf);
     return resBuf;
   }
 }
@@ -129,8 +152,10 @@ export type TcpAgentInitConfig = {
 
 export type TcpAgentConfig = Required<TcpAgentInitConfig>;
 
-export class TcpAgent {
+export class TcpAgent implements ITcpAgent {
   #config: TcpAgentConfig;
+  #protocol = "tcp" as const;
+  #sock?: TcpSocket;
 
   constructor(config: TcpAgentInitConfig) {
     this.#config = {
@@ -139,8 +164,16 @@ export class TcpAgent {
     };
   }
 
+  get protocol(): ITcpAgent["protocol"] {
+    return this.#protocol;
+  }
+
   get config(): TcpAgentConfig {
     return structuredClone(this.#config);
+  }
+
+  close(): void {
+    this.#sock?.destroy();
   }
 
   async indicate(msg: RawStunFmtMsg): Promise<undefined> {
@@ -158,6 +191,7 @@ export class TcpAgent {
         sock.end();
         reject(err);
       });
+      this.#sock = sock;
     });
     return;
   }
@@ -186,8 +220,23 @@ export class TcpAgent {
         sock.end();
         reject(new Error("reached timeout"));
       });
+      this.#sock = sock;
     });
-    assertStunMSg(resBuf);
+    assertRawStunFmtMsg(resBuf);
     return resBuf;
+  }
+}
+
+export function createAgent(
+  protocol: Protocol,
+  config: UdpAgentInitConfig | TcpAgentInitConfig,
+): IUdpAgent | ITcpAgent {
+  switch (protocol) {
+    case "tcp":
+      return new TcpAgent(config);
+    case "udp":
+      return new UdpAgent(config);
+    default:
+      throw new Error(`invalid protocol: ${protocol} is not supported.`);
   }
 }

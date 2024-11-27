@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { createSocket } from "node:dgram";
 import { createServer } from "node:net";
 import { describe, expect, it } from "vitest";
-import { TcpAgent, UdpAgent, assertStunMSg } from "./agent.js";
+import { TcpAgent, UdpAgent, assertRawStunFmtMsg } from "./agent.js";
 import { magicCookie } from "./consts.js";
 import { type StunMsg, decodeStunMsg, encodeStunMsg } from "./msg.js";
 
@@ -32,7 +32,7 @@ describe("assertStunMsg", () => {
       0x73,
       // 0xbd		-1 byte
     ]);
-    expect(() => assertStunMSg(buf)).toThrowError(/invalid stun msg/i);
+    expect(() => assertRawStunFmtMsg(buf)).toThrowError(/invalid stun msg/i);
   });
   it("throws an error if the length of a STUN message is not a multiple of 4", () => {
     const trxId = Buffer.from([
@@ -55,7 +55,7 @@ describe("assertStunMsg", () => {
       hBuf, // 20 bytes
       Buffer.alloc(1),
     ]);
-    expect(() => assertStunMSg(buf)).toThrowError(/invalid stun msg/i);
+    expect(() => assertRawStunFmtMsg(buf)).toThrowError(/invalid stun msg/i);
   });
   it("throws error if a STUN message header does not include valid magic cookie", () => {
     const trxId = Buffer.from([
@@ -74,7 +74,7 @@ describe("assertStunMsg", () => {
       ]),
       trxId,
     ]);
-    expect(() => assertStunMSg(buf)).toThrowError(/invalid magic cookie/);
+    expect(() => assertRawStunFmtMsg(buf)).toThrowError(/invalid magic cookie/);
   });
 });
 
@@ -139,7 +139,7 @@ describe("send", () => {
         const resAts: number[] = [];
         server.on("message", (msg, rinfo) => {
           resAts.push(Date.now());
-          assertStunMSg(msg);
+          assertRawStunFmtMsg(msg);
         });
         const agent = new UdpAgent({
           dest: {
@@ -180,7 +180,7 @@ describe("send", () => {
         const resAts: number[] = [];
         server.on("message", (msg, rinfo) => {
           resAts.push(Date.now());
-          assertStunMSg(msg);
+          assertRawStunFmtMsg(msg);
         });
         const agent = new UdpAgent({
           dest: {
@@ -221,7 +221,7 @@ describe("send", () => {
         const resAts: number[] = [];
         server.on("message", (msg, rinfo) => {
           resAts.push(Date.now());
-          assertStunMSg(msg);
+          assertRawStunFmtMsg(msg);
           const { header, attrs } = decodeStunMsg(msg);
           if (resAts.length === 2) {
             const res = encodeStunMsg({
@@ -306,7 +306,7 @@ describe("send", () => {
       // Arrange
       const server = createSocket("udp4");
       server.on("message", (msg, rinfo) => {
-        assertStunMSg(msg);
+        assertRawStunFmtMsg(msg);
         const { header, attrs } = decodeStunMsg(msg);
         const res = encodeStunMsg({
           header: {
@@ -476,7 +476,7 @@ describe("send", () => {
         });
         const server = createServer((conn) => {
           conn.on("data", (data) => {
-            assertStunMSg(data);
+            assertRawStunFmtMsg(data);
             const {
               header: { trxId },
             } = decodeStunMsg(data);

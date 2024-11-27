@@ -10,7 +10,7 @@ export {
   type TcpClientInitConfig,
 } from "./client.js";
 export {
-  assertStunMSg,
+  assertRawStunFmtMsg as assertStunMSg,
   UdpAgent,
   TcpAgent,
   type UdpAgentConfig,

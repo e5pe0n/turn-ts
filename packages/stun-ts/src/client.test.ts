@@ -1,7 +1,7 @@
 import { createSocket } from "node:dgram";
 import { createServer } from "node:net";
 import { describe, expect, it } from "vitest";
-import { assertStunMSg } from "./agent.js";
+import { assertRawStunFmtMsg } from "./agent.js";
 import { Client, type ErrorResponse, type SuccessResponse } from "./client.js";
 import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 
@@ -56,7 +56,7 @@ describe("send", () => {
         // Arrange
         const server = createSocket("udp4");
         server.on("message", (msg, rinfo) => {
-          assertStunMSg(msg);
+          assertRawStunFmtMsg(msg);
           const { header, attrs } = decodeStunMsg(msg);
           const res = encodeStunMsg({
             header: {
@@ -166,7 +166,7 @@ describe("send", () => {
         // Arrange
         const server = createServer((conn) => {
           conn.on("data", (data) => {
-            assertStunMSg(data);
+            assertRawStunFmtMsg(data);
             const { header } = decodeStunMsg(data);
             const res = encodeStunMsg({
               header: {
@@ -222,7 +222,7 @@ describe("send", () => {
         });
         const server = createServer((conn) => {
           conn.on("data", (data) => {
-            assertStunMSg(data);
+            assertRawStunFmtMsg(data);
             const {
               header: { trxId },
             } = decodeStunMsg(data);

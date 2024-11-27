@@ -1,5 +1,9 @@
 import { randomBytes } from "node:crypto";
 import {
+  type Agent,
+  createAgent,
+  type ITcpAgent,
+  type IUdpAgent,
   TcpAgent,
   type TcpAgentInitConfig,
   UdpAgent,
@@ -39,20 +43,12 @@ export type TcpClientConfig = Required<TcpClientInitConfig>;
 export type ClientConfig = UdpClientConfig | TcpClientConfig;
 
 export class Client {
-  #agent: UdpAgent | TcpAgent;
+  #agent: IUdpAgent | ITcpAgent;
   #config: ClientConfig;
 
   constructor(config: ClientInitConfig) {
-    switch (config.protocol) {
-      case "tcp":
-        this.#agent = new TcpAgent(config);
-        this.#config = { ...config, ...this.#agent.config };
-        break;
-      case "udp":
-        this.#agent = new UdpAgent(config);
-        this.#config = { ...config, ...this.#agent.config };
-        break;
-    }
+    this.#agent = createAgent(config.protocol, config);
+    this.#config = { ...config, ...this.#agent.config };
   }
 
   get config(): ClientConfig {
@@ -69,7 +65,11 @@ export class Client {
       },
       attrs: [],
     });
-    await this.#agent.indicate(msg);
+    try {
+      await this.#agent.indicate(msg);
+    } finally {
+      this.#agent.close();
+    }
   }
 
   async request(): Promise<Response> {
@@ -82,31 +82,39 @@ export class Client {
       },
       attrs: [],
     });
-    const resBuf = await this.#agent.request(msg);
-    const resMsg = decodeStunMsg(resBuf);
-    if (!trxId.equals(resMsg.header.trxId)) {
-      throw new Error(
-        `invalid transaction id; expected: ${trxId}, actual: ${resMsg.header.trxId}.`,
+    console.log("msg:", msg);
+    try {
+      const resBuf = await this.#agent.request(msg);
+      console.log("XXX");
+      const resMsg = decodeStunMsg(resBuf);
+      if (!trxId.equals(resMsg.header.trxId)) {
+        throw new Error(
+          `invalid transaction id; expected: ${trxId}, actual: ${resMsg.header.trxId}.`,
+        );
+      }
+      const xorMappedAddrAttr = resMsg.attrs.find(
+        (attr) => attr.type === "XOR-MAPPED-ADDRESS",
       );
+      if (xorMappedAddrAttr) {
+        return {
+          success: true,
+          ...xorMappedAddrAttr.value,
+        } satisfies SuccessResponse;
+      }
+      const errCodeAttr = resMsg.attrs.find(
+        (attr) => attr.type === "ERROR-CODE",
+      );
+      if (errCodeAttr) {
+        return {
+          success: false,
+          ...errCodeAttr.value,
+        } satisfies ErrorResponse;
+      }
+      throw new Error(
+        "invalid response; neither XOR-MAPPED-ADDRESS nor ERROR-CODE exist",
+      );
+    } finally {
+      this.#agent.close();
     }
-    const xorMappedAddrAttr = resMsg.attrs.find(
-      (attr) => attr.type === "XOR-MAPPED-ADDRESS",
-    );
-    if (xorMappedAddrAttr) {
-      return {
-        success: true,
-        ...xorMappedAddrAttr.value,
-      } satisfies SuccessResponse;
-    }
-    const errCodeAttr = resMsg.attrs.find((attr) => attr.type === "ERROR-CODE");
-    if (errCodeAttr) {
-      return {
-        success: false,
-        ...errCodeAttr.value,
-      } satisfies ErrorResponse;
-    }
-    throw new Error(
-      "invalid response; neither XOR-MAPPED-ADDRESS nor ERROR-CODE exist",
-    );
   }
 }
