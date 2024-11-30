@@ -1,4 +1,5 @@
 import { setTimeout } from "node:timers/promises";
+import { z } from "zod";
 
 /**
  * Override the property types of `T` by given `U`.
@@ -140,7 +141,7 @@ export function numToBuf(n: number, length: number): Buffer {
 export function xorBufs(a: Buffer, b: Buffer): Buffer {
   if (a.length !== b.length) {
     throw new Error(
-      `invalid args; two buffers must have the same length. a: ${a}, b: ${b}`,
+      `invalid args; two buffers must have the same length. a: ${a.length}, b: ${b.length}`,
     );
   }
   const resBuf = Buffer.alloc(a.length);
@@ -257,23 +258,27 @@ export function fAddr(addr: Buffer): string {
 }
 
 export function pAddr(addr: string): Buffer {
-  const nStrsV4 = addr.split(".");
   const nStrsV6 = addr.split(":");
-  if (!(nStrsV4.length === 4 || (3 <= nStrsV6.length && nStrsV6.length <= 8))) {
-    throw new Error(
-      "invalid address; expected ip v4 or ip v6 address such as '127.0.0.1' or '2001:db8:85a3::8a2e:370:7334'.",
-    );
-  }
-  if (nStrsV4.length === 4) {
+  if (z.string().ip({ version: "v4" }).safeParse(addr).success) {
+    const nStrsV4 = addr.split(".");
     return Buffer.from(nStrsV4.map(Number));
-  } else {
-    const numNs = nStrsV6.filter((v) => v !== "").length;
-    const paddedNs = [];
+  }
+  if (z.string().ip({ version: "v6" }).safeParse(addr).success) {
+    const nStrsV6 = addr.split(":");
+
+    // e.g."::ffff:128.0.0.1"
+    const isLastIpV4 = z
+      .string()
+      .ip({ version: "v4" })
+      .safeParse(nStrsV6.at(-1)).success;
+
+    const numNs = nStrsV6.filter((v) => v.match(/^[0-9a-f]{1,4}$/i)).length;
+    const paddedNs: number[] = [];
     let padded = false;
-    for (const nStr of nStrsV6) {
+    for (const nStr of isLastIpV4 ? nStrsV6.slice(0, -1) : nStrsV6) {
       if (nStr === "") {
         if (!padded) {
-          for (let i = 0; i < 8 - numNs; ++i) {
+          for (let i = 0; i < 8 - numNs - Number(isLastIpV4) * 2; ++i) {
             paddedNs.push(0);
           }
           padded = true;
@@ -286,8 +291,19 @@ export function pAddr(addr: string): Buffer {
     for (const [i, n] of paddedNs.entries()) {
       buf.writeUInt16BE(n, i * 2);
     }
+    if (isLastIpV4) {
+      const nStrsV4 = nStrsV6.at(-1)!.split(".");
+      const nStrsV4Num = nStrsV4.map(Number);
+      for (const [i, n] of nStrsV4Num.entries()) {
+        buf.writeUInt8(n, 12 + i);
+      }
+    }
     return buf;
   }
+
+  throw new Error(
+    "invalid address; expected ip v4 or ip v6 address such as '127.0.0.1' or '2001:db8:85a3::8a2e:370:7334'.",
+  );
 }
 
 export function withResolvers<T>() {
