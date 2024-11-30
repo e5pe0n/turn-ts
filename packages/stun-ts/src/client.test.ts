@@ -1,6 +1,6 @@
 import { createSocket } from "node:dgram";
 import { createServer } from "node:net";
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it, test } from "vitest";
 import { assertRawStunFmtMsg } from "./agent.js";
 import {
   Client,

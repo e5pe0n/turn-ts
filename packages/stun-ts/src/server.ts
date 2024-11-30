@@ -1,4 +1,4 @@
-import { createListener, type Listener } from "./listener.js";
+import { type Listener, createListener } from "./listener.js";
 import { encodeStunMsg } from "./msg.js";
 import type { Protocol, RawStunFmtMsg } from "./types.js";
 

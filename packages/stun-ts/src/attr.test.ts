@@ -26,8 +26,6 @@ import {
   encodeUsernameValue,
   encodeXorMappedAddressValue,
 } from "./attr.js";
-import { encodeHeader } from "./header.js";
-import type { RawStunFmtMsg } from "./types.js";
 
 describe("encodeMappedAddressValue", () => {
   it("encodes IPv4 MAPPED-ADDRESS value", () => {
@@ -150,18 +148,12 @@ describe("encodeXorMappedAddressValue", () => {
     const trxId = Buffer.from([
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
     ]);
-    const hBuf = encodeHeader({
-      cls: "Request",
-      method: "Binding",
-      length: 8,
-      trxId,
-    });
     const value: InputXorMappedAddressAttr["value"] = {
       family: "IPv4",
       port: 12345,
       address: "201.199.197.89",
     };
-    expect(encodeXorMappedAddressValue(value, hBuf as RawStunFmtMsg)).toEqual(
+    expect(encodeXorMappedAddressValue(value, trxId)).toEqual(
       Buffer.from([
         0x00,
         0x01, // Family (IPv4)
@@ -178,18 +170,12 @@ describe("encodeXorMappedAddressValue", () => {
     const trxId = Buffer.from([
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
     ]);
-    const hBuf = encodeHeader({
-      cls: "Request",
-      method: "Binding",
-      length: 8,
-      trxId,
-    });
     const value: InputXorMappedAddressAttr["value"] = {
       family: "IPv6",
       port: 12345,
       address: "2001:0:0:db8::1",
     };
-    expect(encodeXorMappedAddressValue(value, hBuf as RawStunFmtMsg)).toEqual(
+    expect(encodeXorMappedAddressValue(value, trxId)).toEqual(
       Buffer.from([
         0x00,
         0x02, // Family (IPv6)

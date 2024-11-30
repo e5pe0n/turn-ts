@@ -1,4 +1,4 @@
-import { expect, it, describe } from "vitest";
+import { describe, expect, it } from "vitest";
 import { Client, type SuccessResponse } from "./client.js";
 import { Server } from "./server.js";
 
@@ -33,7 +33,7 @@ describe("tcp", () => {
     const server = new Server({ protocol: "tcp" });
     server.listen(12345);
     const client = new Client({
-      protocol: "udp",
+      protocol: "tcp",
       dest: {
         port: 12345,
         address: "127.0.0.1",

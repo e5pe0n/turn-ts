@@ -1,9 +1,9 @@
-import { createSocket, type Socket } from "node:dgram";
-import { assertRawStunFmtMsg } from "./agent.js";
-import { decodeStunMsg, type StunMsg } from "./msg.js";
-import type { Protocol, RawStunFmtMsg } from "./types.js";
-import { createServer, type Server } from "node:net";
+import { type Socket, createSocket } from "node:dgram";
+import { type Server, createServer } from "node:net";
 import { z } from "zod";
+import { assertRawStunFmtMsg } from "./agent.js";
+import { type StunMsg, decodeStunMsg } from "./msg.js";
+import type { Protocol, RawStunFmtMsg } from "./types.js";
 
 const remoteInfoSchema = z.object({
   family: z.union([z.literal("IPv4"), z.literal("IPv6")]),
@@ -35,6 +35,7 @@ class UdpListener implements Listener {
         const resMsg = handler(decodedMsg, rinfo);
         this.#sock.send(resMsg, rinfo.port, rinfo.address);
       } catch (err) {
+        // biome-ignore lint/suspicious/noConsole: ignore error
         console.error(err);
       }
     });
@@ -69,6 +70,7 @@ class TcpListener implements Listener {
           const resMsg = handler(decodedMsg, rinfo);
           sock.write(resMsg);
         } catch (err) {
+          // biome-ignore lint/suspicious/noConsole: ignore error
           console.error(err);
         }
       });

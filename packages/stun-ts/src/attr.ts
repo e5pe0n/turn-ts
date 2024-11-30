@@ -172,7 +172,7 @@ export const attrvEncoders: AttrvEncoders<InputAttr> = {
   REALM: (attr) => encodeRealmValue(attr.value),
   NONCE: (attr) => encodeNonceValue(attr.value),
   "XOR-MAPPED-ADDRESS": (attr, msg) =>
-    encodeXorMappedAddressValue(attr.value, msg),
+    encodeXorMappedAddressValue(attr.value, readTrxId(msg)),
   "UNKNOWN-ATTRIBUTES": (attr) => encodeUnknownAttributesValue(attr.value),
   SOFTWARE: (attr) => encodeSoftwareValue(attr.value),
 };
@@ -287,9 +287,8 @@ export function decodeMappedAddressValue(
 
 export function encodeXorMappedAddressValue(
   value: InputXorMappedAddressAttr["value"],
-  msg: RawStunFmtMsg,
+  trxId: Buffer,
 ): Buffer {
-  const trxId = readTrxId(msg);
   const { family, port, address: addr } = value;
   const xPort = port ^ (magicCookie >>> 16);
   const buf = Buffer.alloc(family === "IPv4" ? 8 : 20);
@@ -352,7 +351,7 @@ export function encodeErrorCodeValue(
     );
   }
   const reasonBuf = Buffer.from(reason, "utf-8");
-  // ignoreing the num of chars in utf-8 specified by https://datatracker.ietf.org/doc/html/rfc5389#autoid-44
+  // ignoring the num of chars in utf-8 specified by https://datatracker.ietf.org/doc/html/rfc5389#autoid-44
   if (!(reasonBuf.length <= 763)) {
     throw new Error(
       "invalid reason phrase; reason phrase must be <= 763 bytes.",
