@@ -1,9 +1,39 @@
 import { createSocket } from "node:dgram";
 import { createServer } from "node:net";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { assertRawStunFmtMsg } from "./agent.js";
-import { Client, type ErrorResponse, type SuccessResponse } from "./client.js";
+import {
+  Client,
+  type ClientConfig,
+  type ErrorResponse,
+  type SuccessResponse,
+} from "./client.js";
 import { decodeStunMsg, encodeStunMsg } from "./msg.js";
+
+describe("types", () => {
+  test("udp types inferred when passing 'udp' to protocol in config without explicit type parameter", () => {
+    const client = new Client({
+      protocol: "udp",
+      dest: {
+        address: "127.0.0.1",
+        port: 3478,
+      },
+    });
+    expectTypeOf(client).toEqualTypeOf<Client<"udp">>();
+    expectTypeOf(client.config).toEqualTypeOf<ClientConfig<"udp">>();
+  });
+  test("udp types inferred when passing 'udp' to protocol in config without explicit type parameter", () => {
+    const client = new Client({
+      protocol: "tcp",
+      dest: {
+        address: "127.0.0.1",
+        port: 3478,
+      },
+    });
+    expectTypeOf(client).toEqualTypeOf<Client<"tcp">>();
+    expectTypeOf(client.config).toEqualTypeOf<ClientConfig<"tcp">>();
+  });
+});
 
 describe("send", () => {
   describe("udp", () => {

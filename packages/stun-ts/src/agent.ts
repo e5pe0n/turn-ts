@@ -36,22 +36,16 @@ export function assertRawStunFmtMsg(msg: Buffer): asserts msg is RawStunFmtMsg {
   );
 }
 
-export interface Agent {
-  protocol: Protocol;
-  config: UdpAgentConfig | TcpAgentConfig;
+type AgentConfig<P extends Protocol> = P extends "udp"
+  ? UdpAgentConfig
+  : TcpAgentConfig;
+
+export interface Agent<P extends Protocol = Protocol> {
+  protocol: P;
+  config: AgentConfig<P>;
   close(): void;
   indicate(msg: RawStunFmtMsg): Promise<undefined>;
   request(msg: RawStunFmtMsg): Promise<RawStunFmtMsg>;
-}
-
-export interface IUdpAgent extends Agent {
-  protocol: "udp";
-  config: UdpAgentConfig;
-}
-
-export interface ITcpAgent extends Agent {
-  protocol: "tcp";
-  config: TcpAgentConfig;
 }
 
 export type UdpAgentInitConfig = {
@@ -65,8 +59,7 @@ export type UdpAgentInitConfig = {
 };
 
 export type UdpAgentConfig = Required<UdpAgentInitConfig>;
-
-export class UdpAgent implements IUdpAgent {
+export class UdpAgent implements Agent<"udp"> {
   #config: UdpAgentConfig;
   #sock: Socket;
   #protocol = "udp" as const;
@@ -82,7 +75,7 @@ export class UdpAgent implements IUdpAgent {
     this.#sock.bind();
   }
 
-  get protocol(): IUdpAgent["protocol"] {
+  get protocol(): Agent<"udp">["protocol"] {
     return this.#protocol;
   }
 
@@ -152,7 +145,7 @@ export type TcpAgentInitConfig = {
 
 export type TcpAgentConfig = Required<TcpAgentInitConfig>;
 
-export class TcpAgent implements ITcpAgent {
+export class TcpAgent implements Agent<"tcp"> {
   #config: TcpAgentConfig;
   #protocol = "tcp" as const;
   #sock?: TcpSocket;
@@ -164,7 +157,7 @@ export class TcpAgent implements ITcpAgent {
     };
   }
 
-  get protocol(): ITcpAgent["protocol"] {
+  get protocol(): Agent<"tcp">["protocol"] {
     return this.#protocol;
   }
 
@@ -227,15 +220,24 @@ export class TcpAgent implements ITcpAgent {
   }
 }
 
-export function createAgent(
-  protocol: Protocol,
-  config: UdpAgentInitConfig | TcpAgentInitConfig,
-): IUdpAgent | ITcpAgent {
+type AgentInitConfig<P extends Protocol> = P extends "udp"
+  ? UdpAgentInitConfig
+  : TcpAgentInitConfig;
+
+export function createAgent<P extends Protocol>(
+  protocol: P,
+  config: AgentInitConfig<P>,
+): Agent<P> {
   switch (protocol) {
-    case "tcp":
-      return new TcpAgent(config);
+    // FIXME: is there a better way to type the args and the return value?
+    // Type 'UdpAgent' is not assignable to type 'Agent<P>'.
+    //   Types of property 'protocol' are incompatible.
+    //     Type '"udp"' is not assignable to type 'P'.
+    //       '"udp"' is assignable to the constraint of type 'P', but 'P' could be instantiated with a different subtype of constraint 'Protocol'.ts(2322)
     case "udp":
-      return new UdpAgent(config);
+      return new UdpAgent(config) as unknown as Agent<P>;
+    case "tcp":
+      return new TcpAgent(config) as unknown as Agent<P>;
     default:
       throw new Error(`invalid protocol: ${protocol} is not supported.`);
   }
