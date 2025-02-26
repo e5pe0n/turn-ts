@@ -25,7 +25,8 @@
         "noUselessElse": "off"
       },
       "complexity": {
-        "useSimpleNumberKeys": "off"
+        "useSimpleNumberKeys": "off",
+        "useLiteralKeys": "off"
       },
       "correctness": {
         "noUnusedImports": "warn"
@@ -37,7 +38,8 @@
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "double"
+      "quoteStyle": "double",
+      "quoteProperties": "preserve"
     }
   }
 }

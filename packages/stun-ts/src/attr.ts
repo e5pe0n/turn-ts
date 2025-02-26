@@ -18,17 +18,17 @@ const compOptRange = [0x8000, 0xffff] as const;
 
 export const attrTypeRecord = {
   "MAPPED-ADDRESS": 0x0001,
-  USERNAME: 0x0006,
+  "USERNAME": 0x0006,
   "MESSAGE-INTEGRITY": 0x0008,
   "ERROR-CODE": 0x0009,
   "UNKNOWN-ATTRIBUTES": 0x000a,
-  REALM: 0x0014,
-  NONCE: 0x0015,
+  "REALM": 0x0014,
+  "NONCE": 0x0015,
   "XOR-MAPPED-ADDRESS": 0x0020,
   // TODO: Separate into optional attribute records
-  SOFTWARE: 0x8022,
+  "SOFTWARE": 0x8022,
   // "ALTERNATE-SERVER": 0x8023,
-  FINGERPRINT: 0x8028,
+  "FINGERPRINT": 0x8028,
 } as const;
 export type AttrType = keyof typeof attrTypeRecord;
 
@@ -164,17 +164,17 @@ export type AttrvEncoders<IA extends { type: string }> = {
 
 export const attrvEncoders: AttrvEncoders<InputAttr> = {
   "MAPPED-ADDRESS": (attr) => encodeMappedAddressValue(attr.value),
-  USERNAME: (attr) => encodeUsernameValue(attr.value),
+  "USERNAME": (attr) => encodeUsernameValue(attr.value),
   "ERROR-CODE": (attr) => encodeErrorCodeValue(attr.value),
-  FINGERPRINT: (_, msg) => encodeFingerprintValue(msg),
+  "FINGERPRINT": (_, msg) => encodeFingerprintValue(msg),
   "MESSAGE-INTEGRITY": (attr, msg) =>
     encodeMessageIntegrityValue(attr.params, msg),
-  REALM: (attr) => encodeRealmValue(attr.value),
-  NONCE: (attr) => encodeNonceValue(attr.value),
+  "REALM": (attr) => encodeRealmValue(attr.value),
+  "NONCE": (attr) => encodeNonceValue(attr.value),
   "XOR-MAPPED-ADDRESS": (attr, msg) =>
     encodeXorMappedAddressValue(attr.value, readTrxId(msg)),
   "UNKNOWN-ATTRIBUTES": (attr) => encodeUnknownAttributesValue(attr.value),
-  SOFTWARE: (attr) => encodeSoftwareValue(attr.value),
+  "SOFTWARE": (attr) => encodeSoftwareValue(attr.value),
 };
 
 export function buildAttrEncoder<IA extends { type: string }>(
@@ -203,15 +203,15 @@ export type AttrvDecoders<OA extends { type: string; value: unknown }> = {
 
 export const attrvDecoders: AttrvDecoders<OutputAttr> = {
   "ERROR-CODE": (buf) => decodeErrorCodeValue(buf),
-  FINGERPRINT: (buf) => buf.readInt32BE(),
+  "FINGERPRINT": (buf) => buf.readInt32BE(),
   "MAPPED-ADDRESS": (buf) => decodeMappedAddressValue(buf),
-  NONCE: (buf) => decodeStrValue(buf),
-  REALM: (buf) => decodeStrValue(buf),
-  USERNAME: (buf) => decodeStrValue(buf),
+  "NONCE": (buf) => decodeStrValue(buf),
+  "REALM": (buf) => decodeStrValue(buf),
+  "USERNAME": (buf) => decodeStrValue(buf),
   "MESSAGE-INTEGRITY": (buf) => buf,
   "XOR-MAPPED-ADDRESS": (buf, trxId) => decodeXorMappedAddressValue(buf, trxId),
   "UNKNOWN-ATTRIBUTES": (buf) => decodeUnknownAttributeValue(buf),
-  SOFTWARE: (buf) => decodeStrValue(buf),
+  "SOFTWARE": (buf) => decodeStrValue(buf),
 };
 
 export function buildAttrsDecoder<OA extends { type: string; value: unknown }>(
