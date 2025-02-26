@@ -14,7 +14,7 @@ export class Server {
     this.#protocol = config.protocol;
     this.#listener = createListener(this.#protocol, (msg, rinfo) => {
       const {
-        header: { method, trxId },
+        #header: { method, trxId },
       } = msg;
       let res: RawStunFmtMsg;
       switch (method) {

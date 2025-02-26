@@ -1,40 +1,40 @@
 import { type Socket, createSocket } from "node:dgram";
 import { type Socket as TcpSocket, createConnection } from "node:net";
 import { assert, retry } from "@e5pe0n/lib";
-import { magicCookie } from "./consts.js";
-import { readMagicCookie } from "./header.js";
-import type { Protocol, RawStunFmtMsg } from "./types.js";
+import { magicCookie } from "./common.js";
+// import { readMagicCookie } from "./header.js";
+import type { Protocol } from "./types.js";
 
-export function assertRawStunFmtMsg(msg: Buffer): asserts msg is RawStunFmtMsg {
-  assert(
-    msg.length >= 20,
-    new Error(
-      `invalid stun msg; expected msg length is >= 20 bytes. actual length is ${msg.length}.`,
-    ),
-  );
-  assert(
-    msg.length % 4 === 0,
-    new Error(
-      `invalid stun msg; expected msg length is a multiple of 4 bytes. actual length is ${msg.length}.`,
-    ),
-  );
-  const fstBits = msg[0]! >>> 6;
-  assert(
-    fstBits === 0,
-    new Error(
-      `invalid stun msg; expected the most significant 2 bits is 0b00. actual is ${fstBits.toString(2)}.`,
-    ),
-  );
+// export function assertRawStunFmtMsg(msg: Buffer): asserts msg is RawStunFmtMsg {
+//   assert(
+//     msg.length >= 20,
+//     new Error(
+//       `invalid stun msg; expected msg length is >= 20 bytes. actual length is ${msg.length}.`,
+//     ),
+//   );
+//   assert(
+//     msg.length % 4 === 0,
+//     new Error(
+//       `invalid stun msg; expected msg length is a multiple of 4 bytes. actual length is ${msg.length}.`,
+//     ),
+//   );
+//   const fstBits = msg[0]! >>> 6;
+//   assert(
+//     fstBits === 0,
+//     new Error(
+//       `invalid stun msg; expected the most significant 2 bits is 0b00. actual is ${fstBits.toString(2)}.`,
+//     ),
+//   );
 
-  const stunMsg = msg as RawStunFmtMsg;
-  const cookie = readMagicCookie(stunMsg);
-  assert(
-    cookie === magicCookie,
-    new Error(
-      `invalid stun msg; invalid magic cookie. actual is ${cookie.toString(16)}.`,
-    ),
-  );
-}
+//   const stunMsg = msg as RawStunFmtMsg;
+//   const cookie = readMagicCookie(stunMsg);
+//   assert(
+//     cookie === magicCookie,
+//     new Error(
+//       `invalid stun msg; invalid magic cookie. actual is ${cookie.toString(16)}.`,
+//     ),
+//   );
+// }
 
 type AgentConfig<P extends Protocol> = P extends "udp"
   ? UdpAgentConfig
@@ -44,12 +44,12 @@ export interface Agent<P extends Protocol = Protocol> {
   protocol: P;
   config: AgentConfig<P>;
   close(): void;
-  indicate(msg: RawStunFmtMsg): Promise<undefined>;
-  request(msg: RawStunFmtMsg): Promise<RawStunFmtMsg>;
+  indicate(msg: Buffer): Promise<undefined>;
+  request(msg: Buffer): Promise<Buffer>;
 }
 
 export type UdpAgentInitConfig = {
-  dest: {
+  to: {
     address: string;
     port: number;
   };
@@ -87,12 +87,12 @@ export class UdpAgent implements Agent<"udp"> {
     this.#sock.close();
   }
 
-  async indicate(msg: RawStunFmtMsg): Promise<undefined> {
+  async indicate(msg: Buffer): Promise<undefined> {
     await new Promise<void>((resolve, reject) => {
       this.#sock.send(
         msg,
-        this.#config.dest.port,
-        this.#config.dest.address,
+        this.#config.to.port,
+        this.#config.to.address,
         (err, bytes) => {
           if (err) {
             reject(err);
@@ -103,40 +103,39 @@ export class UdpAgent implements Agent<"udp"> {
     });
   }
 
-  async request(msg: RawStunFmtMsg): Promise<RawStunFmtMsg> {
+  async request(msg: Buffer): Promise<Buffer> {
     const _res = new Promise<Buffer>((resolve, reject) => {
       this.#sock.on("message", (msg) => {
         resolve(msg);
       });
     });
-    const _req = async (): Promise<void> =>
+    const _req = async (): Promise<Error | null> =>
       new Promise((resolve, reject) => {
         this.#sock.send(
           msg,
-          this.#config.dest.port,
-          this.#config.dest.address,
-          (err, bytes) => {
-            reject(err);
+          this.#config.to.port,
+          this.#config.to.address,
+          (errOrNull, bytes) => {
+            resolve(errOrNull);
           },
         );
       });
 
-    const resBuf = (await Promise.race([
-      retry(
-        _req,
-        this.#config.rc,
-        (numAttempts: number) => this.#config.rtoMs * numAttempts,
-        this.#config.rtoMs * this.#config.rm,
-      ),
+    const res = (await Promise.race([
+      retry(_req, {
+        retryIf: () => true,
+        maxAttempts: this.#config.rc,
+        intervalMs: (numAttempts: number) => this.#config.rtoMs * numAttempts,
+        attemptTimeoutMs: this.#config.rtoMs * this.#config.rm,
+      }),
       _res,
     ])) as Buffer;
-    assertRawStunFmtMsg(resBuf);
-    return resBuf;
+    return res;
   }
 }
 
 export type TcpAgentInitConfig = {
-  dest: {
+  to: {
     address: string;
     port: number;
   };
@@ -172,8 +171,8 @@ export class TcpAgent implements Agent<"tcp"> {
   async indicate(msg: RawStunFmtMsg): Promise<undefined> {
     await new Promise<void>((resolve, reject) => {
       const sock = createConnection(
-        this.#config.dest.port,
-        this.#config.dest.address,
+        this.#config.to.port,
+        this.#config.to.address,
         () => {
           sock.write(msg);
           sock.end();
@@ -193,8 +192,8 @@ export class TcpAgent implements Agent<"tcp"> {
     const resBuf = await new Promise<Buffer>((resolve, reject) => {
       const sock = createConnection(
         {
-          port: this.#config.dest.port,
-          host: this.#config.dest.address,
+          port: this.#config.to.port,
+          host: this.#config.to.address,
           timeout: this.#config.tiMs,
         },
         () => {

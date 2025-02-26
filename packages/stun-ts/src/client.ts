@@ -2,10 +2,11 @@ import { randomBytes } from "node:crypto";
 import {
   type Agent,
   type TcpAgentInitConfig,
+  UdpAgent,
   type UdpAgentInitConfig,
   createAgent,
 } from "./agent.js";
-import { decodeStunMsg, encodeStunMsg } from "./msg.js";
+import { decodeStunMsg, encodeStunMsg, StunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
 
 export type ErrorResponse = {
@@ -52,6 +53,13 @@ export class Client<P extends Protocol> {
     //   Types of property 'protocol' are incompatible.
     //     Type '"udp"' is not assignable to type 'P'.
     //       '"udp"' is assignable to the constraint of type 'P', but 'P' could be instantiated with a different subtype of constraint 'Protocol'.ts(2322)
+    switch (config.protocol) {
+      case "udp": {
+        const agent: Agent<"udp"> = new UdpAgent(config);
+        this.#agent = agent;
+        break;
+      }
+    }
     this.#agent = createAgent(config.protocol, config) as Agent<P>;
     this.#config = { ...config, ...this.#agent.config } as ClientConfig<P>;
   }
@@ -79,23 +87,22 @@ export class Client<P extends Protocol> {
 
   async request(): Promise<Response> {
     const trxId = randomBytes(12);
-    const msg = encodeStunMsg({
+    const msg = StunMsg.build({
       header: {
         cls: "Request",
         method: "Binding",
         trxId,
       },
-      attrs: [],
     });
     try {
       const resBuf = await this.#agent.request(msg);
       const resMsg = decodeStunMsg(resBuf);
-      if (!trxId.equals(resMsg.header.trxId)) {
+      if (!trxId.equals(resMsg.#header.trxId)) {
         throw new Error(
-          `invalid transaction id; expected: ${trxId}, actual: ${resMsg.header.trxId}.`,
+          `invalid transaction id; expected: ${trxId}, actual: ${resMsg.#header.trxId}.`,
         );
       }
-      const xorMappedAddrAttr = resMsg.attrs.find(
+      const xorMappedAddrAttr = resMsg.#attrs.find(
         (attr) => attr.type === "XOR-MAPPED-ADDRESS",
       );
       if (xorMappedAddrAttr) {
@@ -104,7 +111,7 @@ export class Client<P extends Protocol> {
           ...xorMappedAddrAttr.value,
         } satisfies SuccessResponse;
       }
-      const errCodeAttr = resMsg.attrs.find(
+      const errCodeAttr = resMsg.#attrs.find(
         (attr) => attr.type === "ERROR-CODE",
       );
       if (errCodeAttr) {

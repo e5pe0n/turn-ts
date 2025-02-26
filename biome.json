@@ -38,8 +38,7 @@
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "double",
-      "quoteProperties": "preserve"
+      "quoteStyle": "double"
     }
   }
 }

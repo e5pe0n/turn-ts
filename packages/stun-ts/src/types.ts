@@ -8,4 +8,4 @@ export type Brand<T, K extends PropertyKey> = T & Branded<K>;
 
 export type Protocol = "udp" | "tcp";
 
-export type RawStunFmtMsg = Brand<Buffer, "StunFmtMsg">;
+export type RawStunMsg = Brand<Buffer, "RawStunMsg">;

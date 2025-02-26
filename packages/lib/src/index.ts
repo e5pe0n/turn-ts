@@ -168,65 +168,87 @@ export type Result<T, U = unknown> =
       error: U;
     };
 
+class RetryError extends Error {
+  lastResult?: unknown;
+
+  constructor(
+    message: string,
+    options?: (ErrorOptions & { lastResult?: unknown }) | undefined,
+  ) {
+    super(message, options);
+    this.lastResult = options?.lastResult;
+  }
+}
+
 export async function retry<T>(
   fn: () => Promise<T>,
-  maxAttempts: number,
-  intervalMs: number | ((numAttempts: number) => number),
-  attemptTimeoutMs: number | ((numAttempts: number) => number),
-  timeoutMs?: number,
+  {
+    retryIf,
+    maxAttempts,
+    intervalMs,
+    attemptTimeoutMs,
+    timeoutMs,
+  }: {
+    retryIf: (res: T) => boolean;
+    maxAttempts: number;
+    intervalMs: number | ((numAttempts: number) => number);
+    attemptTimeoutMs: number | ((numAttempts: number) => number);
+    timeoutMs?: number;
+  },
 ): Promise<T> {
-  const _retry = async (): Promise<Result<T>> => {
-    let numAttempts = 0;
+  let numAttempts = 0;
+  let lastResult: T | undefined = undefined;
+  const _retry = async (): Promise<T> => {
     while (true) {
-      try {
-        ++numAttempts;
-        const res = await fn();
-        return { success: true, value: res };
-      } catch (error) {
-        if (numAttempts > maxAttempts) {
-          return {
-            success: false,
-            error: new Error("reached max retries", { cause: error }),
-          };
-        }
-        const _intervalMs =
-          typeof intervalMs === "number" ? intervalMs : intervalMs(numAttempts);
-        const _attemptTimeoutMs =
-          typeof attemptTimeoutMs === "number"
-            ? attemptTimeoutMs
-            : attemptTimeoutMs(numAttempts);
-        const state = await Promise.race([
-          setTimeout(_intervalMs, "ready" as const),
-          setTimeout(_attemptTimeoutMs, "timeouted" as const),
-        ]);
-        if (state === "timeouted") {
-          return {
-            success: false,
-            error: new Error("reached timeout"),
-          };
-        }
+      ++numAttempts;
+      lastResult = await fn();
+      if (!retryIf(lastResult)) {
+        return lastResult;
+      }
+      if (numAttempts > maxAttempts) {
+        throw new RetryError(
+          `reached max retries: retried ${numAttempts} times.`,
+          { lastResult },
+        );
+      }
+
+      const _intervalMs =
+        typeof intervalMs === "number" ? intervalMs : intervalMs(numAttempts);
+      const _attemptTimeoutMs =
+        typeof attemptTimeoutMs === "number"
+          ? attemptTimeoutMs
+          : attemptTimeoutMs(numAttempts);
+
+      // wait for the next attempt
+      const state = await Promise.race([
+        setTimeout(_intervalMs, "ready" as const),
+        setTimeout(_attemptTimeoutMs, "timeout" as const),
+      ]);
+      if (state === "timeout") {
+        throw new RetryError(`reached timeout: retried ${numAttempts}.`, {
+          lastResult,
+        });
       }
     }
   };
+
   if (typeof timeoutMs === "number") {
     const res = await Promise.race([
       _retry(),
-      setTimeout(timeoutMs, {
-        success: false,
-        error: new Error("reached timeout"),
-      } satisfies Result<T>),
+      setTimeout(
+        timeoutMs,
+        new RetryError(`reached timeout: retried ${numAttempts}.`, {
+          lastResult,
+        }),
+      ),
     ]);
-    if (!res.success) {
-      throw res.error;
+    if (res instanceof RetryError) {
+      throw res;
     }
-    return res.value;
+    return res;
   }
 
-  const res = await _retry();
-  if (!res.success) {
-    throw res.error;
-  }
-  return res.value;
+  return await _retry();
 }
 
 export function pad0s(s: string, digits: number): string {
@@ -252,7 +274,7 @@ export function fAddr(addr: Buffer): string {
       .join(":");
   } else {
     throw new Error(
-      `invalid address; expected addresss bytes is 4 or 16. actual is ${addr.length}.`,
+      `invalid address; expected address length is 4 bytes or 16 bytes. actual is ${addr.length} bytes.`,
     );
   }
 }
@@ -306,13 +328,32 @@ export function pAddr(addr: string): Buffer {
   );
 }
 
+export type Resolve<T> = (value: T | PromiseLike<T>) => void;
+export type Reject = (reason?: unknown) => void;
+
 export function withResolvers<T>() {
-  let resolve: (value: T | PromiseLike<T>) => void;
-  let reject: (reason?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
+  let resolve: Resolve<T>;
+  let reject: Reject;
+  const promise = new Promise<T>((rs, rj) => {
+    resolve = rs;
+    reject = rj;
   });
   // @ts-ignore: ts(2454)
   return { promise, resolve, reject };
+}
+
+export async function* generatePromise<T>(
+  executor: (
+    getResolvers: () => { resolve: Resolve<T>; reject: Reject },
+  ) => void,
+) {
+  let { promise, resolve, reject } = withResolvers<T>();
+  executor(() => ({
+    resolve,
+    reject,
+  }));
+  while (true) {
+    yield await promise;
+    ({ promise, resolve, reject } = withResolvers<T>());
+  }
 }

@@ -14,7 +14,7 @@ describe("types", () => {
   test("udp types inferred when passing 'udp' to protocol in config without explicit type parameter", () => {
     const client = new Client({
       protocol: "udp",
-      dest: {
+      to: {
         address: "127.0.0.1",
         port: 3478,
       },
@@ -25,7 +25,7 @@ describe("types", () => {
   test("udp types inferred when passing 'udp' to protocol in config without explicit type parameter", () => {
     const client = new Client({
       protocol: "tcp",
-      dest: {
+      to: {
         address: "127.0.0.1",
         port: 3478,
       },
@@ -48,7 +48,7 @@ describe("send", () => {
         });
         const client = new Client({
           protocol: "udp",
-          dest: {
+          to: {
             address: "127.0.0.1",
             port: 12345,
           },
@@ -87,7 +87,7 @@ describe("send", () => {
         const server = createSocket("udp4");
         server.on("message", (msg, rinfo) => {
           assertRawStunFmtMsg(msg);
-          const { header, attrs } = decodeStunMsg(msg);
+          const { #header: header, #attrs: attrs } = decodeStunMsg(msg);
           const res = encodeStunMsg({
             header: {
               cls: "SuccessResponse",
@@ -114,7 +114,7 @@ describe("send", () => {
         try {
           const client = new Client({
             protocol: "udp",
-            dest: {
+            to: {
               address: "127.0.0.1",
               port: 12345,
             },
@@ -157,7 +157,7 @@ describe("send", () => {
         });
         const client = new Client({
           protocol: "tcp",
-          dest: {
+          to: {
             address: "127.0.0.1",
             port: 12345,
           },
@@ -197,7 +197,7 @@ describe("send", () => {
         const server = createServer((conn) => {
           conn.on("data", (data) => {
             assertRawStunFmtMsg(data);
-            const { header } = decodeStunMsg(data);
+            const { #header: header } = decodeStunMsg(data);
             const res = encodeStunMsg({
               header: {
                 cls: "ErrorResponse",
@@ -223,7 +223,7 @@ describe("send", () => {
         });
         const client = new Client({
           protocol: "tcp",
-          dest: {
+          to: {
             address: "127.0.0.1",
             port: 12345,
           },
@@ -254,7 +254,7 @@ describe("send", () => {
           conn.on("data", (data) => {
             assertRawStunFmtMsg(data);
             const {
-              header: { trxId },
+              #header: { trxId },
             } = decodeStunMsg(data);
             const res = encodeStunMsg({
               header: {
@@ -283,7 +283,7 @@ describe("send", () => {
         });
         const client = new Client({
           protocol: "tcp",
-          dest: {
+          to: {
             address: "127.0.0.1",
             port: 12345,
           },

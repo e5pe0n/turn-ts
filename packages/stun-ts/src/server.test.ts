@@ -8,7 +8,7 @@ describe("udp", () => {
     server.listen(12345);
     const client = new Client({
       protocol: "udp",
-      dest: {
+      to: {
         port: 12345,
         address: "127.0.0.1",
       },
@@ -34,7 +34,7 @@ describe("tcp", () => {
     server.listen(12345);
     const client = new Client({
       protocol: "tcp",
-      dest: {
+      to: {
         port: 12345,
         address: "127.0.0.1",
       },

@@ -1,253 +1,224 @@
-import { describe, expect, it, test } from "vitest";
-import { magicCookie } from "./consts.js";
-import { writeTrxId } from "./header.js";
-import { type StunMsg, decodeStunMsg, encodeStunMsg } from "./msg.js";
-import type { RawStunFmtMsg } from "./types.js";
+import { describe, expect, it } from "vitest";
+import { magicCookie } from "./common.js";
+import { StunMsg } from "./msg.js";
+import type { RawStunMsg } from "./types.js";
 
-describe("decodeStunMsg", () => {
-  it("decodes a STUN message", () => {
-    const trxId = Buffer.from([
-      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-    ]);
-    const hBuf = Buffer.concat([
-      Buffer.from([
-        0x00, // STUN Message Type: Binding request
-        0x01,
-        0x00, // Message Length: 12 bytes
-        0x0c,
-        0x21, // Magic Cookie
-        0x12,
-        0xa4,
-        0x42,
-      ]),
-      trxId,
-    ]);
-    const attrBuf = Buffer.from([
-      0x00, // Attr Type: XOR-MAPPED-ADDRESS
-      0x20,
-      0x00, // Attr Length: 8 bytes
-      0x08,
-      // Attr Value
-      0x00,
-      0x01, // Family: IPv4
-      0x11, // X-Port
-      0x2b,
-      0xe8, // X-Address (IPv4)
-      0xd5,
-      0x61,
-      0x1b,
-    ]); // 12 bytes
-    const buf = Buffer.concat([hBuf, attrBuf]) as RawStunFmtMsg;
-    expect(decodeStunMsg(buf)).toEqual({
-      header: {
-        cls: "Request",
-        method: "Binding",
-        length: 12,
-        magicCookie,
-        trxId,
-      },
-      attrs: [
-        {
-          type: "XOR-MAPPED-ADDRESS",
-          value: {
+const ctx: {
+  trxId: Buffer;
+} = {
+  trxId: Buffer.from([
+    0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
+  ]),
+} as const;
+
+describe("StunMsg", () => {
+  describe("build()", () => {
+    it("creates a StunMsg with XOR-MAPPED-ADDRESS attr", () => {
+      const msg = StunMsg.build({
+        header: {
+          cls: "SuccessResponse",
+          method: "Binding",
+          trxId: ctx.trxId,
+        },
+        attrs: {
+          xorMappedAddress: {
             family: "IPv4",
             port: 12345,
             address: "201.199.197.89",
           },
         },
-      ],
-    } satisfies StunMsg);
-  });
-});
-
-describe("encodeStunMsg", () => {
-  it("encodes a STUN message", () => {
-    const trxId = Buffer.from([
-      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-    ]);
-    const res = encodeStunMsg({
-      header: {
-        cls: "SuccessResponse",
-        method: "Binding",
-        trxId,
-      },
-      attrs: [
-        {
-          type: "XOR-MAPPED-ADDRESS",
-          value: {
+      });
+      expect(msg).toEqual({
+        header: {
+          cls: "SuccessResponse",
+          method: "Binding",
+          trxId: ctx.trxId,
+          length: 12,
+          magicCookie,
+        },
+        attrs: {
+          xorMappedAddress: {
             family: "IPv4",
             port: 12345,
             address: "201.199.197.89",
           },
         },
-      ],
+        raw: Buffer.concat([
+          // Header
+          Buffer.from([
+            0x01, // Message Type
+            0x01,
+            0x00, // Length: 12 bytes
+            0x0c,
+            0x21, // Magic Cookie
+            0x12,
+            0xa4,
+            0x42,
+          ]),
+          ctx.trxId,
+          // Attrs
+          Buffer.from([
+            0x00, // Type
+            0x20,
+            0x00, // Length
+            0x08,
+            // Value
+            0x00,
+            0x01, // Family (IPv4)
+            0x11, // Port
+            0x2b,
+            0xe8, // X-Address (IPv4)
+            0xd5,
+            0x61,
+            0x1b,
+          ]),
+        ]) as RawStunMsg,
+      } satisfies StunMsg);
     });
-    expect(res).toEqual(
-      Buffer.concat([
-        // Header
+    it("creates a StunMsg with MESSAGE-INTEGRITY and FINGERPRINT attr", () => {
+      const msg = StunMsg.build({
+        header: {
+          cls: "SuccessResponse",
+          method: "Binding",
+          trxId: ctx.trxId,
+        },
+        attrs: {
+          xorMappedAddress: {
+            family: "IPv4",
+            port: 12345,
+            address: "201.199.197.89",
+          },
+          messageIntegrity: {
+            term: "short",
+            password: "pass",
+          },
+          fingerprint: true,
+        },
+      });
+      expect(msg).toEqual({
+        header: {
+          cls: "SuccessResponse",
+          method: "Binding",
+          trxId: ctx.trxId,
+          length: 44,
+          magicCookie,
+        },
+        attrs: {
+          xorMappedAddress: {
+            family: "IPv4",
+            port: 12345,
+            address: "201.199.197.89",
+          }, // 4 + 8
+          messageIntegrity: expect.any(Buffer), // 4 + 20
+          fingerprint: expect.any(Buffer), // 4 + 4
+        },
+        raw: expect.any(Buffer),
+      } satisfies StunMsg);
+      expect(msg.raw).toHaveLength(20 + 44);
+      expect(msg.raw.subarray(0, 20 + 12)).toEqual(
+        Buffer.concat([
+          // Header
+          Buffer.from([
+            0x01, // Message Type
+            0x01,
+            0x00, // Length: 44 bytes
+            0x2c,
+            0x21, // Magic Cookie
+            0x12,
+            0xa4,
+            0x42,
+          ]),
+          ctx.trxId,
+          // Attrs
+          Buffer.from([
+            0x00, // Type
+            0x20,
+            0x00, // Length
+            0x08,
+            // Value
+            0x00,
+            0x01, // Family (IPv4)
+            0x11, // Port
+            0x2b,
+            0xe8, // X-Address (IPv4)
+            0xd5,
+            0x61,
+            0x1b,
+          ]),
+        ]),
+      );
+      expect(msg.raw.subarray(20 + 12, 20 + 12 + 4)).toEqual(
         Buffer.from([
-          0b00_000001, // Message Type
-          0b00000001,
-          0x00, // Length: 12 bytes
+          0x00, // Type
+          0x08,
+          0x00, // Length
+          0x14,
+        ]),
+      );
+      expect(msg.raw.subarray(20 + 12 + 24, 20 + 12 + 24 + 4)).toEqual(
+        Buffer.from([
+          0x80, // Type
+          0x28,
+          0x00, // Length
+          0x04,
+        ]),
+      );
+    });
+  });
+  describe("from()", () => {
+    it("creates StunMsg from raw STUN msg", () => {
+      const hBuf = Buffer.concat([
+        Buffer.from([
+          0x01, // Message Type
+          0x01,
+          0x00, // Message Length: 12 bytes
           0x0c,
           0x21, // Magic Cookie
           0x12,
           0xa4,
           0x42,
         ]),
-        trxId,
-        // Attrs
-        Buffer.from([
-          0x00, // Type
-          0x20,
-          0x00, // Length
-          0x08,
-          // Value
-          0x00,
-          0x01, // Family (IPv4)
-          0x11, // Port
-          0x2b,
-          0xe8, // X-Address (IPv4)
-          0xd5,
-          0x61,
-          0x1b,
-        ]),
-      ]),
+        ctx.trxId,
+      ]);
+      const attrBuf = Buffer.from([
+        0x00, // Attr Type: XOR-MAPPED-ADDRESS
+        0x20,
+        0x00, // Attr Length: 8 bytes
+        0x08,
+        // Attr Value
+        0x00,
+        0x01, // Family: IPv4
+        0x11, // X-Port
+        0x2b,
+        0xe8, // X-Address (IPv4)
+        0xd5,
+        0x61,
+        0x1b,
+      ]); // 12 bytes
+      const raw = Buffer.concat([hBuf, attrBuf]) as RawStunMsg;
+      const msg = StunMsg.from(raw);
+      expect(msg).toEqual({
+        header: {
+          cls: "SuccessResponse",
+          method: "Binding",
+          length: 12,
+          trxId: ctx.trxId,
+          magicCookie,
+        },
+        attrs: {
+          xorMappedAddress: {
+            family: "IPv4",
+            port: 12345,
+            address: "201.199.197.89",
+          },
+        },
+        raw,
+      } satisfies StunMsg);
+    });
+    it.todo(
+      "does not throw an error if FINGERPRINT attr is not at the last",
+      () => {},
     );
-  });
-  it("does not throw an error if FINGERPRINT attribute is at the last in attrs", () => {
-    const trxId = Buffer.from([
-      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-    ]);
-    expect(() =>
-      encodeStunMsg({
-        header: {
-          cls: "SuccessResponse",
-          method: "Binding",
-          trxId,
-        },
-        attrs: [
-          {
-            type: "XOR-MAPPED-ADDRESS",
-            value: {
-              family: "IPv4",
-              port: 12345,
-              address: "201.199.197.89",
-            },
-          },
-          {
-            type: "FINGERPRINT",
-          },
-        ],
-      }),
-    ).not.toThrowError(/fingerprint/i);
-  });
-  it("throws an error if FINGERPRINT attribute is not at the last in attrs", () => {
-    const trxId = Buffer.from([
-      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-    ]);
-    expect(() =>
-      encodeStunMsg({
-        header: {
-          cls: "SuccessResponse",
-          method: "Binding",
-          trxId,
-        },
-        attrs: [
-          {
-            type: "FINGERPRINT",
-          },
-          {
-            type: "XOR-MAPPED-ADDRESS",
-            value: {
-              family: "IPv4",
-              port: 12345,
-              address: "201.199.197.89",
-            },
-          },
-        ],
-      }),
-    ).toThrowError(/fingerprint/i);
-  });
-});
-
-describe("message integrity should be changed if some part of a message is modified", () => {
-  test("long-term credentials", () => {
-    const trxId1 = Buffer.from([
-      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-    ]);
-    const msgBuf = encodeStunMsg({
-      header: {
-        cls: "SuccessResponse",
-        method: "Binding",
-        trxId: trxId1,
-      },
-      attrs: [
-        {
-          type: "MESSAGE-INTEGRITY",
-          params: {
-            term: "long",
-            username: "user",
-            realm: "realm",
-            password: "pass",
-          },
-        },
-      ],
-    });
-
-    // modify the first byte x81 -> x80
-    const trxId2 = trxId1.fill(0x80, 0, 1);
-    writeTrxId(msgBuf, trxId2);
-
-    const msg1 = decodeStunMsg(msgBuf);
-    const msgIntegrityAttr1 = msg1.attrs.filter(
-      (v) => v.type === "MESSAGE-INTEGRITY",
-    )[0];
-    const msg2 = decodeStunMsg(msgBuf);
-    const msgIntegrityAttr2 = msg2.attrs.filter(
-      (v) => v.type === "MESSAGE-INTEGRITY",
-    )[0];
-
-    expect(msgIntegrityAttr1).not.toBeUndefined();
-    expect(msgIntegrityAttr2).not.toBeUndefined();
-    expect(msgIntegrityAttr1!.value).not.toBe(msgIntegrityAttr2!.value);
-  });
-  test("short-term credentials", () => {
-    const trxId1 = Buffer.from([
-      0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
-    ]);
-    const msgBuf = encodeStunMsg({
-      header: {
-        cls: "SuccessResponse",
-        method: "Binding",
-        trxId: trxId1,
-      },
-      attrs: [
-        {
-          type: "MESSAGE-INTEGRITY",
-          params: {
-            term: "short",
-            password: "pass",
-          },
-        },
-      ],
-    });
-
-    // modify the first byte x81 -> x80
-    const trxId2 = trxId1.fill(0x80, 0, 1);
-    writeTrxId(msgBuf, trxId2);
-
-    const msg1 = decodeStunMsg(msgBuf);
-    const msgIntegrityAttr1 = msg1.attrs.filter(
-      (v) => v.type === "MESSAGE-INTEGRITY",
-    )[0];
-    const msg2 = decodeStunMsg(msgBuf);
-    const msgIntegrityAttr2 = msg2.attrs.filter(
-      (v) => v.type === "MESSAGE-INTEGRITY",
-    )[0];
-
-    expect(msgIntegrityAttr1).not.toBeUndefined();
-    expect(msgIntegrityAttr2).not.toBeUndefined();
-    expect(msgIntegrityAttr1!.value).not.toBe(msgIntegrityAttr2!.value);
+    it.todo("throws an error if FINGERPRINT attr is not at the last", () => {});
   });
 });
