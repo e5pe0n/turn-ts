@@ -196,6 +196,10 @@ export async function retry<T>(
     timeoutMs?: number;
   },
 ): Promise<T> {
+  assert(
+    maxAttempts > 0,
+    new RangeError("invalid argument: maxAttempts must be > 0."),
+  );
   let numAttempts = 0;
   let lastResult: T | undefined = undefined;
   const _retry = async (): Promise<T> => {
@@ -205,9 +209,9 @@ export async function retry<T>(
       if (!retryIf(lastResult)) {
         return lastResult;
       }
-      if (numAttempts > maxAttempts) {
+      if (numAttempts >= maxAttempts) {
         throw new RetryError(
-          `reached max retries: retried ${numAttempts} times.`,
+          `reached max attempts: tried ${numAttempts} times.`,
           { lastResult },
         );
       }
@@ -225,7 +229,7 @@ export async function retry<T>(
         setTimeout(_attemptTimeoutMs, "timeout" as const),
       ]);
       if (state === "timeout") {
-        throw new RetryError(`reached timeout: retried ${numAttempts}.`, {
+        throw new RetryError(`reached timeout: tried ${numAttempts} times.`, {
           lastResult,
         });
       }
@@ -352,8 +356,18 @@ export async function* generatePromise<T>(
     resolve,
     reject,
   }));
+  console.log("executed");
+  yield;
   while (true) {
     yield await promise;
     ({ promise, resolve, reject } = withResolvers<T>());
   }
+}
+
+export function buildPromiseGenerator<T>(
+  executor: (
+    getResolvers: () => { resolve: Resolve<T>; reject: Reject },
+  ) => void,
+) {
+  return generatePromise(executor).next();
 }

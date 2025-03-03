@@ -235,6 +235,83 @@ describe("UdpAgent", () => {
   });
 });
 
+describe("TcpAgent", () => {
+  test.only("indicate", async () => {
+    const server = createServer();
+    const gen = generatePromise((getResolvers) => {
+      console.log("setup connection");
+      server.on("connection", (conn) => {
+        console.log("connected");
+        conn.on("data", (data) => {
+          console.log("data", data);
+          const { resolve } = getResolvers();
+          resolve(data);
+        });
+      });
+    });
+    const p = gen.next();
+
+    // // Arrange
+    // let resolve: (value: Buffer | PromiseLike<Buffer>) => void;
+    // const p = new Promise<Buffer>((res, rej) => {
+    //   resolve = res;
+    // });
+    // const server = createServer((conn) => {
+    //   conn.on("data", (data) => {
+    //     conn.end();
+    //     resolve(data);
+    //   });
+    // });
+    // server.on("error", (err) => {
+    //   throw err;
+    // });
+
+    // let resolve: (value: Buffer | PromiseLike<Buffer>) => void;
+    // const p = new Promise<Buffer>((res, rej) => {
+    //   resolve = res;
+    // });
+    // const server = createServer();
+    // server.on("connection", (conn) => {
+    //   conn.on("data", (data) => {
+    //     conn.end();
+    //     resolve(data);
+    //   });
+    // });
+
+    const agent = new TcpAgent({
+      to: {
+        address: "127.0.0.1",
+        port: 12345,
+      },
+    });
+    server.listen(12345, "127.0.0.1");
+
+    try {
+      {
+        // Act
+        const msg = Buffer.from([1]);
+        await agent.indicate(msg);
+        // const buf = (await p.next()).value;
+        const buf = (await p).value;
+
+        // Assert
+        expect(buf).toEqual(msg);
+      }
+      // { // Act
+      //   const msg = Buffer.from([2]);
+      //   await agent.indicate(msg);
+      //   const buf = (await p.next()).value;
+
+      //   // Assert
+      //   expect(buf).toEqual(msg);
+      // }
+    } finally {
+      agent.close();
+      server.close();
+    }
+  });
+});
+
 // describe("send", () => {
 //   describe("udp", () => {
 //     describe("Indication", () => {
