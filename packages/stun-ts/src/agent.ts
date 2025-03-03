@@ -36,13 +36,7 @@ import type { Protocol } from "./types.js";
 //   );
 // }
 
-type AgentConfig<P extends Protocol> = P extends "udp"
-  ? UdpAgentConfig
-  : TcpAgentConfig;
-
-export interface Agent<P extends Protocol = Protocol> {
-  protocol: P;
-  config: AgentConfig<P>;
+export interface Agent {
   close(): void;
   indicate(msg: Buffer): Promise<undefined>;
   request(msg: Buffer): Promise<Buffer>;
@@ -59,10 +53,9 @@ export type UdpAgentInitConfig = {
 };
 
 export type UdpAgentConfig = Required<UdpAgentInitConfig>;
-export class UdpAgent implements Agent<"udp"> {
+export class UdpAgent implements Agent {
   #config: UdpAgentConfig;
   #sock: Socket;
-  #protocol = "udp" as const;
 
   constructor(config: UdpAgentInitConfig) {
     this.#config = {
@@ -73,14 +66,6 @@ export class UdpAgent implements Agent<"udp"> {
     };
     this.#sock = createSocket("udp4");
     this.#sock.bind();
-  }
-
-  get protocol(): Agent<"udp">["protocol"] {
-    return this.#protocol;
-  }
-
-  get config(): UdpAgentConfig {
-    return structuredClone(this.#config);
   }
 
   close(): void {
@@ -144,9 +129,8 @@ export type TcpAgentInitConfig = {
 
 export type TcpAgentConfig = Required<TcpAgentInitConfig>;
 
-export class TcpAgent implements Agent<"tcp"> {
+export class TcpAgent implements Agent {
   #config: TcpAgentConfig;
-  #protocol = "tcp" as const;
   #sock?: TcpSocket;
 
   constructor(config: TcpAgentInitConfig) {
@@ -156,19 +140,11 @@ export class TcpAgent implements Agent<"tcp"> {
     };
   }
 
-  get protocol(): Agent<"tcp">["protocol"] {
-    return this.#protocol;
-  }
-
-  get config(): TcpAgentConfig {
-    return structuredClone(this.#config);
-  }
-
   close(): void {
     this.#sock?.destroy();
   }
 
-  async indicate(msg: RawStunFmtMsg): Promise<undefined> {
+  async indicate(msg: Buffer): Promise<undefined> {
     await new Promise<void>((resolve, reject) => {
       const sock = createConnection(
         this.#config.to.port,
@@ -188,7 +164,7 @@ export class TcpAgent implements Agent<"tcp"> {
     return;
   }
 
-  async request(msg: RawStunFmtMsg): Promise<RawStunFmtMsg> {
+  async request(msg: Buffer): Promise<Buffer> {
     const resBuf = await new Promise<Buffer>((resolve, reject) => {
       const sock = createConnection(
         {
@@ -214,30 +190,6 @@ export class TcpAgent implements Agent<"tcp"> {
       });
       this.#sock = sock;
     });
-    assertRawStunFmtMsg(resBuf);
     return resBuf;
-  }
-}
-
-type AgentInitConfig<P extends Protocol> = P extends "udp"
-  ? UdpAgentInitConfig
-  : TcpAgentInitConfig;
-
-export function createAgent<P extends Protocol>(
-  protocol: P,
-  config: AgentInitConfig<P>,
-): Agent<P> {
-  switch (protocol) {
-    // FIXME: is there a better way to type the args and the return value?
-    // Type 'UdpAgent' is not assignable to type 'Agent<P>'.
-    //   Types of property 'protocol' are incompatible.
-    //     Type '"udp"' is not assignable to type 'P'.
-    //       '"udp"' is assignable to the constraint of type 'P', but 'P' could be instantiated with a different subtype of constraint 'Protocol'.ts(2322)
-    case "udp":
-      return new UdpAgent(config) as unknown as Agent<P>;
-    case "tcp":
-      return new TcpAgent(config) as unknown as Agent<P>;
-    default:
-      throw new Error(`invalid protocol: ${protocol} is not supported.`);
   }
 }

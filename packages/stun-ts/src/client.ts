@@ -9,63 +9,15 @@ import {
 import { decodeStunMsg, encodeStunMsg, StunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
 
-export type ErrorResponse = {
-  success: false;
-  code: number;
-  reason: string;
+export type ClientInitConfig = {
+  agent: Agent;
 };
 
-export type SuccessResponse = {
-  success: true;
-  family: "IPv4" | "IPv6";
-  address: string; // Reflexive Transport Address
-  port: number;
-};
+export class Client {
+  #agent: Agent;
 
-export type Response = SuccessResponse | ErrorResponse;
-
-export type UdpClientInitConfig = UdpAgentInitConfig & {
-  protocol: "udp";
-};
-
-export type TcpClientInitConfig = TcpAgentInitConfig & {
-  protocol: "tcp";
-};
-
-export type UdpClientConfig = Required<UdpClientInitConfig>;
-
-export type TcpClientConfig = Required<TcpClientInitConfig>;
-
-export type ClientInitConfig<P extends Protocol> = {
-  protocol: P;
-} & (P extends "udp" ? UdpClientInitConfig : TcpClientInitConfig);
-export type ClientConfig<P extends Protocol> = {
-  protocol: P;
-} & (P extends "udp" ? UdpClientConfig : TcpClientConfig);
-
-export class Client<P extends Protocol> {
-  #agent: Agent<P>;
-  #config: ClientConfig<P>;
-
-  constructor(config: ClientInitConfig<P>) {
-    // FIXME: is there a better way to type the class?
-    // Type 'UdpAgent' is not assignable to type 'Agent<P>'.
-    //   Types of property 'protocol' are incompatible.
-    //     Type '"udp"' is not assignable to type 'P'.
-    //       '"udp"' is assignable to the constraint of type 'P', but 'P' could be instantiated with a different subtype of constraint 'Protocol'.ts(2322)
-    switch (config.protocol) {
-      case "udp": {
-        const agent: Agent<"udp"> = new UdpAgent(config);
-        this.#agent = agent;
-        break;
-      }
-    }
-    this.#agent = createAgent(config.protocol, config) as Agent<P>;
-    this.#config = { ...config, ...this.#agent.config } as ClientConfig<P>;
-  }
-
-  get config(): ClientConfig<P> {
-    return structuredClone(this.#config);
+  constructor(config: ClientInitConfig) {
+    this.#agent = config.agent;
   }
 
   async indicate(): Promise<undefined> {
