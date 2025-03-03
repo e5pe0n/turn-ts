@@ -4,7 +4,12 @@ import { createServer } from "node:net";
 import { setTimeout } from "node:timers/promises";
 import { describe, expect, it, test } from "vitest";
 import { TcpAgent, UdpAgent } from "./agent.js";
-import { generatePromise, withResolvers, type Resolve } from "@e5pe0n/lib";
+import {
+  generatePromise,
+  generatePromise,
+  withResolvers,
+  type Resolve,
+} from "@e5pe0n/lib";
 
 // describe("assertStunMsg", () => {
 //   it("throws an error if the STUN message is not >= 20 bytes", () => {
@@ -82,7 +87,7 @@ describe("UdpAgent", () => {
   test("indicate", async () => {
     // Arrange
     const server = createSocket("udp4");
-    const p = generatePromise((getResolvers) => {
+    const gen = generatePromise((getResolvers) => {
       server.on("message", (msg) => {
         const { resolve } = getResolvers();
         resolve(msg);
@@ -101,7 +106,7 @@ describe("UdpAgent", () => {
         // Act
         const msg = Buffer.from([1]);
         await agent.indicate(msg);
-        const buf = (await p.next()).value;
+        const buf = (await gen.next()).value;
 
         // Assert
         expect(buf).toEqual(msg);
@@ -110,7 +115,7 @@ describe("UdpAgent", () => {
         // Act
         const msg = Buffer.from([2]);
         await agent.indicate(msg);
-        const buf = (await p.next()).value;
+        const buf = (await gen.next()).value;
 
         // Assert
         expect(buf).toEqual(msg);
@@ -232,6 +237,54 @@ describe("UdpAgent", () => {
         server.close();
       }
     });
+  });
+});
+
+describe("TcpAgent", () => {
+  test("indicate", async () => {
+    // // Arrange
+    const server = createServer();
+    const gen = generatePromise((getResolvers) => {
+      server.on("connection", (conn) => {
+        conn.on("data", (data) => {
+          const { resolve } = getResolvers();
+          resolve(data);
+        });
+      });
+    });
+    const agent = new TcpAgent({
+      to: {
+        address: "127.0.0.1",
+        port: 12345,
+      },
+    });
+    server.listen(12345, "127.0.0.1");
+
+    try {
+      {
+        // Act
+        const msg = Buffer.from([1]);
+        await agent.indicate(msg);
+        // const buf = (await p.next()).value;
+        const buf = (await gen.next()).value;
+
+        // Assert
+        expect(buf).toEqual(msg);
+      }
+      {
+        // Act
+
+        const msg = Buffer.from([2]);
+        await agent.indicate(msg);
+        const buf = (await gen.next()).value;
+
+        // Assert
+        expect(buf).toEqual(msg);
+      }
+    } finally {
+      agent.close();
+      server.close();
+    }
   });
 });
 
