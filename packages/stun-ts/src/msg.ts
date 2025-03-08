@@ -77,7 +77,7 @@ export type StunMsg = {
 export const StunMsg = {
   build({
     header,
-    attrs,
+    attrs = {},
   }: {
     header: {
       cls: MsgClass;

@@ -182,7 +182,7 @@ export class TcpAgent implements Agent {
       });
       sock.on("error", (err) => {
         sock.end();
-        throw err;
+        reject(err);
       });
       sock.on("timeout", () => {
         sock.end();

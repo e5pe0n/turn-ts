@@ -167,8 +167,8 @@ describe("TcpAgent", () => {
     // // Arrange
     const server = createServer();
     const gen = genPromise<Buffer>((genResolvers) => {
-      server.on("connection", (conn) => {
-        conn.on("data", (data) => {
+      server.on("connection", (sock) => {
+        sock.on("data", (data) => {
           const { resolve } = genResolvers.next().value!;
           resolve(data);
         });
@@ -233,15 +233,14 @@ describe("TcpAgent", () => {
     it("sends request data then returns response data", async () => {
       // Arrange
       const server = createServer();
-      const gen = genPromise((genResolvers) => {
+      const gen = genPromise<Buffer>((genResolvers) => {
         let cnt = 0;
-        server.on("connection", (conn) => {
-          conn.on("data", (data) => {
+        server.on("connection", (sock) => {
+          sock.on("data", (data) => {
             const { resolve } = genResolvers.next().value!;
             const resp = Buffer.from(`resp${++cnt}`);
-            conn.write(resp);
-            conn.end();
-            // console.log("resolve.fname", resolve.fname);
+            sock.write(resp);
+            sock.end();
             resolve(data);
           });
         });

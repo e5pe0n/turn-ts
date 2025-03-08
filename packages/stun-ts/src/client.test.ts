@@ -1,326 +1,388 @@
+import { genPromise } from "@e5pe0n/lib";
 import { createSocket } from "node:dgram";
+import { describe, expect, it } from "vitest";
+import { TcpAgent, UdpAgent } from "./agent.js";
+import { Client } from "./client.js";
+import { StunMsg } from "./msg.js";
+import { magicCookie } from "./common.js";
 import { createServer } from "node:net";
-import { describe, expect, expectTypeOf, it, test } from "vitest";
-import { assertRawStunFmtMsg } from "./agent.js";
-import {
-  Client,
-  type ClientConfig,
-  type ErrorResponse,
-  type SuccessResponse,
-} from "./client.js";
-import { decodeStunMsg, encodeStunMsg } from "./msg.js";
 
-describe("types", () => {
-  test("udp types inferred when passing 'udp' to protocol in config without explicit type parameter", () => {
-    const client = new Client({
-      protocol: "udp",
-      to: {
-        address: "127.0.0.1",
-        port: 3478,
-      },
-    });
-    expectTypeOf(client).toEqualTypeOf<Client<"udp">>();
-    expectTypeOf(client.config).toEqualTypeOf<ClientConfig<"udp">>();
-  });
-  test("udp types inferred when passing 'udp' to protocol in config without explicit type parameter", () => {
-    const client = new Client({
-      protocol: "tcp",
-      to: {
-        address: "127.0.0.1",
-        port: 3478,
-      },
-    });
-    expectTypeOf(client).toEqualTypeOf<Client<"tcp">>();
-    expectTypeOf(client.config).toEqualTypeOf<ClientConfig<"tcp">>();
-  });
-});
-
-describe("send", () => {
-  describe("udp", () => {
-    describe("Binding Indication", () => {
-      it("sends a binding indication", async () => {
-        // Arrange
-        const server = createSocket("udp4");
-        const res = new Promise<Buffer>((resolve, reject) => {
-          server.on("message", (msg, rinfo) => {
-            resolve(msg);
-          });
+describe("with UdpAgent", () => {
+  describe("indicate()", () => {
+    it("sends binding indications", async () => {
+      // Arrange
+      const server = createSocket("udp4");
+      const gen = genPromise<Buffer>((genResolvers) => {
+        server.on("message", (msg, rinfo) => {
+          const { resolve } = genResolvers.next().value!;
+          resolve(msg);
         });
-        const client = new Client({
-          protocol: "udp",
-          to: {
-            address: "127.0.0.1",
-            port: 12345,
-          },
-        });
-        try {
-          server.bind(12345, "127.0.0.1");
+      });
+      const agent = new UdpAgent({
+        to: {
+          address: "127.0.0.1",
+          port: 12345,
+        },
+      });
+      const client = new Client({
+        agent,
+      });
+      server.bind(12345, "127.0.0.1");
 
+      try {
+        {
           // Act
           await client.indicate();
-          const buf = await res;
+          const buf = (await gen.next()).value;
 
           // Assert
-          expect(buf).toHaveLength(20);
-          expect(buf.subarray(0, 8)).toEqual(
-            Buffer.concat([
-              Buffer.from([
-                0x00, // STUN Message Type
-                0x11,
-                0x00, // Message Length
-                0x00,
-                0x21, // Magic Cookie
-                0x12,
-                0xa4,
-                0x42,
-              ]),
-            ]),
-          );
-        } finally {
-          server.close();
+          const indi = StunMsg.from(buf!);
+          expect(indi).toEqual({
+            header: {
+              cls: "Indication",
+              method: "Binding",
+              trxId: expect.any(Buffer),
+              length: 0,
+              magicCookie,
+            },
+            attrs: {},
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
         }
-      });
+        {
+          // Act
+          await client.indicate();
+          const buf = (await gen.next()).value;
+
+          // Assert
+          const indi = StunMsg.from(buf!);
+          expect(indi).toEqual({
+            header: {
+              cls: "Indication",
+              method: "Binding",
+              trxId: expect.any(Buffer),
+              length: 0,
+              magicCookie,
+            },
+            attrs: {},
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
+        }
+      } finally {
+        client.close();
+        server.close();
+      }
     });
-    describe("Binding Request", () => {
-      it("sends a request then receives a success response", async () => {
-        // Arrange
-        const server = createSocket("udp4");
+  });
+
+  describe("request()", () => {
+    it("sends binding requests then returns responses", async () => {
+      // Arrange
+      const server = createSocket("udp4");
+      const gen = genPromise<Buffer>((genResolvers) => {
         server.on("message", (msg, rinfo) => {
-          assertRawStunFmtMsg(msg);
-          const { #header: header, #attrs: attrs } = decodeStunMsg(msg);
-          const res = encodeStunMsg({
+          const { resolve } = genResolvers.next().value!;
+          resolve(msg);
+          const req = StunMsg.from(msg);
+          const resp = StunMsg.build({
+            header: {
+              cls: "SuccessResponse",
+              method: req.header.method,
+              trxId: req.header.trxId,
+            },
+            attrs: {
+              xorMappedAddress: {
+                family: "IPv4",
+                port: 12345,
+                address: "201.199.197.89",
+              },
+            },
+          });
+          server.send(resp.raw, rinfo.port, rinfo.address);
+        });
+      });
+      server.bind(12345, "127.0.0.1");
+      const agent = new UdpAgent({
+        to: {
+          address: "127.0.0.1",
+          port: 12345,
+        },
+      });
+      const client = new Client({
+        agent,
+      });
+
+      try {
+        {
+          // Act
+          const resp = await client.request();
+          const reqBuf = (await gen.next()).value!;
+
+          // Assert
+          const req = StunMsg.from(reqBuf);
+          expect(req).toEqual({
+            header: {
+              cls: "Request",
+              method: "Binding",
+              trxId: expect.any(Buffer),
+              length: 0,
+              magicCookie,
+            },
+            attrs: {},
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
+
+          expect(resp).toEqual({
             header: {
               cls: "SuccessResponse",
               method: "Binding",
-              trxId: header.trxId,
+              trxId: req.header.trxId,
+              length: 12,
+              magicCookie,
             },
-            attrs: [
-              {
-                type: "XOR-MAPPED-ADDRESS",
-                value: {
-                  family: "IPv4",
-                  address: "222.62.247.70",
-                  port: 54321,
-                },
+            attrs: {
+              xorMappedAddress: {
+                family: "IPv4",
+                port: 12345,
+                address: "201.199.197.89",
               },
-            ],
-          });
-          server.send(res, rinfo.port, rinfo.address, (err, bytes) => {
-            if (err) {
-              throw err;
-            }
-          });
-        });
-        try {
-          const client = new Client({
-            protocol: "udp",
-            to: {
-              address: "127.0.0.1",
-              port: 12345,
             },
-          });
-          server.bind(12345, "127.0.0.1");
-
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
+        }
+        {
           // Act
-          const res = await client.request();
+          const resp = await client.request();
+          const reqBuf = (await gen.next()).value!;
 
           // Assert
-          expect(res).toEqual({
-            success: true,
-            family: "IPv4",
-            address: "222.62.247.70",
-            port: 54321,
-          } satisfies SuccessResponse);
-        } finally {
-          server.close();
+          const req = StunMsg.from(reqBuf);
+          expect(req).toEqual({
+            header: {
+              cls: "Request",
+              method: "Binding",
+              trxId: expect.any(Buffer),
+              length: 0,
+              magicCookie,
+            },
+            attrs: {},
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
+
+          expect(resp).toEqual({
+            header: {
+              cls: "SuccessResponse",
+              method: "Binding",
+              trxId: req.header.trxId,
+              length: 12,
+              magicCookie,
+            },
+            attrs: {
+              xorMappedAddress: {
+                family: "IPv4",
+                port: 12345,
+                address: "201.199.197.89",
+              },
+            },
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
         }
-      });
+      } finally {
+        client.close();
+        server.close();
+      }
     });
   });
+});
 
-  describe("tcp", () => {
-    describe("Binding Indication", () => {
-      it("sends a binding indication", async () => {
-        // Arrange
-        let resolve: (value: Buffer | PromiseLike<Buffer>) => void;
-        const p = new Promise<Buffer>((res, rej) => {
-          resolve = res;
-        });
-        const server = createServer((conn) => {
+describe("with TcpAgent", () => {
+  describe("indicate()", () => {
+    it("sends binding indications", async () => {
+      // Arrange
+      const server = createServer();
+      const gen = genPromise<Buffer>((genResolvers) => {
+        server.on("connection", (conn) => {
           conn.on("data", (data) => {
-            conn.end();
+            const { resolve } = genResolvers.next().value!;
             resolve(data);
           });
         });
-        server.on("error", (err) => {
-          throw err;
-        });
-        const client = new Client({
-          protocol: "tcp",
-          to: {
-            address: "127.0.0.1",
-            port: 12345,
-          },
-        });
-        try {
-          server.listen(12345, "127.0.0.1");
+      });
+      const agent = new TcpAgent({
+        to: {
+          address: "127.0.0.1",
+          port: 12345,
+        },
+      });
+      const client = new Client({
+        agent,
+      });
+      server.listen(12345, "127.0.0.1");
 
+      try {
+        {
           // Act
           await client.indicate();
-          const buf = await p;
+          const buf = (await gen.next()).value;
 
           // Assert
-          expect(buf).toHaveLength(20);
-          expect(buf.subarray(0, 8)).toEqual(
-            Buffer.concat([
-              Buffer.from([
-                0x00, // STUN Message Type
-                0x11,
-                0x00, // Message Length
-                0x00,
-                0x21, // Magic Cookie
-                0x12,
-                0xa4,
-                0x42,
-              ]),
-            ]),
-          );
-        } finally {
-          server.close();
+          const indi = StunMsg.from(buf!);
+          expect(indi).toEqual({
+            header: {
+              cls: "Indication",
+              method: "Binding",
+              trxId: expect.any(Buffer),
+              length: 0,
+              magicCookie,
+            },
+            attrs: {},
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
         }
-      });
-    });
-
-    describe("Binding Request", () => {
-      it("can receive an error response", async () => {
-        // Arrange
-        const server = createServer((conn) => {
-          conn.on("data", (data) => {
-            assertRawStunFmtMsg(data);
-            const { #header: header } = decodeStunMsg(data);
-            const res = encodeStunMsg({
-              header: {
-                cls: "ErrorResponse",
-                method: header.method,
-                trxId: header.trxId,
-              },
-              attrs: [
-                {
-                  type: "ERROR-CODE",
-                  value: {
-                    code: 401,
-                    reason: "Unauthorized",
-                  },
-                },
-              ],
-            });
-            conn.write(res);
-            conn.end();
-          });
-        });
-        server.on("error", (err) => {
-          throw err;
-        });
-        const client = new Client({
-          protocol: "tcp",
-          to: {
-            address: "127.0.0.1",
-            port: 12345,
-          },
-        });
-        try {
-          server.listen(12345, "127.0.0.1");
-
+        {
           // Act
-          const res = await client.request();
+          await client.indicate();
+          const buf = (await gen.next()).value;
 
           // Assert
-          expect(res).toEqual({
-            success: false,
-            code: 401,
-            reason: "Unauthorized",
-          } satisfies ErrorResponse);
-        } finally {
-          server.close();
+          const indi = StunMsg.from(buf!);
+          expect(indi).toEqual({
+            header: {
+              cls: "Indication",
+              method: "Binding",
+              trxId: expect.any(Buffer),
+              length: 0,
+              magicCookie,
+            },
+            attrs: {},
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
         }
-      });
-      it("sends a binding request then receives a success response", async () => {
-        // Arrange
-        let resolve: (value: Buffer | PromiseLike<Buffer>) => void;
-        const p = new Promise<Buffer>((res, rej) => {
-          resolve = res;
-        });
-        const server = createServer((conn) => {
+      } finally {
+        client.close();
+        server.close();
+      }
+    });
+  });
+  describe("request()", () => {
+    it("sends binding requests then returns responses", async () => {
+      // Arrange
+      const server = createServer();
+      const gen = genPromise<Buffer>((genResolvers) => {
+        server.on("connection", (conn) => {
           conn.on("data", (data) => {
-            assertRawStunFmtMsg(data);
-            const {
-              #header: { trxId },
-            } = decodeStunMsg(data);
-            const res = encodeStunMsg({
+            const { resolve } = genResolvers.next().value!;
+            const req = StunMsg.from(data);
+            const resp = StunMsg.build({
               header: {
                 cls: "SuccessResponse",
-                method: "Binding",
-                trxId,
+                method: req.header.method,
+                trxId: req.header.trxId,
               },
-              attrs: [
-                {
-                  type: "XOR-MAPPED-ADDRESS",
-                  value: {
-                    family: "IPv4",
-                    address: "222.62.247.70",
-                    port: 54321,
-                  },
+              attrs: {
+                xorMappedAddress: {
+                  family: "IPv4",
+                  port: 12345,
+                  address: "201.199.197.89",
                 },
-              ],
+              },
             });
-            conn.write(res);
+            conn.write(resp.raw);
             conn.end();
             resolve(data);
           });
         });
-        server.on("error", (err) => {
-          throw err;
-        });
-        const client = new Client({
-          protocol: "tcp",
-          to: {
-            address: "127.0.0.1",
-            port: 12345,
-          },
-        });
-        try {
-          server.listen(12345, "127.0.0.1");
+      });
+      const agent = new TcpAgent({
+        to: {
+          address: "127.0.0.1",
+          port: 12345,
+        },
+      });
+      const client = new Client({
+        agent,
+      });
+      server.listen(12345, "127.0.0.1");
 
+      try {
+        {
           // Act
-          const res = await client.request();
-          const reqBuf = await p;
+          const resp = await client.request();
+          const reqBuf = (await gen.next()).value!;
 
           // Assert
-          expect(reqBuf).toHaveLength(20);
-          expect(reqBuf.subarray(0, 8)).toEqual(
-            Buffer.concat([
-              Buffer.from([
-                0x00, // STUN Message Type
-                0x01,
-                0x00, // Message Length
-                0x00,
-                0x21, // Magic Cookie
-                0x12,
-                0xa4,
-                0x42,
-              ]),
-            ]),
-          );
-          expect(res).toEqual({
-            success: true,
-            family: "IPv4",
-            address: "222.62.247.70",
-            port: 54321,
-          } satisfies SuccessResponse);
-        } finally {
-          server.close();
+          const req = StunMsg.from(reqBuf);
+          expect(req).toEqual({
+            header: {
+              cls: "Request",
+              method: "Binding",
+              trxId: expect.any(Buffer),
+              length: 0,
+              magicCookie,
+            },
+            attrs: {},
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
+
+          expect(resp).toEqual({
+            header: {
+              cls: "SuccessResponse",
+              method: "Binding",
+              trxId: req.header.trxId,
+              length: 12,
+              magicCookie,
+            },
+            attrs: {
+              xorMappedAddress: {
+                family: "IPv4",
+                port: 12345,
+                address: "201.199.197.89",
+              },
+            },
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
         }
-      });
+        {
+          // Act
+          const resp = await client.request();
+          const reqBuf = (await gen.next()).value!;
+
+          // Assert
+          const req = StunMsg.from(reqBuf);
+          expect(req).toEqual({
+            header: {
+              cls: "Request",
+              method: "Binding",
+              trxId: expect.any(Buffer),
+              length: 0,
+              magicCookie,
+            },
+            attrs: {},
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
+
+          expect(resp).toEqual({
+            header: {
+              cls: "SuccessResponse",
+              method: "Binding",
+              trxId: req.header.trxId,
+              length: 12,
+              magicCookie,
+            },
+            attrs: {
+              xorMappedAddress: {
+                family: "IPv4",
+                port: 12345,
+                address: "201.199.197.89",
+              },
+            },
+            raw: expect.any(Buffer),
+          } satisfies StunMsg);
+        }
+      } finally {
+        client.close();
+        server.close();
+      }
     });
   });
 });

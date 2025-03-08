@@ -1,13 +1,6 @@
 import { randomBytes } from "node:crypto";
-import {
-  type Agent,
-  type TcpAgentInitConfig,
-  UdpAgent,
-  type UdpAgentInitConfig,
-  createAgent,
-} from "./agent.js";
-import { decodeStunMsg, encodeStunMsg, StunMsg } from "./msg.js";
-import type { Protocol } from "./types.js";
+import type { Agent } from "./agent.js";
+import { StunMsg } from "./msg.js";
 
 export type ClientInitConfig = {
   agent: Agent;
@@ -20,24 +13,23 @@ export class Client {
     this.#agent = config.agent;
   }
 
+  close(): void {
+    this.#agent.close();
+  }
+
   async indicate(): Promise<undefined> {
     const trxId = randomBytes(12);
-    const msg = encodeStunMsg({
+    const msg = StunMsg.build({
       header: {
         cls: "Indication",
         method: "Binding",
         trxId,
       },
-      attrs: [],
     });
-    try {
-      await this.#agent.indicate(msg);
-    } finally {
-      this.#agent.close();
-    }
+    await this.#agent.indicate(msg.raw);
   }
 
-  async request(): Promise<Response> {
+  async request(): Promise<StunMsg> {
     const trxId = randomBytes(12);
     const msg = StunMsg.build({
       header: {
@@ -46,37 +38,13 @@ export class Client {
         trxId,
       },
     });
-    try {
-      const resBuf = await this.#agent.request(msg);
-      const resMsg = decodeStunMsg(resBuf);
-      if (!trxId.equals(resMsg.#header.trxId)) {
-        throw new Error(
-          `invalid transaction id; expected: ${trxId}, actual: ${resMsg.#header.trxId}.`,
-        );
-      }
-      const xorMappedAddrAttr = resMsg.#attrs.find(
-        (attr) => attr.type === "XOR-MAPPED-ADDRESS",
-      );
-      if (xorMappedAddrAttr) {
-        return {
-          success: true,
-          ...xorMappedAddrAttr.value,
-        } satisfies SuccessResponse;
-      }
-      const errCodeAttr = resMsg.#attrs.find(
-        (attr) => attr.type === "ERROR-CODE",
-      );
-      if (errCodeAttr) {
-        return {
-          success: false,
-          ...errCodeAttr.value,
-        } satisfies ErrorResponse;
-      }
+    const respBuf = await this.#agent.request(msg.raw);
+    const respMsg = StunMsg.from(respBuf);
+    if (!trxId.equals(respMsg.header.trxId)) {
       throw new Error(
-        "invalid response; neither XOR-MAPPED-ADDRESS nor ERROR-CODE exist",
+        `invalid transaction id; expected is '${trxId}', but actual is '${respMsg.header.trxId}'.`,
       );
-    } finally {
-      this.#agent.close();
     }
+    return respMsg;
   }
 }
