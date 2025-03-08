@@ -1,11 +1,4 @@
-import {
-  assert,
-  assertKeyOf,
-  assertValueOf,
-  getKey,
-  numToBuf,
-  pad0s,
-} from "@e5pe0n/lib";
+import { assert, assertValueOf, getKey, numToBuf, pad0s } from "@e5pe0n/lib";
 import { magicCookie } from "./common.js";
 
 export const HEADER_LENGTH = 20;

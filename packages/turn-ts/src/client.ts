@@ -88,7 +88,7 @@ export class Client {
       case "Allocate": {
         const reqMsg1 = encodeTurnMsg({
           header: {
-            cls: "Request",
+            cls: "request",
             method: "Allocate",
             trxId,
           },
@@ -137,7 +137,7 @@ export class Client {
         );
         const reqMsg2 = encodeTurnMsg({
           header: {
-            cls: "Request",
+            cls: "request",
             method: "Allocate",
             trxId,
           },

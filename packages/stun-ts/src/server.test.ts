@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { Client, type SuccessResponse } from "./client.js";
+import { Client, type successResponse } from "./client.js";
 import { Server } from "./server.js";
 
 describe("udp", () => {
-  it("receives a Binding request then return a success response", async () => {
+  it("receives a binding request then return a success response", async () => {
     const server = new Server({ protocol: "udp" });
     server.listen(12345);
     const client = new Client({
@@ -21,7 +21,7 @@ describe("udp", () => {
         family: "IPv4",
         address: "127.0.0.1",
         port: expect.any(Number),
-      } satisfies SuccessResponse);
+      } satisfies successResponse);
     } finally {
       server.close();
     }
@@ -29,7 +29,7 @@ describe("udp", () => {
 });
 
 describe("tcp", () => {
-  it.only("receives a Binding request then return a success response", async () => {
+  it.only("receives a binding request then return a success response", async () => {
     const server = new Server({ protocol: "tcp" });
     server.listen(12345);
     const client = new Client({
@@ -47,7 +47,7 @@ describe("tcp", () => {
         family: "IPv4",
         address: "127.0.0.1",
         port: expect.any(Number),
-      } satisfies SuccessResponse);
+      } satisfies successResponse);
     } finally {
       server.close();
     }

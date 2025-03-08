@@ -23,7 +23,7 @@ describe("request", () => {
           r1(msg);
           const res1 = encodeTurnMsg({
             header: {
-              cls: "Request",
+              cls: "request",
               method: "Allocate",
               trxId: readTrxId(msg as RawStunFmtMsg),
             },
@@ -55,7 +55,7 @@ describe("request", () => {
           r2(msg);
           const res2 = encodeTurnMsg({
             header: {
-              cls: "SuccessResponse",
+              cls: "successResponse",
               method: "Allocate",
               trxId: readTrxId(msg as RawStunFmtMsg),
             },
@@ -114,7 +114,7 @@ describe("request", () => {
         const req1 = await p1;
         expect(decodeTurnMsg(req1 as RawStunFmtMsg)).toEqual({
           header: {
-            cls: "Request",
+            cls: "request",
             method: "Allocate",
             trxId: expect.any(Buffer),
             length: expect.any(Number),
@@ -142,7 +142,7 @@ describe("request", () => {
         const req2 = await p2;
         expect(decodeTurnMsg(req2 as RawStunFmtMsg)).toEqual({
           header: {
-            cls: "Request",
+            cls: "request",
             method: "Allocate",
             trxId: expect.any(Buffer),
             length: expect.any(Number),
@@ -213,7 +213,7 @@ describe("request", () => {
           r1(msg);
           const res1 = encodeTurnMsg({
             header: {
-              cls: "Request",
+              cls: "request",
               method: "Allocate",
               trxId: readTrxId(msg as RawStunFmtMsg),
             },
@@ -245,7 +245,7 @@ describe("request", () => {
           r2(msg);
           const res2 = encodeTurnMsg({
             header: {
-              cls: "ErrorResponse",
+              cls: "errorResponse",
               method: "Allocate",
               trxId: readTrxId(msg as RawStunFmtMsg),
             },
@@ -291,7 +291,7 @@ describe("request", () => {
         const req1 = await p1;
         expect(decodeTurnMsg(req1 as RawStunFmtMsg)).toEqual({
           header: {
-            cls: "Request",
+            cls: "request",
             method: "Allocate",
             trxId: expect.any(Buffer),
             length: expect.any(Number),
@@ -319,7 +319,7 @@ describe("request", () => {
         const req2 = await p2;
         expect(decodeTurnMsg(req2 as RawStunFmtMsg)).toEqual({
           header: {
-            cls: "Request",
+            cls: "request",
             method: "Allocate",
             trxId: expect.any(Buffer),
             length: expect.any(Number),

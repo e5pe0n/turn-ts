@@ -21,8 +21,8 @@ export class Client {
     const trxId = randomBytes(12);
     const msg = StunMsg.build({
       header: {
-        cls: "Indication",
-        method: "Binding",
+        cls: "indication",
+        method: "binding",
         trxId,
       },
     });
@@ -33,8 +33,8 @@ export class Client {
     const trxId = randomBytes(12);
     const msg = StunMsg.build({
       header: {
-        cls: "Request",
-        method: "Binding",
+        cls: "request",
+        method: "binding",
         trxId,
       },
     });

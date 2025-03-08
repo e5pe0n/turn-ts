@@ -9,7 +9,7 @@ describe("encodeTurnMsg", () => {
     ]);
     const res = encodeTurnMsg({
       header: {
-        cls: "Request",
+        cls: "request",
         method: "Allocate",
         trxId,
       },

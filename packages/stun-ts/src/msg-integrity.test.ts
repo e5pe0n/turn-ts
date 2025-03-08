@@ -30,8 +30,8 @@ test.each([
   ({ credentials }) => {
     const msg = StunMsg.build({
       header: {
-        cls: "SuccessResponse",
-        method: "Binding",
+        cls: "successResponse",
+        method: "binding",
         trxId: ctx.trxId,
       },
       attrs: {

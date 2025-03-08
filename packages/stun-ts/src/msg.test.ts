@@ -16,8 +16,8 @@ describe("StunMsg", () => {
     it("creates a StunMsg with XOR-MAPPED-ADDRESS attr", () => {
       const msg = StunMsg.build({
         header: {
-          cls: "SuccessResponse",
-          method: "Binding",
+          cls: "successResponse",
+          method: "binding",
           trxId: ctx.trxId,
         },
         attrs: {
@@ -30,8 +30,8 @@ describe("StunMsg", () => {
       });
       expect(msg).toEqual({
         header: {
-          cls: "SuccessResponse",
-          method: "Binding",
+          cls: "successResponse",
+          method: "binding",
           trxId: ctx.trxId,
           length: 12,
           magicCookie,
@@ -78,8 +78,8 @@ describe("StunMsg", () => {
     it("creates a StunMsg with MESSAGE-INTEGRITY and FINGERPRINT attr", () => {
       const msg = StunMsg.build({
         header: {
-          cls: "SuccessResponse",
-          method: "Binding",
+          cls: "successResponse",
+          method: "binding",
           trxId: ctx.trxId,
         },
         attrs: {
@@ -97,8 +97,8 @@ describe("StunMsg", () => {
       });
       expect(msg).toEqual({
         header: {
-          cls: "SuccessResponse",
-          method: "Binding",
+          cls: "successResponse",
+          method: "binding",
           trxId: ctx.trxId,
           length: 44,
           magicCookie,
@@ -199,8 +199,8 @@ describe("StunMsg", () => {
       const msg = StunMsg.from(raw);
       expect(msg).toEqual({
         header: {
-          cls: "SuccessResponse",
-          method: "Binding",
+          cls: "successResponse",
+          method: "binding",
           length: 12,
           trxId: ctx.trxId,
           magicCookie,
@@ -257,7 +257,7 @@ describe("StunMsg", () => {
 //     ]);
 //     const hBuf = Buffer.concat([
 //       Buffer.from([
-//         0x00, // STUN Message Type: Binding request
+//         0x00, // STUN Message Type: binding request
 //         0x01,
 //         0x00, // Message Length: 12 bytes
 //         0x0c,

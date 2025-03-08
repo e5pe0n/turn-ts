@@ -39,8 +39,8 @@ describe("with UdpAgent", () => {
           const indi = StunMsg.from(buf!);
           expect(indi).toEqual({
             header: {
-              cls: "Indication",
-              method: "Binding",
+              cls: "indication",
+              method: "binding",
               trxId: expect.any(Buffer),
               length: 0,
               magicCookie,
@@ -58,8 +58,8 @@ describe("with UdpAgent", () => {
           const indi = StunMsg.from(buf!);
           expect(indi).toEqual({
             header: {
-              cls: "Indication",
-              method: "Binding",
+              cls: "indication",
+              method: "binding",
               trxId: expect.any(Buffer),
               length: 0,
               magicCookie,
@@ -86,7 +86,7 @@ describe("with UdpAgent", () => {
           const req = StunMsg.from(msg);
           const resp = StunMsg.build({
             header: {
-              cls: "SuccessResponse",
+              cls: "successResponse",
               method: req.header.method,
               trxId: req.header.trxId,
             },
@@ -122,8 +122,8 @@ describe("with UdpAgent", () => {
           const req = StunMsg.from(reqBuf);
           expect(req).toEqual({
             header: {
-              cls: "Request",
-              method: "Binding",
+              cls: "request",
+              method: "binding",
               trxId: expect.any(Buffer),
               length: 0,
               magicCookie,
@@ -134,8 +134,8 @@ describe("with UdpAgent", () => {
 
           expect(resp).toEqual({
             header: {
-              cls: "SuccessResponse",
-              method: "Binding",
+              cls: "successResponse",
+              method: "binding",
               trxId: req.header.trxId,
               length: 12,
               magicCookie,
@@ -159,8 +159,8 @@ describe("with UdpAgent", () => {
           const req = StunMsg.from(reqBuf);
           expect(req).toEqual({
             header: {
-              cls: "Request",
-              method: "Binding",
+              cls: "request",
+              method: "binding",
               trxId: expect.any(Buffer),
               length: 0,
               magicCookie,
@@ -171,8 +171,8 @@ describe("with UdpAgent", () => {
 
           expect(resp).toEqual({
             header: {
-              cls: "SuccessResponse",
-              method: "Binding",
+              cls: "successResponse",
+              method: "binding",
               trxId: req.header.trxId,
               length: 12,
               magicCookie,
@@ -229,8 +229,8 @@ describe("with TcpAgent", () => {
           const indi = StunMsg.from(buf!);
           expect(indi).toEqual({
             header: {
-              cls: "Indication",
-              method: "Binding",
+              cls: "indication",
+              method: "binding",
               trxId: expect.any(Buffer),
               length: 0,
               magicCookie,
@@ -248,8 +248,8 @@ describe("with TcpAgent", () => {
           const indi = StunMsg.from(buf!);
           expect(indi).toEqual({
             header: {
-              cls: "Indication",
-              method: "Binding",
+              cls: "indication",
+              method: "binding",
               trxId: expect.any(Buffer),
               length: 0,
               magicCookie,
@@ -275,7 +275,7 @@ describe("with TcpAgent", () => {
             const req = StunMsg.from(data);
             const resp = StunMsg.build({
               header: {
-                cls: "SuccessResponse",
+                cls: "successResponse",
                 method: req.header.method,
                 trxId: req.header.trxId,
               },
@@ -314,8 +314,8 @@ describe("with TcpAgent", () => {
           const req = StunMsg.from(reqBuf);
           expect(req).toEqual({
             header: {
-              cls: "Request",
-              method: "Binding",
+              cls: "request",
+              method: "binding",
               trxId: expect.any(Buffer),
               length: 0,
               magicCookie,
@@ -326,8 +326,8 @@ describe("with TcpAgent", () => {
 
           expect(resp).toEqual({
             header: {
-              cls: "SuccessResponse",
-              method: "Binding",
+              cls: "successResponse",
+              method: "binding",
               trxId: req.header.trxId,
               length: 12,
               magicCookie,
@@ -351,8 +351,8 @@ describe("with TcpAgent", () => {
           const req = StunMsg.from(reqBuf);
           expect(req).toEqual({
             header: {
-              cls: "Request",
-              method: "Binding",
+              cls: "request",
+              method: "binding",
               trxId: expect.any(Buffer),
               length: 0,
               magicCookie,
@@ -363,8 +363,8 @@ describe("with TcpAgent", () => {
 
           expect(resp).toEqual({
             header: {
-              cls: "SuccessResponse",
-              method: "Binding",
+              cls: "successResponse",
+              method: "binding",
               trxId: req.header.trxId,
               length: 12,
               magicCookie,

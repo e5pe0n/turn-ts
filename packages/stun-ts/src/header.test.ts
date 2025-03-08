@@ -10,20 +10,20 @@ import {
 describe("encodeMsgType", () => {
   test.each([
     {
-      arg: { method: "Binding", cls: "Request" },
+      arg: { method: "binding", cls: "request" },
       expected: Buffer.from([0b00_000000, 0b00000001]),
     },
     {
       arg: {
-        method: "Binding",
-        cls: "SuccessResponse",
+        method: "binding",
+        cls: "successResponse",
       },
       expected: Buffer.from([0b00_000001, 0b00000001]),
     },
     {
       arg: {
-        method: "Binding",
-        cls: "ErrorResponse",
+        method: "binding",
+        cls: "errorResponse",
       },
       expected: Buffer.from([0b00_000001, 0b00010001]),
     },
@@ -40,22 +40,22 @@ describe("decodeMsgType", () => {
     {
       arg: Buffer.from([0b000000, 0b00000001]),
       expected: {
-        method: "Binding",
-        cls: "Request",
+        method: "binding",
+        cls: "request",
       },
     } as const,
     {
       arg: Buffer.from([0b000001, 0b00000001]),
       expected: {
-        method: "Binding",
-        cls: "SuccessResponse",
+        method: "binding",
+        cls: "successResponse",
       },
     } as const,
     {
       arg: Buffer.from([0b000001, 0b00010001]),
       expected: {
-        method: "Binding",
-        cls: "ErrorResponse",
+        method: "binding",
+        cls: "errorResponse",
       },
     } as const,
   ])(
@@ -82,8 +82,8 @@ describe("encodeHeader", () => {
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
     ]);
     const res = encodeHeader({
-      cls: "SuccessResponse",
-      method: "Binding",
+      cls: "successResponse",
+      method: "binding",
       length: 28,
       trxId,
     });
