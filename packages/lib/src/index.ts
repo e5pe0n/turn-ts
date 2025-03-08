@@ -389,3 +389,7 @@ export function genPromise<T>(
   gen.next();
   return gen;
 }
+
+export function fmtArray<T>(arr: T[], fmt?: (v: T) => string): string {
+  return arr.map((v) => (fmt ? fmt(v) : String(v))).join(", ");
+}

@@ -5,37 +5,6 @@ import { magicCookie } from "./common.js";
 // import { readMagicCookie } from "./header.js";
 import type { Protocol } from "./types.js";
 
-// export function assertRawStunFmtMsg(msg: Buffer): asserts msg is RawStunFmtMsg {
-//   assert(
-//     msg.length >= 20,
-//     new Error(
-//       `invalid stun msg; expected msg length is >= 20 bytes. actual length is ${msg.length}.`,
-//     ),
-//   );
-//   assert(
-//     msg.length % 4 === 0,
-//     new Error(
-//       `invalid stun msg; expected msg length is a multiple of 4 bytes. actual length is ${msg.length}.`,
-//     ),
-//   );
-//   const fstBits = msg[0]! >>> 6;
-//   assert(
-//     fstBits === 0,
-//     new Error(
-//       `invalid stun msg; expected the most significant 2 bits is 0b00. actual is ${fstBits.toString(2)}.`,
-//     ),
-//   );
-
-//   const stunMsg = msg as RawStunFmtMsg;
-//   const cookie = readMagicCookie(stunMsg);
-//   assert(
-//     cookie === magicCookie,
-//     new Error(
-//       `invalid stun msg; invalid magic cookie. actual is ${cookie.toString(16)}.`,
-//     ),
-//   );
-// }
-
 export interface Agent {
   close(): void;
   indicate(msg: Buffer): Promise<undefined>;

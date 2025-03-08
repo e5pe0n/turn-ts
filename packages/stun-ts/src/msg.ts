@@ -1,4 +1,4 @@
-import { type Override, assertValueOf, getKey } from "@e5pe0n/lib";
+import { type Override, assert, assertValueOf, getKey } from "@e5pe0n/lib";
 import { z } from "zod";
 import {
   attrTypeRecord,
@@ -19,12 +19,8 @@ import {
   encodeUsernameValue,
   encodeXorMappedAddressValue,
 } from "./attr.js";
-import { encodeFingerprintValue } from "./fingerprint.js";
-import {
-  credentialsSchema,
-  encodeMessageIntegrityValue,
-} from "./msg-integrity.js";
 import { addrFamilySchema, magicCookie } from "./common.js";
+import { encodeFingerprintValue } from "./fingerprint.js";
 import {
   type Header,
   type MsgClass,
@@ -32,6 +28,10 @@ import {
   decodeHeader,
 } from "./header.js";
 import { RawStunMsgBuilder } from "./msg-builder.js";
+import {
+  credentialsSchema,
+  encodeMessageIntegrityValue,
+} from "./msg-integrity.js";
 import type { RawStunMsg } from "./types.js";
 
 const inputAttrsSchema = z
@@ -160,6 +160,26 @@ export const StunMsg = {
   from(raw: Buffer): StunMsg {
     const buf = Buffer.from(raw);
 
+    assert(
+      raw.length >= 20,
+      new Error(
+        `invalid stun msg; expected msg length is >= 20 bytes. actual length is ${raw.length}.`,
+      ),
+    );
+    assert(
+      raw.length % 4 === 0,
+      new Error(
+        `invalid stun msg; expected msg length is a multiple of 4 bytes. actual length is ${raw.length}.`,
+      ),
+    );
+    const fstBits = raw[0]! >>> 6;
+    assert(
+      fstBits === 0,
+      new Error(
+        `invalid stun msg; expected the most significant 2 bits is 0b00. actual is 0b${fstBits.toString(2)}.`,
+      ),
+    );
+
     const header = decodeHeader(buf.subarray(0, 20));
 
     const attrsBuf = buf.subarray(20, 20 + header.length);
@@ -167,8 +187,6 @@ export const StunMsg = {
     const attrs = {} as Attrs;
     while (offset + 4 <= attrsBuf.length) {
       const attrType = attrsBuf.subarray(offset, offset + 2).readUInt16BE();
-      // TODO: Distinguish between comprehension-required attributes
-      // and comprehension-optional attributes.
       assertValueOf(
         attrType,
         attrTypeRecord,

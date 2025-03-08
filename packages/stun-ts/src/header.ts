@@ -1,4 +1,5 @@
 import {
+  assert,
   assertKeyOf,
   assertValueOf,
   getKey,
@@ -10,15 +11,15 @@ import { magicCookie } from "./common.js";
 export const HEADER_LENGTH = 20;
 
 export const msgClassRecord = {
-  Request: 0b00,
-  Indication: 0b01,
-  SuccessResponse: 0b10,
-  ErrorResponse: 0b11,
+  request: 0b00,
+  indication: 0b01,
+  successResponse: 0b10,
+  errorResponse: 0b11,
 } as const;
 export type MsgClass = keyof typeof msgClassRecord;
 
 export const msgMethodRecord = {
-  Binding: 0x0001,
+  binding: 0x0001,
 } as const;
 export type MsgMethods = typeof msgMethodRecord;
 export type MsgMethod = keyof MsgMethods;
@@ -109,6 +110,10 @@ export function encodeHeader({
 export function decodeHeader(buf: Buffer): Header {
   const { method, cls } = decodeMsgType(buf.subarray(0, 2));
   const length = buf.subarray(2, 4).readUint16BE();
+  assert(
+    buf.subarray(4, 8).readUint32BE() === magicCookie,
+    new Error("invalid stun msg; magic cookie is wrong value."),
+  );
   const trxId = buf.subarray(8, 20);
   return { method, cls, length, magicCookie, trxId };
 }

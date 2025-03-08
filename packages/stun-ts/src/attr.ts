@@ -10,7 +10,10 @@ import {
 import { magicCookie } from "./common.js";
 
 const compReqRange = [0x0000, 0x7fff] as const;
-const compOptRange = [0x8000, 0xffff] as const;
+
+export function isCompReqAttr(attrType: number): boolean {
+  return compReqRange[0] <= attrType && attrType <= compReqRange[1];
+}
 
 export const attrTypeRecord = {
   mappedAddress: 0x0001,
