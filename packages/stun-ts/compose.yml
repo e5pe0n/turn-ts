@@ -1,0 +1,38 @@
+services:
+  router:
+    container_name: router
+    build: .
+    privileged: true
+    networks:
+      private_net:
+        ipv4_address: 192.168.100.200
+      public_net:
+        ipv4_address: 192.168.200.200
+
+  server:
+    container_name: server
+    build: .
+    networks:
+      public_net:
+        ipv4_address: 192.168.200.100
+
+  client:
+    container_name: client
+    build: .
+    privileged: true
+    networks:
+      private_net:
+        ipv4_address: 192.168.100.100
+
+networks:
+  private_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24
+  public_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.200.0/24
+
