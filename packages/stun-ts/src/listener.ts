@@ -50,8 +50,11 @@ class TcpListener implements Listener {
   constructor(handler: MsgHandler) {
     this.#server = createServer((sock) => {
       sock.on("data", (msg) => {
-        const maybeRinfo = sock.address();
-        const validationRes = remoteInfoSchema.safeParse(maybeRinfo);
+        const validationRes = remoteInfoSchema.safeParse({
+          family: sock.remoteFamily,
+          address: sock.remoteAddress,
+          port: sock.remotePort,
+        });
         if (!validationRes.success) {
           return;
         }
