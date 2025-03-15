@@ -2,6 +2,7 @@ import { assert, fmtArray } from "@e5pe0n/lib";
 import { type Listener, createListener } from "./listener.js";
 import { StunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
+import { logPrefix } from "./common.js";
 
 export type ServerConfig = {
   protocol: Protocol;
@@ -28,6 +29,11 @@ export class Server {
           `unexpected method; expected method is 'binding', but actual is '${reqMsg.header.method}'.`,
         ),
       );
+
+      console.log(
+        `${logPrefix} received stun message; ${JSON.stringify(reqMsg)}`,
+      );
+
       const respMsg = StunMsg.build({
         header: {
           cls: "successResponse",
@@ -42,15 +48,22 @@ export class Server {
           },
         },
       });
+
+      console.log(
+        `${logPrefix} received stun message; ${JSON.stringify(respMsg)}`,
+      );
+
       return respMsg.raw;
     });
   }
 
   listen(port: number, host?: string) {
     this.#listener.listen(port, host);
+    console.log(`${logPrefix} listening on ${host ?? ""}:${port}.`);
   }
 
   close() {
     this.#listener.close();
+    console.log(`${logPrefix} server closed.`);
   }
 }

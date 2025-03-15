@@ -1,28 +1,54 @@
 services:
   router:
     container_name: router
-    build: .
+    build:
+      context: .
+      target: base
     privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     networks:
       private_net:
         ipv4_address: 192.168.100.200
       public_net:
         ipv4_address: 192.168.200.200
+    volumes:
+      - ./scripts/router.sh:/router.sh
+    command: bash -c "./router.sh && tail -f /dev/null"
 
   server:
     container_name: server
-    build: .
+    build:
+      context: .
+      target: e2e
     networks:
       public_net:
         ipv4_address: 192.168.200.100
+    volumes:
+      - ./e2e/stun-ts:/app
+      - /app/node_modules
+    command: pnpm dev
 
   client:
     container_name: client
-    build: .
+    build:
+      context: .
+      target: e2e
     privileged: true
+    cap_add:
+      - NET_ADMIN
     networks:
       private_net:
         ipv4_address: 192.168.100.100
+    volumes:
+      - ./e2e/stun-ts:/app
+      - /app/node_modules
+      - ./scripts/client.sh:/app/client.sh
+    command: bash -c "/app/client.sh && pnpm test"
+    depends_on:
+      - server
+      - router
 
 networks:
   private_net:

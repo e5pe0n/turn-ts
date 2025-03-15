@@ -1,0 +1,21 @@
+{
+  "name": "@e5pe0n/stun-ts-e2e",
+  "version": "0.0.0",
+  "description": "",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch server.ts",
+    "start": "tsx server.ts",
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@e5pe0n/stun-ts": "workspace:*",
+    "tsx": "4.19.3",
+    "vitest": "2.1.1"
+  }
+}

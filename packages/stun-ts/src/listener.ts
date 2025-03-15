@@ -1,7 +1,7 @@
 import { type Socket, createSocket } from "node:dgram";
 import { type Server, createServer } from "node:net";
 import { z } from "zod";
-import { addrFamilySchema } from "./common.js";
+import { addrFamilySchema, logPrefix } from "./common.js";
 import type { Protocol } from "./types.js";
 
 const remoteInfoSchema = z.object({
@@ -59,9 +59,15 @@ class TcpListener implements Listener {
           return;
         }
         const rinfo = validationRes.data;
+        console.log(
+          `${logPrefix} received tcp message; rinfo=${JSON.stringify(rinfo)}`,
+        );
         try {
           const buf = handler(msg, rinfo);
           sock.write(buf);
+          console.log(
+            `${logPrefix} returns tcp message; rinfo=${JSON.stringify(rinfo)}`,
+          );
         } catch (err) {
           // biome-ignore lint/suspicious/noConsole: ignore error
           console.error(err);

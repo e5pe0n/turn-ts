@@ -1,4 +1,4 @@
-import { retry } from "@e5pe0n/lib";
+import { retry, type Override } from "@e5pe0n/lib";
 import { type Socket, createSocket } from "node:dgram";
 import { type Socket as TcpSocket, createConnection } from "node:net";
 
@@ -13,12 +13,22 @@ export type UdpAgentInitConfig = {
     address: string;
     port: number;
   };
+  from?: {
+    address?: string;
+    port?: number;
+  };
   rtoMs?: number;
   rc?: number;
   rm?: number;
 };
 
-export type UdpAgentConfig = Required<UdpAgentInitConfig>;
+export type UdpAgentConfig = Override<
+  Required<UdpAgentInitConfig>,
+  {
+    from?: UdpAgentInitConfig["from"];
+  }
+>;
+
 export class UdpAgent implements Agent {
   #config: UdpAgentConfig;
   #sock: Socket;
@@ -31,7 +41,7 @@ export class UdpAgent implements Agent {
       ...config,
     };
     this.#sock = createSocket("udp4");
-    this.#sock.bind();
+    this.#sock.bind(this.#config.from?.port, this.#config.from?.address);
   }
 
   close(): void {
@@ -72,7 +82,7 @@ export class UdpAgent implements Agent {
         );
       });
 
-    const res = (await Promise.race([
+    const resp = (await Promise.race([
       retry(_req, {
         retryIf: () => true,
         maxAttempts: this.#config.rc,
@@ -81,7 +91,7 @@ export class UdpAgent implements Agent {
       }),
       _res,
     ])) as Buffer;
-    return res;
+    return resp;
   }
 }
 
@@ -90,10 +100,19 @@ export type TcpAgentInitConfig = {
     address: string;
     port: number;
   };
+  from?: {
+    address?: string;
+    port?: number;
+  };
   tiMs?: number;
 };
 
-export type TcpAgentConfig = Required<TcpAgentInitConfig>;
+export type TcpAgentConfig = Override<
+  Required<TcpAgentInitConfig>,
+  {
+    from?: TcpAgentInitConfig["from"];
+  }
+>;
 
 export class TcpAgent implements Agent {
   #config: TcpAgentConfig;
@@ -113,8 +132,12 @@ export class TcpAgent implements Agent {
   async indicate(msg: Buffer): Promise<undefined> {
     await new Promise<void>((resolve, reject) => {
       const sock = createConnection(
-        this.#config.to.port,
-        this.#config.to.address,
+        {
+          port: this.#config.to.port,
+          host: this.#config.to.address,
+          localAddress: this.#config.from?.address,
+          localPort: this.#config.from?.port,
+        },
         () => {
           sock.write(msg);
           sock.end();
@@ -131,11 +154,13 @@ export class TcpAgent implements Agent {
   }
 
   async request(msg: Buffer): Promise<Buffer> {
-    const resBuf = await new Promise<Buffer>((resolve, reject) => {
+    const respBuf = await new Promise<Buffer>((resolve, reject) => {
       const sock = createConnection(
         {
           port: this.#config.to.port,
           host: this.#config.to.address,
+          localAddress: this.#config.from?.address,
+          localPort: this.#config.from?.port,
           timeout: this.#config.tiMs,
         },
         () => {
@@ -156,7 +181,7 @@ export class TcpAgent implements Agent {
       });
       this.#sock = sock;
     });
-    return resBuf;
+    return respBuf;
   }
 }
 
