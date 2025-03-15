@@ -1,16 +1,14 @@
 import { randomBytes } from "node:crypto";
-import type { Agent } from "./agent.js";
+import { createAgent, type Agent, type CreateAgentParams } from "./agent.js";
 import { StunMsg } from "./msg.js";
 
-export type ClientInitConfig = {
-  agent: Agent;
-};
+export type ClientInitConfig = CreateAgentParams;
 
 export class Client {
   #agent: Agent;
 
   constructor(config: ClientInitConfig) {
-    this.#agent = config.agent;
+    this.#agent = createAgent(config);
   }
 
   close(): void {

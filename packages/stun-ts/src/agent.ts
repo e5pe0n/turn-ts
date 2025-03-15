@@ -1,9 +1,6 @@
+import { retry } from "@e5pe0n/lib";
 import { type Socket, createSocket } from "node:dgram";
 import { type Socket as TcpSocket, createConnection } from "node:net";
-import { assert, retry } from "@e5pe0n/lib";
-import { magicCookie } from "./common.js";
-// import { readMagicCookie } from "./header.js";
-import type { Protocol } from "./types.js";
 
 export interface Agent {
   close(): void;
@@ -160,5 +157,27 @@ export class TcpAgent implements Agent {
       this.#sock = sock;
     });
     return resBuf;
+  }
+}
+
+export type CreateAgentParams =
+  | ({
+      protocol: "udp";
+    } & UdpAgentInitConfig)
+  | ({
+      protocol: "tcp";
+    } & TcpAgentInitConfig);
+
+export function createAgent(arg: CreateAgentParams): Agent {
+  switch (arg.protocol) {
+    case "udp":
+      return new UdpAgent(arg);
+    case "tcp":
+      return new TcpAgent(arg);
+    default:
+      arg satisfies never;
+      throw new Error(
+        `invalid protocol: ${(arg as { protocol: string }).protocol} is not supported.`,
+      );
   }
 }

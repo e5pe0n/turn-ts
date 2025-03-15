@@ -1,11 +1,10 @@
 import { genPromise } from "@e5pe0n/lib";
 import { createSocket } from "node:dgram";
-import { describe, expect, it } from "vitest";
-import { TcpAgent, UdpAgent } from "./agent.js";
-import { Client } from "./client.js";
-import { StunMsg } from "./msg.js";
-import { magicCookie } from "./common.js";
 import { createServer } from "node:net";
+import { describe, expect, it } from "vitest";
+import { Client } from "./client.js";
+import { magicCookie } from "./common.js";
+import { StunMsg } from "./msg.js";
 
 describe("with UdpAgent", () => {
   describe("indicate()", () => {
@@ -18,14 +17,12 @@ describe("with UdpAgent", () => {
           resolve(msg);
         });
       });
-      const agent = new UdpAgent({
+      const client = new Client({
+        protocol: "udp",
         to: {
           address: "127.0.0.1",
           port: 12345,
         },
-      });
-      const client = new Client({
-        agent,
       });
       server.bind(12345, "127.0.0.1");
 
@@ -102,14 +99,12 @@ describe("with UdpAgent", () => {
         });
       });
       server.bind(12345, "127.0.0.1");
-      const agent = new UdpAgent({
+      const client = new Client({
+        protocol: "udp",
         to: {
           address: "127.0.0.1",
           port: 12345,
         },
-      });
-      const client = new Client({
-        agent,
       });
 
       try {
@@ -208,14 +203,12 @@ describe("with TcpAgent", () => {
           });
         });
       });
-      const agent = new TcpAgent({
+      const client = new Client({
+        protocol: "tcp",
         to: {
           address: "127.0.0.1",
           port: 12345,
         },
-      });
-      const client = new Client({
-        agent,
       });
       server.listen(12345, "127.0.0.1");
 
@@ -293,14 +286,12 @@ describe("with TcpAgent", () => {
           });
         });
       });
-      const agent = new TcpAgent({
+      const client = new Client({
+        protocol: "tcp",
         to: {
           address: "127.0.0.1",
           port: 12345,
         },
-      });
-      const client = new Client({
-        agent,
       });
       server.listen(12345, "127.0.0.1");
 
