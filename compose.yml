@@ -45,7 +45,8 @@ services:
       - ./e2e/stun-ts:/app
       - /app/node_modules
       - ./scripts/client.sh:/app/client.sh
-    command: bash -c "/app/client.sh && pnpm test"
+    # TODO: wait for server and router to be ready stably
+    command: bash -c "/app/client.sh && sleep 3 && pnpm test:docker"
     depends_on:
       - server
       - router
