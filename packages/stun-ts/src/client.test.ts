@@ -1,6 +1,6 @@
-import { genPromise } from "@e5pe0n/lib";
 import { createSocket } from "node:dgram";
 import { createServer } from "node:net";
+import { genPromise } from "@e5pe0n/lib";
 import { describe, expect, it } from "vitest";
 import { Client } from "./client.js";
 import { magicCookie } from "./common.js";

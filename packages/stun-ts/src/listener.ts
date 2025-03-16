@@ -26,8 +26,18 @@ class UdpListener implements Listener {
     this.#sock = createSocket("udp4");
     this.#sock.on("message", (msg, rinfo) => {
       try {
+        // TODO: output log depending on env var or config.
+        // biome-ignore lint/suspicious/noConsole: example code
+        console.log(
+          `${logPrefix} received udp message; rinfo=${JSON.stringify(rinfo)}`,
+        );
         const buf = handler(msg, rinfo);
         this.#sock.send(buf, rinfo.port, rinfo.address);
+        // TODO: output log depending on env var or config.
+        // biome-ignore lint/suspicious/noConsole: example code
+        console.log(
+          `${logPrefix} returns udp message; rinfo=${JSON.stringify(rinfo)}`,
+        );
       } catch (err) {
         // biome-ignore lint/suspicious/noConsole: ignore error
         console.error(err);
@@ -59,12 +69,17 @@ class TcpListener implements Listener {
           return;
         }
         const rinfo = validationRes.data;
+
+        // TODO: output log depending on env var or config.
+        // biome-ignore lint/suspicious/noConsole: example code
         console.log(
           `${logPrefix} received tcp message; rinfo=${JSON.stringify(rinfo)}`,
         );
         try {
           const buf = handler(msg, rinfo);
           sock.write(buf);
+          // TODO: output log depending on env var or config.
+          // biome-ignore lint/suspicious/noConsole: example code
           console.log(
             `${logPrefix} returns tcp message; rinfo=${JSON.stringify(rinfo)}`,
           );

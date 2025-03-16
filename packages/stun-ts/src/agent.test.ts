@@ -1,7 +1,7 @@
-import { genPromise } from "@e5pe0n/lib";
 import { createSocket } from "node:dgram";
 import { createServer } from "node:net";
 import { setTimeout } from "node:timers/promises";
+import { genPromise } from "@e5pe0n/lib";
 import { describe, expect, it, test } from "vitest";
 import { TcpAgent, UdpAgent } from "./agent.js";
 

@@ -1,6 +1,5 @@
 import { describe, expect, it, test } from "vitest";
 import {
-  type Header,
   type MsgType,
   decodeMsgType,
   encodeHeader,

@@ -1,4 +1,4 @@
-import { type Override, assert, assertValueOf, getKey } from "@e5pe0n/lib";
+import { assert, type Override, assertValueOf, getKey } from "@e5pe0n/lib";
 import { z } from "zod";
 import {
   attrTypeRecord,

@@ -1,8 +1,8 @@
 import { assert, fmtArray } from "@e5pe0n/lib";
+import { logPrefix } from "./common.js";
 import { type Listener, createListener } from "./listener.js";
 import { StunMsg } from "./msg.js";
 import type { Protocol } from "./types.js";
-import { logPrefix } from "./common.js";
 
 export type ServerConfig = {
   protocol: Protocol;
@@ -30,6 +30,8 @@ export class Server {
         ),
       );
 
+      // TODO: output log depending on env var or config.
+      // biome-ignore lint/suspicious/noConsole: example code
       console.log(
         `${logPrefix} received stun message; ${JSON.stringify(reqMsg)}`,
       );
@@ -49,6 +51,8 @@ export class Server {
         },
       });
 
+      // TODO: output log depending on env var or config.
+      // biome-ignore lint/suspicious/noConsole: example code
       console.log(
         `${logPrefix} received stun message; ${JSON.stringify(respMsg)}`,
       );
@@ -59,11 +63,15 @@ export class Server {
 
   listen(port: number, host?: string) {
     this.#listener.listen(port, host);
+    // TODO: output log depending on env var or config.
+    // biome-ignore lint/suspicious/noConsole: example code
     console.log(`${logPrefix} listening on ${host ?? ""}:${port}.`);
   }
 
   close() {
     this.#listener.close();
+    // TODO: output log depending on env var or config.
+    // biome-ignore lint/suspicious/noConsole: example code
     console.log(`${logPrefix} server closed.`);
   }
 }

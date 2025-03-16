@@ -1,6 +1,6 @@
-import { retry, type Override } from "@e5pe0n/lib";
 import { type Socket, createSocket } from "node:dgram";
 import { type Socket as TcpSocket, createConnection } from "node:net";
+import { type Override, retry } from "@e5pe0n/lib";
 
 export interface Agent {
   close(): void;

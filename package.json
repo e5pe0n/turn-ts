@@ -7,7 +7,8 @@
     "type:check": "pnpm -r type:check",
     "check": "pnpm -r check",
     "fix": "pnpm -r fix",
-    "test": "pnpm -r test"
+    "test": "pnpm -r --filter \"./packages/**\" test",
+    "test:e2e": "docker compose up --exit-code-from client"
   },
   "keywords": [],
   "author": "",

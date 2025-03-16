@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { createAgent, type Agent, type CreateAgentParams } from "./agent.js";
+import { type Agent, type CreateAgentParams, createAgent } from "./agent.js";
 import { StunMsg } from "./msg.js";
 
 export type ClientConfig = CreateAgentParams;

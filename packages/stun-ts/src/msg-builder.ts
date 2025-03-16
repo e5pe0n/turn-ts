@@ -1,9 +1,9 @@
-import { attrTypeRecord, type AttrType } from "./attr.js";
+import { type AttrType, attrTypeRecord } from "./attr.js";
 import {
-  encodeHeader,
   HEADER_LENGTH,
   type MsgClass,
   type MsgMethod,
+  encodeHeader,
 } from "./header.js";
 import type { RawStunMsg } from "./types.js";
 

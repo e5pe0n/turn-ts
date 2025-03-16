@@ -1,7 +1,7 @@
-import { genPromise } from "@e5pe0n/lib";
 import { createSocket } from "node:dgram";
 import { createConnection } from "node:net";
 import { setTimeout } from "node:timers/promises";
+import { genPromise } from "@e5pe0n/lib";
 import { describe, expect, it } from "vitest";
 import { magicCookie } from "./common.js";
 import { StunMsg } from "./msg.js";
