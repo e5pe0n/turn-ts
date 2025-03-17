@@ -1,19 +1,25 @@
 import { describe, expect, it } from "vitest";
 import {
+  decodeChannelNumberValue,
   decodeErrorCodeValue,
+  decodeLifetimeValue,
   decodeMappedAddressValue,
   decodeNonceValue,
   decodeRealmValue,
+  decodeRequestedTransportValue,
   decodeUnknownAttributeValue,
   decodeUsernameValue,
-  decodeXorMappedAddressValue,
+  decodeXorAddressValue,
+  encodeChannelNumberValue,
   encodeErrorCodeValue,
+  encodeLifetimeValue,
   encodeMappedAddressValue,
   encodeNonceValue,
   encodeRealmValue,
+  encodeRequestedTransportValue,
   encodeUnknownAttributesValue,
   encodeUsernameValue,
-  encodeXorMappedAddressValue,
+  encodeXorAddressValue,
 } from "./attr.js";
 
 const ctx: {
@@ -144,11 +150,11 @@ describe("MAPPED-ADDRESS", () => {
   });
 });
 
-describe("XOR-MAPPED-ADDRESS", () => {
-  describe("encodeXorMappedAddressValue", () => {
-    it("encodes IPv4 XOR-MAPPED-ADDRESS value", () => {
+describe("XOR-MAPPED-ADDRESS/XOR-PEER-ADDRESS/XOR-RELAYED-ADDRESS", () => {
+  describe("encodeXorAddressValue", () => {
+    it("encodes IPv4 XOR-XXX-ADDRESS value", () => {
       expect(
-        encodeXorMappedAddressValue({
+        encodeXorAddressValue({
           family: "IPv4",
           port: 12345,
           address: "201.199.197.89",
@@ -167,9 +173,9 @@ describe("XOR-MAPPED-ADDRESS", () => {
         ]),
       );
     });
-    it("encodes IPv6 XOR-MAPPED-ADDRESS value", () => {
+    it("encodes IPv6 XOR-XXX-ADDRESS value", () => {
       expect(
-        encodeXorMappedAddressValue({
+        encodeXorAddressValue({
           family: "IPv6",
           port: 12345,
           address: "2001:0:0:db8::1",
@@ -208,7 +214,7 @@ describe("XOR-MAPPED-ADDRESS", () => {
       );
     });
   });
-  describe("decodeXorMappedAddressValue", () => {
+  describe("decodeXorAddressValue", () => {
     it("throws an error if an invalid address family given", () => {
       const buf = Buffer.from([
         0x00,
@@ -220,11 +226,11 @@ describe("XOR-MAPPED-ADDRESS", () => {
         0x61,
         0x1b,
       ]);
-      expect(() => decodeXorMappedAddressValue(buf, ctx.trxId)).toThrowError(
+      expect(() => decodeXorAddressValue(buf, ctx.trxId)).toThrowError(
         /invalid address family/,
       );
     });
-    it("decodes IPv4 XOR-MAPPED-ADDRESS value", () => {
+    it("decodes IPv4 XOR-XXX-ADDRESS value", () => {
       const buf = Buffer.from([
         0x00,
         0x01, // Family: IPv4
@@ -235,13 +241,13 @@ describe("XOR-MAPPED-ADDRESS", () => {
         0x61,
         0x1b,
       ]);
-      expect(decodeXorMappedAddressValue(buf, ctx.trxId)).toEqual({
+      expect(decodeXorAddressValue(buf, ctx.trxId)).toEqual({
         family: "IPv4",
         port: 12345,
         address: "201.199.197.89",
-      } satisfies ReturnType<typeof decodeXorMappedAddressValue>);
+      } satisfies ReturnType<typeof decodeXorAddressValue>);
     });
-    it("decodes IPv6 XOR-MAPPED-ADDRESS value", () => {
+    it("decodes IPv6 XOR-XXX-ADDRESS value", () => {
       const buf = Buffer.from([
         0x00,
         0x02, // Family: IPv6
@@ -271,11 +277,11 @@ describe("XOR-MAPPED-ADDRESS", () => {
         0x73,
         0xbc,
       ]);
-      expect(decodeXorMappedAddressValue(buf, ctx.trxId)).toEqual({
+      expect(decodeXorAddressValue(buf, ctx.trxId)).toEqual({
         family: "IPv6",
         port: 12345,
         address: "2001:0000:0000:0db8:0000:0000:0000:0001",
-      } satisfies ReturnType<typeof decodeXorMappedAddressValue>);
+      } satisfies ReturnType<typeof decodeXorAddressValue>);
     });
   });
 });
@@ -535,6 +541,54 @@ describe("UNKNOWN-ATTRIBUTES", () => {
       ]);
       const res = decodeUnknownAttributeValue(buf);
       expect(res).toEqual([0x0002, 0x0003, 0x0004]);
+    });
+  });
+});
+
+describe("CHANNEL-NUMBER", () => {
+  describe("encodeChannelNumberValue", () => {
+    it("encodes CHANNEL-NUMBER value", () => {
+      const res = encodeChannelNumberValue(12345);
+      expect(res).toEqual(Buffer.from([0x30, 0x39, 0x00, 0x00]));
+    });
+  });
+  describe("decodeChannelNumberValue", () => {
+    it("decodes CHANNEL-NUMBER value", () => {
+      const buf = Buffer.from([0x30, 0x39, 0x00, 0x00]);
+      const res = decodeChannelNumberValue(buf);
+      expect(res).toEqual(12345);
+    });
+  });
+});
+
+describe("LIFETIME", () => {
+  describe("encodeLifetimeValue", () => {
+    it("encodes LIFETIME value", () => {
+      const res = encodeLifetimeValue(3600);
+      expect(res).toEqual(Buffer.from([0x00, 0x00, 0x0e, 0x10]));
+    });
+  });
+  describe("decodeLifetimeValue", () => {
+    it("decodes LIFETIME value", () => {
+      const buf = Buffer.from([0x00, 0x00, 0x0e, 0x10]);
+      const res = decodeLifetimeValue(buf);
+      expect(res).toEqual(3600);
+    });
+  });
+});
+
+describe("REQUESTED-TRANSPORT", () => {
+  describe("encodeRequestedTransportValue", () => {
+    it("encodes REQUESTED-TRANSPORT value", () => {
+      const res = encodeRequestedTransportValue("udp");
+      expect(res).toEqual(Buffer.from([0x11, 0x00, 0x00, 0x00]));
+    });
+  });
+  describe("decodeRequestedTransportValue", () => {
+    it("decodes REQUESTED-TRANSPORT value", () => {
+      const buf = Buffer.from([0x11, 0x00, 0x00, 0x00]);
+      const res = decodeRequestedTransportValue(buf);
+      expect(res).toEqual("udp");
     });
   });
 });
