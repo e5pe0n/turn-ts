@@ -9,7 +9,7 @@ import {
   decodeSoftwareValue,
   decodeUnknownAttributeValue,
   decodeUsernameValue,
-  decodeXorMappedAddressValue,
+  decodeXorAddressValue,
   encodeErrorCodeValue,
   encodeMappedAddressValue,
   encodeNonceValue,
@@ -17,7 +17,7 @@ import {
   encodeSoftwareValue,
   encodeUnknownAttributesValue,
   encodeUsernameValue,
-  encodeXorMappedAddressValue,
+  encodeXorAddressValue,
 } from "./attr.js";
 import { addrFamilySchema, magicCookie } from "./common.js";
 import { encodeFingerprintValue } from "./fingerprint.js";
@@ -117,7 +117,7 @@ export const StunMsg = {
           vBuf = encodeSoftwareValue(inputAttrs[k]);
           break;
         case "xorMappedAddress":
-          vBuf = encodeXorMappedAddressValue({
+          vBuf = encodeXorAddressValue({
             ...inputAttrs[k],
             trxId: header.trxId,
           });
@@ -229,7 +229,7 @@ export const StunMsg = {
           attrs[kAttrType] = decodeSoftwareValue(vBuf);
           break;
         case "xorMappedAddress":
-          attrs[kAttrType] = decodeXorMappedAddressValue(vBuf, header.trxId);
+          attrs[kAttrType] = decodeXorAddressValue(vBuf, header.trxId);
           break;
         case "messageIntegrity":
           attrs[kAttrType] = vBuf;
