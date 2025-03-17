@@ -12,7 +12,15 @@ export const msgClassRecord = {
 export type MsgClass = keyof typeof msgClassRecord;
 
 export const msgMethodRecord = {
+  // https://datatracker.ietf.org/doc/html/rfc5389#autoid-62
   binding: 0x0001,
+  // https://datatracker.ietf.org/doc/html/rfc5766#autoid-43
+  allocate: 0x0003,
+  refresh: 0x0004,
+  send: 0x0006,
+  data: 0x0007,
+  createPermission: 0x0008,
+  channelBind: 0x0009,
 } as const;
 export type MsgMethods = typeof msgMethodRecord;
 export type MsgMethod = keyof MsgMethods;

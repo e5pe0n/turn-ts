@@ -26,6 +26,27 @@ describe("encodeMsgType", () => {
       },
       expected: Buffer.from([0b00_000001, 0b00010001]),
     },
+    {
+      arg: {
+        method: "allocate",
+        cls: "request",
+      },
+      expected: Buffer.from([0b00_000000, 0b00000011]),
+    },
+    {
+      arg: {
+        method: "allocate",
+        cls: "successResponse",
+      },
+      expected: Buffer.from([0b00_000001, 0b00000011]),
+    },
+    {
+      arg: {
+        method: "allocate",
+        cls: "errorResponse",
+      },
+      expected: Buffer.from([0b00_000001, 0b00010011]),
+    },
   ] satisfies {
     arg: MsgType;
     expected: Buffer;
@@ -42,22 +63,43 @@ describe("decodeMsgType", () => {
         method: "binding",
         cls: "request",
       },
-    } as const,
+    },
     {
       arg: Buffer.from([0b000001, 0b00000001]),
       expected: {
         method: "binding",
         cls: "successResponse",
       },
-    } as const,
+    },
     {
       arg: Buffer.from([0b000001, 0b00010001]),
       expected: {
         method: "binding",
         cls: "errorResponse",
       },
-    } as const,
-  ])(
+    },
+    {
+      arg: Buffer.from([0b00_000000, 0b00000011]),
+      expected: {
+        method: "allocate",
+        cls: "request",
+      },
+    },
+    {
+      arg: Buffer.from([0b00_000001, 0b00000011]),
+      expected: {
+        method: "allocate",
+        cls: "successResponse",
+      },
+    },
+    {
+      arg: Buffer.from([0b00_000001, 0b00010011]),
+      expected: {
+        method: "allocate",
+        cls: "errorResponse",
+      },
+    },
+  ] as const)(
     "decodes a $expected.method $expected.cls message type",
     ({
       arg,
