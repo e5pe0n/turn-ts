@@ -2,223 +2,94 @@ import { randomBytes } from "node:crypto";
 import { assert } from "@e5pe0n/lib";
 import {
   type AddrFamily,
-  UdpAgent,
-  type UdpAgentInitConfig,
+  type Agent,
+  type CreateAgentParams,
+  createAgent,
 } from "@e5pe0n/stun-ts";
-import type { MsgMethod } from "./method.js";
-import { type TurnMsg, decodeTurnMsg, encodeTurnMsg } from "./msg.js";
+import type { MsgMethod } from "./header.js";
+import { TurnMsg } from "./msg.js";
 
-type ClientConfig = UdpAgentInitConfig & {
+type ClientConfig = CreateAgentParams & {
   username: string;
   password: string;
   realm: string;
 };
 
-export type AllocateSuccessResponse = {
-  success: true;
-  relayedAddress: {
-    family: AddrFamily;
-    address: string;
-    port: number;
-  };
-  mappedAddress: {
-    family: AddrFamily;
-    address: string;
-    port: number;
-  };
-  lifetime: number; // sec
-};
-
-export type AllocateErrorResponse = {
-  success: false;
-  code: number;
-  reason: string;
-};
-
-export type AllocateResponse = AllocateSuccessResponse | AllocateErrorResponse;
-
-function pResMsg(msg: TurnMsg): AllocateResponse {
-  const relayedAddrAttr = msg.attrs.find(
-    (attr) => attr.type === "XOR-RELAYED-ADDRESS",
-  );
-  assert(
-    !!relayedAddrAttr,
-    new Error("invalid response; XOR-RELAYED-ADDRESS attr not found."),
-  );
-  const mappedAddrAttr = msg.attrs.find(
-    (attr) => attr.type === "XOR-MAPPED-ADDRESS",
-  );
-  assert(
-    !!mappedAddrAttr,
-    new Error("invalid response; XOR-MAPPED-ADDRESS attr not found."),
-  );
-  const lifetimeAttr = msg.attrs.find((attr) => attr.type === "LIFETIME");
-  assert(
-    !!lifetimeAttr,
-    new Error("invalid response; LIFETIME attr not found."),
-  );
-  return {
-    success: true,
-    relayedAddress: relayedAddrAttr.value,
-    mappedAddress: mappedAddrAttr.value,
-    lifetime: lifetimeAttr.value,
-  };
-}
-
 export class Client {
-  #agent: UdpAgent;
+  #agent: Agent;
   #config: ClientConfig;
 
   constructor(config: ClientConfig) {
-    this.#agent = new UdpAgent(config);
+    this.#agent = createAgent(config);
     this.#config = config;
-  }
-
-  get config() {
-    return structuredClone(this.#config);
   }
 
   close(): void {
     this.#agent.close();
   }
 
-  async request(method: MsgMethod): Promise<AllocateResponse> {
+  async request(method: MsgMethod): Promise<TurnMsg> {
     const trxId = randomBytes(12);
     switch (method) {
-      case "Allocate": {
-        const reqMsg1 = encodeTurnMsg({
+      case "allocate": {
+        const reqMsg1 = TurnMsg.build({
           header: {
             cls: "request",
-            method: "Allocate",
+            method: "allocate",
             trxId,
           },
-          attrs: [
-            {
-              type: "SOFTWARE",
-              value: "@e5pe0n/turn-ts@0.0.1 client",
-            },
-            {
-              type: "LIFETIME",
-              value: 3600,
-            },
-            {
-              type: "REQUESTED-TRANSPORT",
-              value: 17,
-            },
-            {
-              type: "DONT-FRAGMENT",
-            },
-          ],
+          attrs: {
+            software: "@e5pe0n/turn-ts@0.0.1 client",
+            lifetime: 3600,
+            requestedTransport: "udp",
+            dontFragment: true,
+          },
         });
-        const resMsg1 = await this.#agent.request(reqMsg1);
-        const res1 = decodeTurnMsg(resMsg1);
-        const errCodeAttr1 = res1.attrs.find(
-          (attr) => attr.type === "ERROR-CODE",
-        );
+        const respBuf = await this.#agent.request(reqMsg1.raw);
+        const respMsg = TurnMsg.from(respBuf);
         assert(
-          !!errCodeAttr1,
+          !!respMsg.attrs.errorCode,
           new Error("invalid response; ERROR-CODE attr not found."),
         );
         assert(
-          errCodeAttr1!.value.code === 401,
+          respMsg.attrs.errorCode.code === 401,
           new Error(
-            `invalid response; expected ERROR-CODE code is 401. actual is ${errCodeAttr1!.value.code}`,
+            `invalid response; expected ERROR-CODE code is 401. actual is ${respMsg.attrs.errorCode.code}.`,
           ),
         );
-        const realmAttr = res1.attrs.find((attr) => attr.type === "REALM");
         assert(
-          !!realmAttr,
+          !!respMsg.attrs.realm,
           new Error("invalid response; REALM attr not found."),
         );
-        const nonceAttr = res1.attrs.find((attr) => attr.type === "NONCE");
         assert(
-          !!nonceAttr,
+          !!respMsg.attrs.nonce,
           new Error("invalid response; NONCE attr not found."),
         );
-        const reqMsg2 = encodeTurnMsg({
+        const reqMsg2 = TurnMsg.build({
           header: {
             cls: "request",
-            method: "Allocate",
+            method: "allocate",
             trxId,
           },
-          attrs: [
-            {
-              type: "SOFTWARE",
-              value: "@e5pe0n/turn-ts@0.0.1 client",
+          attrs: {
+            software: "@e5pe0n/turn-ts@0.0.1 client",
+            lifetime: 3600,
+            requestedTransport: "udp",
+            dontFragment: true,
+            username: this.#config.username,
+            realm: respMsg.attrs.realm,
+            nonce: respMsg.attrs.nonce,
+            messageIntegrity: {
+              term: "long",
+              username: this.#config.username,
+              password: this.#config.password,
+              realm: respMsg.attrs.realm,
             },
-            {
-              type: "LIFETIME",
-              value: 3600,
-            },
-            {
-              type: "REQUESTED-TRANSPORT",
-              value: 17,
-            },
-            {
-              type: "DONT-FRAGMENT",
-            },
-            {
-              type: "USERNAME",
-              value: this.#config.username,
-            },
-            {
-              type: "REALM",
-              value: realmAttr.value,
-            },
-            {
-              type: "NONCE",
-              value: nonceAttr.value,
-            },
-            {
-              type: "MESSAGE-INTEGRITY",
-              params: {
-                term: "long",
-                username: this.#config.username,
-                password: this.#config.password,
-                realm: realmAttr.value,
-              },
-            },
-          ],
+          },
         });
-        const resMsg2 = await this.#agent.request(reqMsg2);
-        const res2 = decodeTurnMsg(resMsg2);
-        const errCodeAttr2 = res2.attrs.find(
-          (attr) => attr.type === "ERROR-CODE",
-        );
-        if (errCodeAttr2) {
-          return {
-            success: false,
-            code: errCodeAttr2.value.code,
-            reason: errCodeAttr2.value.reason,
-          };
-        }
-        const relayedAddrAttr = res2.attrs.find(
-          (attr) => attr.type === "XOR-RELAYED-ADDRESS",
-        );
-        assert(
-          !!relayedAddrAttr,
-          new Error("invalid response; XOR-RELAYED-ADDRESS attr not found."),
-        );
-        const mappedAddrAttr = res2.attrs.find(
-          (attr) => attr.type === "XOR-MAPPED-ADDRESS",
-        );
-        assert(
-          !!mappedAddrAttr,
-          new Error("invalid response; XOR-MAPPED-ADDRESS attr not found."),
-        );
-        const lifetimeAttr = res2.attrs.find(
-          (attr) => attr.type === "LIFETIME",
-        );
-        assert(
-          !!lifetimeAttr,
-          new Error("invalid response; LIFETIME attr not found."),
-        );
-        return {
-          success: true,
-          relayedAddress: relayedAddrAttr.value,
-          mappedAddress: mappedAddrAttr.value,
-          lifetime: lifetimeAttr.value,
-        };
+        const respBuf2 = await this.#agent.request(reqMsg2.raw);
+        const respMsg2 = TurnMsg.from(respBuf2);
+        return respMsg2;
       }
       default:
         throw new Error(`invalid method: ${method}`);

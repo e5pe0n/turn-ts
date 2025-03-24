@@ -1,5 +1,5 @@
 import { createSocket } from "node:dgram";
-import { withResolvers } from "@e5pe0n/lib/src/index.js";
+import { genPromise, withResolvers } from "@e5pe0n/lib/src/index.js";
 import { type RawStunFmtMsg, magicCookie } from "@e5pe0n/stun-ts";
 import { readTrxId } from "@e5pe0n/stun-ts/src/header.js";
 import { describe, expect, it } from "vitest";
@@ -8,12 +8,56 @@ import {
   type AllocateSuccessResponse,
   Client,
 } from "./client.js";
-import { type TurnMsg, decodeTurnMsg, encodeTurnMsg } from "./msg.js";
+import { TurnMsg, decodeTurnMsg, encodeTurnMsg } from "./msg.js";
 
 describe("request", () => {
   describe("Allocate", () => {
-    it("sends Allocate request then receives success response", async () => {
+    it("sends an Allocate request then receives a success response", async () => {
       const server = createSocket("udp4");
+      const gen = genPromise<Buffer>((genResolvers) => {
+        server.on("message", (msg, rinfo) => {
+          const { resolve } = genResolvers.next().value!;
+          const req = TurnMsg.from(msg);
+          if (!req.attrs.messageIntegrity) {
+            const resp = TurnMsg.build({
+              header: {
+                cls: "errorResponse",
+                method: "allocate",
+                trxId: req.header.trxId,
+              },
+              attrs: {
+                software: "@e5pe0n/turn-ts@0.0.0 server",
+                errorCode: { code: 401, reason: "Unauthorized" },
+                realm: "example.com",
+                nonce: "nonce",
+              },
+            });
+          } else {
+            const resp = TurnMsg.build({
+              header: {
+                cls: "successResponse",
+                method: "allocate",
+                trxId: req.header.trxId,
+              },
+              attrs: {
+                software: "@e5pe0n/turn-ts@0.0.0 server",
+                lifetime: 1200,
+                xorRelayedAddress: {
+                  family: "IPv4",
+                  address: "192.0.2.15",
+                  port: 50000,
+                },
+                xorMappedAddress: {
+                  family: "IPv4",
+                  address: "192.0.2.1",
+                  port: 7000,
+                },
+                messageIntegrity: {},
+              },
+            });
+          }
+        });
+      });
 
       const { promise: p1, resolve: r1 } = withResolvers<Buffer>();
       const { promise: p2, resolve: r2 } = withResolvers<Buffer>();

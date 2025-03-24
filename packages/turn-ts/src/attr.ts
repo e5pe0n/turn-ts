@@ -1,113 +1,70 @@
-import {
-  type AddrFamily,
-  type AttrvDecoders,
-  type AttrvEncoders,
-  type InputAttr as InputStunAttr,
-  type OutputAttr as OutputStunAttr,
-  decodeXorMappedAddressValue,
-  encodeXorMappedAddressValue,
-  attrTypeRecord as stunAttrTypeRecord,
-  attrvDecoders as stunAttrvDecoders,
-  attrvEncoders as stunAttrvEncoders,
-} from "@e5pe0n/stun-ts";
+import { attrTypeRecord as stunAttrTypeRecord } from "@e5pe0n/stun-ts";
 
-export const turnAttrTypeRecord = {
-  // "CHANNEL-NUMBER": 0x000c,
-  LIFETIME: 0x000d,
-  // "XOR-PEER-ADDRESS": 0x0012,
-  // DATA: 0x0013,
-  "XOR-RELAYED-ADDRESS": 0x0016,
-  // "EVEN-PORT": 0x0018,
-  "REQUESTED-TRANSPORT": 0x0019,
-  "DONT-FRAGMENT": 0x001a,
-  // "RESERVATION-TOKEN": 0x0022,
+// https://datatracker.ietf.org/doc/html/rfc5766#autoid-44
+export const attrTypeRecord = {
   ...stunAttrTypeRecord,
+  // channelNumber: 0x000c,
+  lifetime: 0x000d,
+  xorPeerAddress: 0x0012,
+  data: 0x0013,
+  xorRelayedAddress: 0x0016,
+  evenPort: 0x0018,
+  requestedTransport: 0x0019,
+  dontFragment: 0x001a,
+  reservationToken: 0x022,
 } as const;
-export type TurnAttrType = keyof typeof turnAttrTypeRecord;
+export type AttrType = keyof typeof attrTypeRecord;
 
-export type InputLifetimeAttr = {
-  type: "LIFETIME";
-  value: number;
-};
-export type OutputLifetimeAttr = InputLifetimeAttr;
-
-export type InputRequestTransportAttr = {
-  type: "REQUESTED-TRANSPORT";
-  value: 17;
-};
-export type OutputRequestTransportAttr = InputRequestTransportAttr;
-
-export type InputDontFragmentAttr = {
-  type: "DONT-FRAGMENT";
-};
-export type OutputDontFragmentAttr = InputDontFragmentAttr & {
-  value: undefined;
-};
-
-export type InputXorRelayedAddressAttrValue = {
-  type: "XOR-RELAYED-ADDRESS";
-  value: {
-    family: AddrFamily;
-    port: number;
-    address: string;
-  };
-};
-export type OutputXorRelayedAddressAttrValue = InputXorRelayedAddressAttrValue;
-
-export type InputTurnAttr =
-  | InputLifetimeAttr
-  | InputRequestTransportAttr
-  | InputDontFragmentAttr
-  | InputStunAttr
-  | InputXorRelayedAddressAttrValue;
-
-export type OutputTurnAttr =
-  | OutputLifetimeAttr
-  | OutputRequestTransportAttr
-  | OutputDontFragmentAttr
-  | OutputStunAttr
-  | OutputXorRelayedAddressAttrValue;
-
-export const turnAttrvEncoders: AttrvEncoders<InputTurnAttr> = {
-  LIFETIME: (attr) => encodeLifetimeAttrv(attr.value),
-  "REQUESTED-TRANSPORT": (attr) => encodeRequestTransportAttrv(attr.value),
-  "DONT-FRAGMENT": () => Buffer.alloc(0),
-  "XOR-RELAYED-ADDRESS": (attr, msg) =>
-    encodeXorMappedAddressValue(attr.value, msg),
-  ...stunAttrvEncoders,
-};
-
-export const turnAttrvDecoders: AttrvDecoders<OutputTurnAttr> = {
-  LIFETIME: decodeLifetimeAttrv,
-  "REQUESTED-TRANSPORT": decodeRequestTransportAttrv,
-  "DONT-FRAGMENT": () => undefined,
-  "XOR-RELAYED-ADDRESS": decodeXorMappedAddressValue,
-  ...stunAttrvDecoders,
-};
-
-export function encodeLifetimeAttrv(value: InputLifetimeAttr["value"]): Buffer {
+export function encodeChannelNumberValue(channelNumber: number): Buffer {
   const buf = Buffer.alloc(4);
-  buf.writeUInt32BE(value);
+  buf.writeUInt16BE(channelNumber);
   return buf;
 }
-export function decodeLifetimeAttrv(buf: Buffer): OutputLifetimeAttr["value"] {
+export function decodeChannelNumberValue(buf: Buffer): number {
+  return buf.readUInt16BE();
+}
+
+export function encodeLifetimeValue(lifetime: number): Buffer {
+  const buf = Buffer.alloc(4);
+  buf.writeUInt32BE(lifetime);
+  return buf;
+}
+export function decodeLifetimeValue(buf: Buffer): number {
   return buf.readUInt32BE();
 }
 
-export function encodeRequestTransportAttrv(
-  value: InputRequestTransportAttr["value"],
-): Buffer {
-  const buf = Buffer.from([value, 0, 0, 0]);
+export function encodeEvenPortValue(reserveNextHigherPort: boolean): Buffer {
+  const buf = Buffer.alloc(4);
+  buf.writeUInt8(reserveNextHigherPort ? 0b10000000 : 0);
   return buf;
 }
-export function decodeRequestTransportAttrv(
-  buf: Buffer,
-): OutputRequestTransportAttr["value"] {
-  const protocol = buf[0]!;
-  if (protocol !== 17) {
-    throw new Error(
-      `invalid REQUESTED-TRANSPORT; expected protocol is 17. actual is ${protocol}`,
-    );
+export function decodeEvenPortValue(buf: Buffer): {
+  reserveNextHigherPort: boolean;
+} {
+  return { reserveNextHigherPort: buf[0] === 0b10000000 };
+}
+
+// https://datatracker.ietf.org/doc/html/rfc5766#section-14.7
+export function encodeRequestedTransportValue(protocol: "udp"): Buffer {
+  const buf = Buffer.alloc(4);
+  switch (protocol) {
+    case "udp":
+      buf.writeUInt8(0x11);
+      break;
+    default:
+      protocol satisfies never;
+      throw new Error(`invalid protocol: '${protocol}' is not supported.`);
   }
-  return protocol;
+  return buf;
+}
+export function decodeRequestedTransportValue(buf: Buffer): "udp" {
+  const protocol = buf[0]!;
+  switch (protocol) {
+    case 0x11:
+      return "udp";
+    default:
+      throw new Error(
+        `invalid protocol: '0x${protocol.toString(2)}' is not supported.`,
+      );
+  }
 }

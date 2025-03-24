@@ -1,14 +1,11 @@
-import { assert, type Override, assertValueOf, getKey } from "@e5pe0n/lib";
+import { assert, assertValueOf, getKey, type Override } from "@e5pe0n/lib";
 import { z } from "zod";
 import {
   attrTypeRecord,
   decodeErrorCodeValue,
   decodeMappedAddressValue,
-  decodeNonceValue,
-  decodeRealmValue,
-  decodeSoftwareValue,
-  decodeUnknownAttributeValue,
-  decodeUsernameValue,
+  decodeStrValue,
+  decodeUnknownAttributesValue,
   decodeXorAddressValue,
   encodeErrorCodeValue,
   encodeMappedAddressValue,
@@ -21,26 +18,23 @@ import {
 } from "./attr.js";
 import { addrFamilySchema, magicCookie } from "./common.js";
 import { encodeFingerprintValue } from "./fingerprint.js";
-import {
-  type Header,
-  type MsgClass,
-  type MsgMethod,
-  decodeHeader,
-} from "./header.js";
-import { RawStunMsgBuilder } from "./msg-builder.js";
+import { Header } from "./header.js";
+import { RawStunMsgBuilder, type InitHeader } from "./msg-builder.js";
 import {
   credentialsSchema,
   encodeMessageIntegrityValue,
 } from "./msg-integrity.js";
 import type { RawStunMsg } from "./types.js";
 
-const inputAttrsSchema = z
+const addressSchema = z.object({
+  family: addrFamilySchema,
+  port: z.number(),
+  address: z.string().ip(),
+});
+
+export const inputAttrsSchema = z
   .object({
-    mappedAddress: z.object({
-      family: addrFamilySchema,
-      port: z.number(),
-      address: z.string().ip(),
-    }),
+    mappedAddress: addressSchema,
     username: z.string(),
     errorCode: z.object({
       code: z.number(),
@@ -49,11 +43,7 @@ const inputAttrsSchema = z
     unknownAttributes: z.array(z.number()),
     realm: z.string(),
     nonce: z.string(),
-    xorMappedAddress: z.object({
-      family: addrFamilySchema,
-      port: z.number(),
-      address: z.string().ip(),
-    }),
+    xorMappedAddress: addressSchema,
     software: z.string(),
     messageIntegrity: credentialsSchema,
     fingerprint: z.boolean(),
@@ -79,11 +69,7 @@ export const StunMsg = {
     header,
     attrs = {},
   }: {
-    header: {
-      cls: MsgClass;
-      method: MsgMethod;
-      trxId: Buffer;
-    };
+    header: InitHeader;
     attrs?: InputAttrs | undefined;
   }): StunMsg {
     // TODO: handle validation error
@@ -180,7 +166,7 @@ export const StunMsg = {
       ),
     );
 
-    const header = decodeHeader(buf.subarray(0, 20));
+    const header = Header.from(buf.subarray(0, 20));
 
     const attrsBuf = buf.subarray(20, 20 + header.length);
     let offset = 0;
@@ -210,23 +196,17 @@ export const StunMsg = {
         case "mappedAddress":
           attrs[kAttrType] = decodeMappedAddressValue(vBuf);
           break;
-        case "username":
-          attrs[kAttrType] = decodeUsernameValue(vBuf);
-          break;
         case "errorCode":
           attrs[kAttrType] = decodeErrorCodeValue(vBuf);
           break;
         case "unknownAttributes":
-          attrs[kAttrType] = decodeUnknownAttributeValue(vBuf);
+          attrs[kAttrType] = decodeUnknownAttributesValue(vBuf);
           break;
+        case "username":
         case "realm":
-          attrs[kAttrType] = decodeRealmValue(vBuf);
-          break;
         case "nonce":
-          attrs[kAttrType] = decodeNonceValue(vBuf);
-          break;
         case "software":
-          attrs[kAttrType] = decodeSoftwareValue(vBuf);
+          attrs[kAttrType] = decodeStrValue(vBuf);
           break;
         case "xorMappedAddress":
           attrs[kAttrType] = decodeXorAddressValue(vBuf, header.trxId);

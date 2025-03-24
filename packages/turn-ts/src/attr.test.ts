@@ -1,25 +1,57 @@
 import { describe, expect, it } from "vitest";
 import {
-  type InputLifetimeAttr,
-  type InputRequestTransportAttr,
-  decodeLifetimeAttrv,
-  encodeLifetimeAttrv,
-  encodeRequestTransportAttrv,
+  encodeChannelNumberValue,
+  decodeChannelNumberValue,
+  encodeLifetimeValue,
+  decodeLifetimeValue,
+  encodeRequestedTransportValue,
+  decodeRequestedTransportValue,
 } from "./attr.js";
 
-describe("encodeRequestTransportAttrv", () => {
-  it("encodes REQUESTED-TRANSPORT value", () => {
-    const value: InputRequestTransportAttr["value"] = 17;
-    const res = encodeRequestTransportAttrv(value);
-    expect(res).toEqual(Buffer.from([17, 0, 0, 0]));
+describe("CHANNEL-NUMBER", () => {
+  describe("encodeChannelNumberValue", () => {
+    it("encodes CHANNEL-NUMBER value", () => {
+      const res = encodeChannelNumberValue(12345);
+      expect(res).toEqual(Buffer.from([0x30, 0x39, 0x00, 0x00]));
+    });
+  });
+  describe("decodeChannelNumberValue", () => {
+    it("decodes CHANNEL-NUMBER value", () => {
+      const buf = Buffer.from([0x30, 0x39, 0x00, 0x00]);
+      const res = decodeChannelNumberValue(buf);
+      expect(res).toEqual(12345);
+    });
   });
 });
 
-describe("encodeLifetimeAttrv/decodeLifetimeAttrv", () => {
-  it("encodes/decodes LIFETIME value", () => {
-    const value: InputLifetimeAttr["value"] = 4_294_967_295;
-    const buf = encodeLifetimeAttrv(value);
-    const res = decodeLifetimeAttrv(buf);
-    expect(res).toBe(value);
+describe("LIFETIME", () => {
+  describe("encodeLifetimeValue", () => {
+    it("encodes LIFETIME value", () => {
+      const res = encodeLifetimeValue(3600);
+      expect(res).toEqual(Buffer.from([0x00, 0x00, 0x0e, 0x10]));
+    });
+  });
+  describe("decodeLifetimeValue", () => {
+    it("decodes LIFETIME value", () => {
+      const buf = Buffer.from([0x00, 0x00, 0x0e, 0x10]);
+      const res = decodeLifetimeValue(buf);
+      expect(res).toEqual(3600);
+    });
+  });
+});
+
+describe("REQUESTED-TRANSPORT", () => {
+  describe("encodeRequestedTransportValue", () => {
+    it("encodes REQUESTED-TRANSPORT value", () => {
+      const res = encodeRequestedTransportValue("udp");
+      expect(res).toEqual(Buffer.from([0x11, 0x00, 0x00, 0x00]));
+    });
+  });
+  describe("decodeRequestedTransportValue", () => {
+    it("decodes REQUESTED-TRANSPORT value", () => {
+      const buf = Buffer.from([0x11, 0x00, 0x00, 0x00]);
+      const res = decodeRequestedTransportValue(buf);
+      expect(res).toEqual("udp");
+    });
   });
 });

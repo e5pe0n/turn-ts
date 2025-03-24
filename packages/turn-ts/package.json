@@ -17,8 +17,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@e5pe0n/lib": "workspace:*",
     "@e5pe0n/stun-ts": "workspace:*",
-    "@e5pe0n/lib": "workspace:*"
+    "zod": "3.23.8"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.0",

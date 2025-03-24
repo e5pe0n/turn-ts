@@ -2,7 +2,7 @@ import { describe, expect, it, test } from "vitest";
 import {
   type MsgType,
   decodeMsgType,
-  encodeHeader,
+  Header,
   encodeMsgType,
 } from "./header.js";
 
@@ -117,12 +117,12 @@ describe("decodeMsgType", () => {
   });
 });
 
-describe("encodeHeader", () => {
+describe("Header", () => {
   it("encodes a STUN message header", () => {
     const trxId = Buffer.from([
       0x81, 0x4c, 0x72, 0x09, 0xa7, 0x68, 0xf9, 0x89, 0xf8, 0x0b, 0x73, 0xbd,
     ]);
-    const res = encodeHeader({
+    const res = Header.into({
       cls: "successResponse",
       method: "binding",
       length: 28,

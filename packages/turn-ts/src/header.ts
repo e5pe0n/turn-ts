@@ -1,19 +1,15 @@
+import { magicCookie, type MsgClass, msgMethodRecord as stunMsgMethodRecord, msgClassRecord } from "@e5pe0n/stun-ts";
 import { assert, assertValueOf, getKey, numToBuf, pad0s } from "@e5pe0n/lib";
-import { magicCookie } from "./common.js";
 
-export const HEADER_LENGTH = 20;
-
-export const msgClassRecord = {
-  request: 0b00,
-  indication: 0b01,
-  successResponse: 0b10,
-  errorResponse: 0b11,
-} as const;
-export type MsgClass = keyof typeof msgClassRecord;
-
-// https://datatracker.ietf.org/doc/html/rfc5389#autoid-62
+// https://datatracker.ietf.org/doc/html/rfc5766#autoid-43
 export const msgMethodRecord = {
-  binding: 0x0001,
+  ...stunMsgMethodRecord,
+  allocate: 0x0003,
+  refresh: 0x0004,
+  send: 0x0006,
+  data: 0x0007,
+  createPermission: 0x0008,
+  channelBind: 0x0009,
 } as const;
 export type MsgMethods = typeof msgMethodRecord;
 export type MsgMethod = keyof MsgMethods;

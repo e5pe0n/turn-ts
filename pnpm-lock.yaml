@@ -77,6 +77,9 @@ importers:
       '@e5pe0n/stun-ts':
         specifier: workspace:*
         version: link:../stun-ts
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
     devDependencies:
       '@biomejs/biome':
         specifier: 1.9.0

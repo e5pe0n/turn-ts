@@ -1,6 +1,6 @@
 import { type AttrType, attrTypeRecord } from "./attr.js";
-import { Header, HEADER_LENGTH } from "./header.js";
-import type { RawStunMsg } from "./types.js";
+import { Header } from "./header.js";
+import { type RawStunMsg, HEADER_LENGTH } from "@e5pe0n/stun-ts"; 
 
 export type InitHeader = Omit<Header, "length" | "magicCookie">;
 
@@ -44,3 +44,4 @@ export class RawStunMsgBuilder {
     return new RawStunMsgBuilder(this.raw);
   }
 }
+

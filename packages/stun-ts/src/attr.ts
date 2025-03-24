@@ -15,8 +15,8 @@ export function isCompReqAttr(attrType: number): boolean {
   return compReqRange[0] <= attrType && attrType <= compReqRange[1];
 }
 
+// https://datatracker.ietf.org/doc/html/rfc5389#autoid-63
 export const attrTypeRecord = {
-  // https://datatracker.ietf.org/doc/html/rfc5389#autoid-63
   mappedAddress: 0x0001,
   username: 0x0006,
   messageIntegrity: 0x0008,
@@ -29,17 +29,6 @@ export const attrTypeRecord = {
   software: 0x8022,
   // "ALTERNATE-SERVER": 0x8023,
   fingerprint: 0x8028,
-
-  // https://datatracker.ietf.org/doc/html/rfc5766#autoid-44
-  channelNumber: 0x000c,
-  lifetime: 0x000d,
-  xorPeerAddress: 0x0012,
-  data: 0x0013,
-  xorRelayedAddress: 0x0016,
-  evenPort: 0x0018,
-  requestedTransport: 0x0019,
-  dontFragment: 0x001a,
-  reservationToken: 0x022,
 } as const;
 export type AttrType = keyof typeof attrTypeRecord;
 
@@ -49,15 +38,17 @@ export const addrFamilyRecord = {
 } as const;
 export type AddrFamily = keyof typeof addrFamilyRecord;
 
+type MappedAddressAttr = {
+  family: AddrFamily;
+  port: number;
+  address: string;
+};
+
 export function encodeMappedAddressValue({
   family,
   port,
   address,
-}: {
-  family: AddrFamily;
-  port: number;
-  address: string;
-}): Buffer {
+}: MappedAddressAttr): Buffer {
   const buf = Buffer.alloc(family === "IPv4" ? 8 : 20);
   buf.writeUint8(0);
   buf.writeUint8(addrFamilyRecord[family], 1);
@@ -97,10 +88,7 @@ export function encodeXorAddressValue({
   port,
   address,
   trxId,
-}: {
-  family: AddrFamily;
-  port: number;
-  address: string;
+}: MappedAddressAttr & {
   trxId: Buffer;
 }): Buffer {
   const xPort = port ^ (magicCookie >>> 16);
@@ -219,9 +207,6 @@ export function encodeUsernameValue(username: string): Buffer {
   }
   return buf;
 }
-export function decodeUsernameValue(buf: Buffer): string {
-  return decodeStrValue(buf);
-}
 
 export function decodeStrValue(buf: Buffer): string {
   return buf.toString("utf8");
@@ -236,9 +221,6 @@ export function encodeRealmValue(realm: string): Buffer {
   }
   return buf;
 }
-export function decodeRealmValue(buf: Buffer): string {
-  return decodeStrValue(buf);
-}
 
 export function encodeNonceValue(nonce: string): Buffer {
   const buf = Buffer.from(nonce, "utf8");
@@ -248,9 +230,6 @@ export function encodeNonceValue(nonce: string): Buffer {
     );
   }
   return buf;
-}
-export function decodeNonceValue(buf: Buffer): string {
-  return decodeStrValue(buf);
 }
 
 export function encodeSoftwareValue(software: string): Buffer {
@@ -263,9 +242,6 @@ export function encodeSoftwareValue(software: string): Buffer {
   );
   return buf;
 }
-export function decodeSoftwareValue(buf: Buffer): string {
-  return decodeStrValue(buf);
-}
 
 export function encodeUnknownAttributesValue(attrTypes: number[]): Buffer {
   const requiredBytes = 2 * attrTypes.length;
@@ -276,7 +252,7 @@ export function encodeUnknownAttributesValue(attrTypes: number[]): Buffer {
   }
   return buf;
 }
-export function decodeUnknownAttributeValue(buf: Buffer): number[] {
+export function decodeUnknownAttributesValue(buf: Buffer): number[] {
   const res: number[] = [];
   for (let i = 0; i < buf.length; i += 2) {
     const n = buf.readInt16BE(i);
@@ -287,60 +263,4 @@ export function decodeUnknownAttributeValue(buf: Buffer): number[] {
     res.push(n);
   }
   return res;
-}
-
-export function encodeChannelNumberValue(channelNumber: number): Buffer {
-  const buf = Buffer.alloc(4);
-  buf.writeUInt16BE(channelNumber);
-  return buf;
-}
-
-export function decodeChannelNumberValue(buf: Buffer): number {
-  return buf.readUInt16BE();
-}
-
-export function encodeLifetimeValue(lifetime: number): Buffer {
-  const buf = Buffer.alloc(4);
-  buf.writeUInt32BE(lifetime);
-  return buf;
-}
-
-export function decodeLifetimeValue(buf: Buffer): number {
-  return buf.readUInt32BE();
-}
-
-export function encodeEvenPortValue(reserveNextHigherPort: boolean): Buffer {
-  const buf = Buffer.alloc(4);
-  buf.writeUInt8(reserveNextHigherPort ? 0b10000000 : 0);
-  return buf;
-}
-export function decodeEvenPortValue(buf: Buffer): {
-  reserveNextHigherPort: boolean;
-} {
-  return { reserveNextHigherPort: buf[0] === 0b10000000 };
-}
-
-// https://datatracker.ietf.org/doc/html/rfc5766#section-14.7
-export function encodeRequestedTransportValue(protocol: "udp"): Buffer {
-  const buf = Buffer.alloc(4);
-  switch (protocol) {
-    case "udp":
-      buf.writeUInt8(0x11);
-      break;
-    default:
-      protocol satisfies never;
-      throw new Error(`invalid protocol: '${protocol}' is not supported.`);
-  }
-  return buf;
-}
-export function decodeRequestedTransportValue(buf: Buffer): "udp" {
-  const protocol = buf[0]!;
-  switch (protocol) {
-    case 0x11:
-      return "udp";
-    default:
-      throw new Error(
-        `invalid protocol: '0x${protocol.toString(2)}' is not supported.`,
-      );
-  }
 }

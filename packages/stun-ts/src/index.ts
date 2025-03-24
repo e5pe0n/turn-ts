@@ -1,20 +1,50 @@
 export {
+  createAgent,
+  TcpAgent,
+  UdpAgent,
+  type Agent,
+  type CreateAgentParams,
+  type TcpAgentConfig,
+  type TcpAgentInitConfig,
+  type UdpAgentConfig,
+  type UdpAgentInitConfig,
+} from "./agent.js";
+export {
+  attrTypeRecord,
+  type AttrType,
+  decodeErrorCodeValue,
+  decodeMappedAddressValue,
+  decodeUnknownAttributesValue,
+  decodeXorAddressValue,
+  encodeErrorCodeValue,
+  encodeMappedAddressValue,
+  encodeNonceValue,
+  encodeRealmValue,
+  encodeSoftwareValue,
+  encodeUnknownAttributesValue,
+  encodeUsernameValue,
+  encodeXorAddressValue,
+  type AddrFamily,
+} from "./attr.js";
+export {
   Client,
   type ClientConfig,
 } from "./client.js";
+export { addrFamilySchema, magicCookie } from "./common.js";
+export { encodeFingerprintValue } from "./fingerprint.js";
 export {
-  UdpAgent,
-  TcpAgent,
-  type UdpAgentConfig,
-  type UdpAgentInitConfig,
-  type TcpAgentConfig,
-  type TcpAgentInitConfig,
-} from "./agent.js";
+  Header,
+  HEADER_LENGTH,
+  msgClassRecord,
+  msgMethodRecord,
+  type MsgClass,
+  type MsgMethod,
+} from "./header.js";
+export { RawStunMsgBuilder, type InitHeader } from "./msg-builder.js";
+export { encodeMessageIntegrityValue } from "./msg-integrity.js";
+export { inputAttrsSchema, StunMsg } from "./msg.js";
 export {
   Server,
   type ServerConfig,
 } from "./server.js";
-export { StunMsg } from "./msg.js";
-export { type AddrFamily } from "./attr.js";
-export { magicCookie } from "./common.js";
 export type { Protocol, RawStunMsg } from "./types.js";
