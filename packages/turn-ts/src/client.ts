@@ -39,7 +39,7 @@ export class Client {
             trxId,
           },
           attrs: {
-            software: "@e5pe0n/turn-ts@0.0.1 client",
+            software: "@e5pe0n/turn-ts@0.0.0 client",
             lifetime: 3600,
             requestedTransport: "udp",
             dontFragment: true,
@@ -72,20 +72,15 @@ export class Client {
             trxId,
           },
           attrs: {
-            software: "@e5pe0n/turn-ts@0.0.1 client",
+            software: "@e5pe0n/turn-ts@0.0.0 client",
             lifetime: 3600,
             requestedTransport: "udp",
             dontFragment: true,
             username: this.#config.username,
             realm: respMsg.attrs.realm,
             nonce: respMsg.attrs.nonce,
-            messageIntegrity: {
-              term: "long",
-              username: this.#config.username,
-              password: this.#config.password,
-              realm: respMsg.attrs.realm,
-            },
           },
+          password: this.#config.password,
         });
         const respBuf2 = await this.#agent.request(reqMsg2.raw);
         const respMsg2 = TurnMsg.from(respBuf2);

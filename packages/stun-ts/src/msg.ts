@@ -45,17 +45,14 @@ export const inputAttrsSchema = z
     nonce: z.string(),
     xorMappedAddress: addressSchema,
     software: z.string(),
-    messageIntegrity: credentialsSchema,
+    messageIntegrity: z.instanceof(Buffer),
     fingerprint: z.boolean(),
   })
   .partial();
 
 type InputAttrs = z.infer<typeof inputAttrsSchema>;
 
-type Attrs = Override<
-  InputAttrs,
-  Partial<{ messageIntegrity: Buffer; fingerprint: Buffer }>
->;
+type Attrs = Override<InputAttrs, Partial<{ fingerprint: Buffer }>>;
 
 export type StunMsg = {
   // TODO: hide magicCookie from users
@@ -68,9 +65,11 @@ export const StunMsg = {
   build({
     header,
     attrs = {},
+    password,
   }: {
     header: InitHeader;
     attrs?: InputAttrs | undefined;
+    password?: string;
   }): StunMsg {
     // TODO: handle validation error
     const rawMsgBuilder = RawStunMsgBuilder.init(header);
@@ -118,9 +117,19 @@ export const StunMsg = {
     }
 
     const msgAttrs = inputAttrs as Attrs;
-    if (inputAttrs.messageIntegrity) {
+    if (
+      !inputAttrs.messageIntegrity &&
+      inputAttrs.username &&
+      inputAttrs.realm &&
+      password
+    ) {
       const vBuf = encodeMessageIntegrityValue({
-        credentials: inputAttrs.messageIntegrity,
+        credentials: {
+          term: "long",
+          username: inputAttrs.username,
+          realm: inputAttrs.realm,
+          password,
+        },
         raw: rawMsgBuilder.raw,
       });
       msgAttrs.messageIntegrity = vBuf;

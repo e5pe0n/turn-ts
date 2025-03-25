@@ -1,9 +1,4 @@
-import {
-  assert,
-  assertValueOf,
-  getKey,
-  type Override,
-} from "@e5pe0n/lib";
+import { assert, assertValueOf, getKey, type Override } from "@e5pe0n/lib";
 import {
   type RawStunMsg,
   addrFamilySchema,
@@ -64,10 +59,7 @@ const inputAttrsSchema = stunInputAttrsSchema
 
 type InputAttrs = z.infer<typeof inputAttrsSchema>;
 
-type Attrs = Override<
-  InputAttrs,
-  Partial<{ messageIntegrity: Buffer; fingerprint: Buffer }>
->;
+type Attrs = Override<InputAttrs, Partial<{ fingerprint: Buffer }>>;
 
 export type TurnMsg = {
   // TODO: hide magicCookie from users
@@ -80,9 +72,11 @@ export const TurnMsg = {
   build({
     header,
     attrs = {},
+    password,
   }: {
     header: InitHeader;
     attrs?: InputAttrs | undefined;
+    password?: string | undefined;
   }): TurnMsg {
     // TODO: handle validation error
     const rawMsgBuilder = RawStunMsgBuilder.init(header);
@@ -136,6 +130,7 @@ export const TurnMsg = {
           vBuf = inputAttrs[k];
           break;
         case "dontFragment":
+          break;
         case "messageIntegrity":
         case "fingerprint":
           continue;
@@ -147,8 +142,21 @@ export const TurnMsg = {
 
     const msgAttrs = inputAttrs as Attrs;
     if (inputAttrs.messageIntegrity) {
+      msgAttrs.messageIntegrity = inputAttrs.messageIntegrity;
+      rawMsgBuilder.addAttr("messageIntegrity", inputAttrs.messageIntegrity);
+    } else if (
+      !inputAttrs.messageIntegrity &&
+      inputAttrs.username &&
+      inputAttrs.realm &&
+      password
+    ) {
       const vBuf = encodeMessageIntegrityValue({
-        credentials: inputAttrs.messageIntegrity,
+        credentials: {
+          term: "long",
+          username: inputAttrs.username,
+          realm: inputAttrs.realm,
+          password,
+        },
         raw: rawMsgBuilder.raw,
       });
       msgAttrs.messageIntegrity = vBuf;
