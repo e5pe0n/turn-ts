@@ -30,7 +30,7 @@ export {
   Client,
   type ClientConfig,
 } from "./client.js";
-export { addrFamilySchema, magicCookie } from "./common.js";
+export { addrFamilySchema, magicCookie, logPrefix } from "./common.js";
 export { encodeFingerprintValue } from "./fingerprint.js";
 export {
   Header,
@@ -48,3 +48,4 @@ export {
   type ServerConfig,
 } from "./server.js";
 export type { Protocol, RawStunMsg } from "./types.js";
+export { type Listener, createListener } from "./listener.js";

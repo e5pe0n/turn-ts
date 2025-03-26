@@ -89,6 +89,7 @@ describe("request", () => {
             dontFragment: true,
           },
           raw: expect.any(Buffer),
+          msgIntegrityOffset: expect.any(Number),
         } satisfies TurnMsg);
         const req2 = TurnMsg.from(reqBuf2);
         expect(req2).toEqual({
@@ -110,6 +111,7 @@ describe("request", () => {
             messageIntegrity: expect.any(Buffer),
           },
           raw: expect.any(Buffer),
+          msgIntegrityOffset: expect.any(Number),
         } satisfies TurnMsg);
         expect(resp).toEqual({
           header: {
@@ -135,6 +137,7 @@ describe("request", () => {
             messageIntegrity: req2.attrs.messageIntegrity,
           },
           raw: expect.any(Buffer),
+          msgIntegrityOffset: expect.any(Number),
         } satisfies TurnMsg);
       } finally {
         server.close();

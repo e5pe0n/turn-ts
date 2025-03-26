@@ -20,7 +20,7 @@ type AddrFamilyRecord = typeof addrFamilyRecord;
 type AddrFamily = (typeof addrFamilyRecord)[keyof typeof addrFamilyRecord];
 
 test("ValueOf", () => {
-  expectTypeOf<ValueOf<typeof addrFamilyRecord>>().toEqualTypeOf<AddrFamily>();
+  expectTypeOf<ValueOf<typeof addrFamilyRecord>>().toEqualTypeOf<AddrFamily>;
 });
 
 test("Inverse", () => {

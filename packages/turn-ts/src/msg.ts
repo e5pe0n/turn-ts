@@ -66,6 +66,7 @@ export type TurnMsg = {
   header: Header;
   attrs: Attrs;
   raw: RawStunMsg;
+  msgIntegrityOffset: number;
 };
 
 export const TurnMsg = {
@@ -81,6 +82,7 @@ export const TurnMsg = {
     // TODO: handle validation error
     const rawMsgBuilder = RawStunMsgBuilder.init(header);
     const inputAttrs = inputAttrsSchema.parse(attrs);
+    let msgIntegrityOffset = -1;
     for (const k of Object.keys(inputAttrs) as (keyof InputAttrs)[]) {
       if (inputAttrs[k] === undefined) {
         continue;
@@ -132,6 +134,8 @@ export const TurnMsg = {
         case "dontFragment":
           break;
         case "messageIntegrity":
+          msgIntegrityOffset = rawMsgBuilder.msgLength;
+          continue;
         case "fingerprint":
           continue;
         default:
@@ -176,6 +180,7 @@ export const TurnMsg = {
       },
       attrs: msgAttrs,
       raw: rawMsgBuilder.raw,
+      msgIntegrityOffset,
     };
   },
 
@@ -206,6 +211,7 @@ export const TurnMsg = {
 
     const attrsBuf = buf.subarray(20, 20 + header.length);
     let offset = 0;
+    let msgIntegrityOffset = -1;
     const attrs = {} as Attrs;
     while (offset + 4 <= attrsBuf.length) {
       const attrType = attrsBuf.subarray(offset, offset + 2).readUInt16BE();
@@ -263,8 +269,11 @@ export const TurnMsg = {
           break;
         case "reservationToken":
         case "data":
-        case "messageIntegrity":
         case "fingerprint":
+          attrs[kAttrType] = vBuf;
+          break;
+        case "messageIntegrity":
+          msgIntegrityOffset = offset;
           attrs[kAttrType] = vBuf;
           break;
         default:
@@ -277,6 +286,7 @@ export const TurnMsg = {
       header,
       attrs,
       raw: buf as RawStunMsg,
+      msgIntegrityOffset,
     };
   },
 };
