@@ -1,5 +1,6 @@
 import { assert, assertValueOf, getKey, type Override } from "@e5pe0n/lib";
 import {
+  HEADER_LENGTH,
   type RawStunMsg,
   addrFamilySchema,
   decodeErrorCodeValue,
@@ -144,6 +145,7 @@ export const TurnMsg = {
       rawMsgBuilder.addAttr(k, vBuf);
     }
 
+    const msgIntegrityOffset = rawMsgBuilder.raw.length;
     const msgAttrs = inputAttrs as Attrs;
     if (inputAttrs.messageIntegrity) {
       msgAttrs.messageIntegrity = inputAttrs.messageIntegrity;
