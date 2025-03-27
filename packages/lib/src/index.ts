@@ -28,6 +28,14 @@ export type Inverse<T extends Invertable> = {
   [K in keyof T as T[K]]: K;
 };
 
+const Brand: unique symbol = Symbol("turn-ts");
+type Branded<T extends PropertyKey> = {
+  [Brand]: {
+    [k in T]: true;
+  };
+};
+export type Brand<T, K extends PropertyKey> = T & Branded<K>;
+
 export function getKey<T extends Invertable, V extends T[keyof T]>(
   record: T,
   value: V,

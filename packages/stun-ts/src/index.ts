@@ -47,5 +47,9 @@ export {
   Server,
   type ServerConfig,
 } from "./server.js";
-export type { Protocol, RawStunMsg } from "./types.js";
-export { type Listener, createListener } from "./listener.js";
+export type {
+  Protocol,
+  RawStunMsg,
+  TransportAddress,
+} from "./types.js";
+export { type Listener, createListener, type RemoteInfo } from "./listener.js";

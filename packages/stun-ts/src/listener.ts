@@ -1,16 +1,13 @@
 import { type Socket, createSocket } from "node:dgram";
 import { type Server, createServer } from "node:net";
-import { z } from "zod";
-import { addrFamilySchema, logPrefix } from "./common.js";
+import { type AddrFamily, logPrefix } from "./common.js";
 import type { Protocol } from "./types.js";
 
-const remoteInfoSchema = z.object({
-  family: addrFamilySchema,
-  address: z.string().ip(),
-  port: z.number(),
-});
-
-export type RemoteInfo = z.infer<typeof remoteInfoSchema>;
+export type RemoteInfo = {
+  family: AddrFamily;
+  address: string;
+  port: number;
+};
 
 export type MsgHandler = (data: Buffer, rinfo: RemoteInfo) => Buffer;
 
@@ -60,15 +57,14 @@ class TcpListener implements Listener {
   constructor(handler: MsgHandler) {
     this.#server = createServer((sock) => {
       sock.on("data", (msg) => {
-        const validationRes = remoteInfoSchema.safeParse({
+        if (!(sock.remoteFamily && sock.remoteAddress && sock.remotePort)) {
+          return;
+        }
+        const rinfo = {
           family: sock.remoteFamily,
           address: sock.remoteAddress,
           port: sock.remotePort,
-        });
-        if (!validationRes.success) {
-          return;
-        }
-        const rinfo = validationRes.data;
+        } as RemoteInfo;
 
         // TODO: output log depending on env var or config.
         // biome-ignore lint/suspicious/noConsole: example code
