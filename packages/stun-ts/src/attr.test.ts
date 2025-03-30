@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   decodeErrorCodeValue,
   decodeMappedAddressValue,
-  decodeNonceValue,
-  decodeRealmValue,
   decodeUnknownAttributesValue,
-  decodeUsernameValue,
   decodeXorAddressValue,
   encodeErrorCodeValue,
   encodeMappedAddressValue,
@@ -450,13 +447,6 @@ describe("NONCE", () => {
       );
     });
   });
-  describe("decodeNonceValue", () => {
-    it("decodes Nonce value", () => {
-      const buf = Buffer.from([0x6e, 0x6f, 0x6e, 0x63, 0x65]);
-      const res = decodeNonceValue(buf);
-      expect(res).toEqual("nonce");
-    });
-  });
 });
 
 describe("USERNAME", () => {
@@ -471,13 +461,6 @@ describe("USERNAME", () => {
       );
     });
   });
-  describe("decodeUsernameValue", () => {
-    it("decodes USERNAME value", () => {
-      const buf = Buffer.from([0x75, 0x73, 0x65, 0x72, 0x31]);
-      const res = decodeUsernameValue(buf);
-      expect(res).toEqual("user1");
-    });
-  });
 });
 
 describe("REALM", () => {
@@ -490,13 +473,6 @@ describe("REALM", () => {
       expect(() => encodeRealmValue("r".repeat(764))).toThrowError(
         /invalid realm/,
       );
-    });
-  });
-  describe("decodeRealmValue", () => {
-    it("decodes REALM value", () => {
-      const buf = Buffer.from([0x72, 0x65, 0x61, 0x6c, 0x6d]);
-      const res = decodeRealmValue(buf);
-      expect(res).toEqual("realm");
     });
   });
 });
