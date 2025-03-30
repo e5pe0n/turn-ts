@@ -1,6 +1,5 @@
-import { assert, assertValueOf, getKey, type Override } from "@e5pe0n/lib";
+import { assert, type Override, assertValueOf, getKey } from "@e5pe0n/lib";
 import {
-  HEADER_LENGTH,
   type RawStunMsg,
   addrFamilySchema,
   decodeErrorCodeValue,
@@ -26,15 +25,15 @@ import {
 import { z } from "zod";
 import {
   attrTypeRecord,
+  decodeEvenPortValue,
+  decodeLifetimeValue,
+  decodeRequestedTransportValue,
   encodeEvenPortValue,
   encodeLifetimeValue,
   encodeRequestedTransportValue,
-  decodeLifetimeValue,
-  decodeEvenPortValue,
-  decodeRequestedTransportValue,
 } from "./attr.js";
-import { RawStunMsgBuilder, type InitHeader } from "./msg-builder.js";
 import { Header } from "./header.js";
+import { type InitHeader, RawStunMsgBuilder } from "./msg-builder.js";
 
 const addressSchema = z.object({
   family: addrFamilySchema,
@@ -83,7 +82,6 @@ export const TurnMsg = {
     // TODO: handle validation error
     const rawMsgBuilder = RawStunMsgBuilder.init(header);
     const inputAttrs = inputAttrsSchema.parse(attrs);
-    let msgIntegrityOffset = -1;
     for (const k of Object.keys(inputAttrs) as (keyof InputAttrs)[]) {
       if (inputAttrs[k] === undefined) {
         continue;
@@ -135,8 +133,6 @@ export const TurnMsg = {
         case "dontFragment":
           break;
         case "messageIntegrity":
-          msgIntegrityOffset = rawMsgBuilder.msgLength;
-          continue;
         case "fingerprint":
           continue;
         default:

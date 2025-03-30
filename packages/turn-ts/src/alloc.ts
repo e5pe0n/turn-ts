@@ -1,68 +1,131 @@
-import type { TransportAddress, Protocol } from "@e5pe0n/stun-ts";
+import { type Socket, createSocket } from "node:dgram";
+import {
+  type Brand,
+  type Override,
+  type Result,
+  withResolvers,
+} from "@e5pe0n/lib";
+import type { Protocol, RemoteInfo, TransportAddress } from "@e5pe0n/stun-ts";
 import { TurnMsg } from "./msg.js";
-import type { RemoteInfo } from "@e5pe0n/stun-ts";
-import { type Brand, withResolvers } from "@e5pe0n/lib";
-import { createSocket, Socket } from "node:dgram";
 
-type ValidateAllocReqReturn =
-  | {
-      success: true;
-    }
-  | {
-      success: false;
-      errorResp: TurnMsg;
-    };
+type AllocationId = Brand<string, "AllocationId">;
 
-export function validateAllocReq(req: TurnMsg): ValidateAllocReqReturn {
-  if (req.header.cls === "request" && req.header.method === "allocate") {
-    return { success: true };
-  }
-
-  return {
-    success: false,
-    errorResp: TurnMsg.build({
-      header: {
-        cls: "errorResponse",
-        method: req.header.method,
-        trxId: req.header.trxId,
-      },
-      attrs: {
-        errorCode: { code: 400, reason: "Bad Request" },
-      },
-    }),
-  };
-}
-
-type Allocation = {
+export type Allocation = {
+  id: AllocationId;
   relayedTransportAddress: TransportAddress;
   clientTransportAddress: TransportAddress;
   serverTransportAddress: TransportAddress;
   transportProtocol: Protocol;
-  authInfo: {
-    username: string;
-    password: string;
-    realm: string;
-    nonce: string;
-  };
-  timeToExpire: number;
+  // TODO: Add authInfo
+  // authInfo: {
+  //   username: string;
+  //   password: string;
+  //   realm: string;
+  //   nonce: string;
+  // };
+  timeToExpirySec: number;
+  createdAt: Date;
+  sock: Socket;
 };
 
-type AllocKey = Brand<string, "AllocKey">;
-
-function createAllocKey(arg: {
+function createAllocationId(arg: {
   clientTransportAddress: TransportAddress;
   serverTransportAddress: TransportAddress;
   transportProtocol: Protocol;
-}): AllocKey {
-  return JSON.stringify(arg) as AllocKey;
+}): AllocationId {
+  return `${arg.clientTransportAddress.address}:${arg.clientTransportAddress.port}-${arg.serverTransportAddress.address}:${arg.serverTransportAddress.port}-${arg.transportProtocol}` as AllocationId;
 }
 
-async function bindSocket(serverHost: string) {
+class AllocationRepo {
+  #allocations: Map<AllocationId, Allocation> = new Map();
+
+  insert(alloc: Allocation) {
+    this.#allocations.set(alloc.id, alloc);
+  }
+
+  get(allocKey: AllocationId): Allocation | undefined {
+    return this.#allocations.get(allocKey);
+  }
+
+  has(allocKey: AllocationId): boolean {
+    return this.#allocations.has(allocKey);
+  }
+}
+
+type InitAllocation = Override<
+  Omit<
+    Allocation,
+    | "id"
+    | "serverTransportAddress"
+    | "relayedTransportAddress"
+    | "createdAt"
+    | "sock"
+  >,
+  {
+    timeToExpirySec?: number | undefined;
+  }
+>;
+
+export class AllocationManager {
+  #allocRepo: AllocationRepo;
+  #maxLifetimeSec: number;
+  #host: string;
+  #serverTransportAddress: TransportAddress;
+
+  constructor({
+    maxLifetimeSec,
+    host,
+    serverTransportAddress,
+  }: {
+    maxLifetimeSec: number;
+    host: string;
+    serverTransportAddress: TransportAddress;
+  }) {
+    this.#allocRepo = new AllocationRepo();
+    this.#maxLifetimeSec = maxLifetimeSec;
+    this.#host = host;
+    this.#serverTransportAddress = serverTransportAddress;
+  }
+
+  // TODO: handle other errors
+  async allocate(init: InitAllocation): Promise<Result<Allocation>> {
+    const allocId = createAllocationId({
+      ...init,
+      serverTransportAddress: this.#serverTransportAddress,
+    });
+    if (this.#allocRepo.has(allocId)) {
+      return {
+        success: false,
+        error: Error(`Allocation(id='${allocId}') already exists.`),
+      };
+    }
+    const sock = await bindSocket(this.#host);
+    const alloc: Allocation = {
+      ...init,
+      id: allocId,
+      serverTransportAddress: this.#serverTransportAddress,
+      relayedTransportAddress: sock.address() as TransportAddress,
+      createdAt: new Date(),
+      timeToExpirySec: Math.min(
+        init.timeToExpirySec ?? this.#maxLifetimeSec,
+        this.#maxLifetimeSec,
+      ),
+      sock,
+    };
+    this.#allocRepo.insert(alloc);
+    return {
+      success: true,
+      value: alloc,
+    };
+  }
+}
+
+async function bindSocket(host: string) {
   const sock = createSocket("udp4");
   const { promise, resolve } = withResolvers<Socket>();
   sock.bind(
     {
-      address: serverHost,
+      address: host,
     },
     () => {
       resolve(sock);
@@ -75,19 +138,19 @@ async function bindSocket(serverHost: string) {
 export async function handleAllocReq(
   req: TurnMsg,
   {
-    allocations,
+    allocManager,
     rinfo,
-    serverTransportAddress,
     transportProtocol,
-    serverHost,
+    serverInfo,
   }: {
-    allocations: Map<AllocKey, Allocation>;
+    allocManager: AllocationManager;
     rinfo: RemoteInfo;
-    serverTransportAddress: TransportAddress;
     transportProtocol: Protocol;
-    serverHost: string;
+    serverInfo: {
+      software: string;
+    };
   },
-): TurnMsg {
+): Promise<TurnMsg> {
   if (!(req.header.cls === "request" && req.header.method === "allocate")) {
     return TurnMsg.build({
       header: {
@@ -114,6 +177,7 @@ export async function handleAllocReq(
     });
   }
 
+  // TODO: move this to where TurnMsg.from() is called
   if (req.attrs.requestedTransport !== "udp") {
     return TurnMsg.build({
       header: {
@@ -127,12 +191,13 @@ export async function handleAllocReq(
     });
   }
 
-  const allocKey = createAllocKey({
+  const res = await allocManager.allocate({
     clientTransportAddress: rinfo,
-    serverTransportAddress,
     transportProtocol,
+    timeToExpirySec: req.attrs.lifetime,
   });
-  if (allocations.has(allocKey)) {
+  // TODO: handle other errors
+  if (!res.success) {
     return TurnMsg.build({
       header: {
         cls: "errorResponse",
@@ -145,8 +210,6 @@ export async function handleAllocReq(
     });
   }
 
-  const sock = await bindSocket(serverHost);
-
   return TurnMsg.build({
     header: {
       cls: "successResponse",
@@ -154,7 +217,8 @@ export async function handleAllocReq(
       trxId: req.header.trxId,
     },
     attrs: {
-      lifetime: 1200,
+      lifetime: res.value.timeToExpirySec,
+      software: serverInfo.software,
     },
   });
 }

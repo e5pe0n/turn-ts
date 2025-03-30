@@ -1,9 +1,9 @@
 import {
-  createListener,
-  encodeMessageIntegrityValue,
   type Listener,
   type Protocol,
   type RawStunMsg,
+  createListener,
+  encodeMessageIntegrityValue,
 } from "@e5pe0n/stun-ts";
 import { TurnMsg } from "./msg.js";
 
@@ -13,6 +13,7 @@ export type ServerConfig = {
   password: string;
   realm: string;
   software?: string;
+  maxLifetimeSec: number;
 };
 
 export class Server {
@@ -21,7 +22,9 @@ export class Server {
 
   constructor(config: ServerConfig) {
     this.#listener = createListener(config.protocol, (data, rinfo) => {});
-    this.#config = config;
+    this.#config = {
+      ...config,
+    };
   }
 }
 

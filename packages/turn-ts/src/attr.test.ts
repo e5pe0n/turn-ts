@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  encodeChannelNumberValue,
   decodeChannelNumberValue,
-  encodeLifetimeValue,
   decodeLifetimeValue,
-  encodeRequestedTransportValue,
   decodeRequestedTransportValue,
+  encodeChannelNumberValue,
+  encodeLifetimeValue,
+  encodeRequestedTransportValue,
 } from "./attr.js";
 
 describe("CHANNEL-NUMBER", () => {

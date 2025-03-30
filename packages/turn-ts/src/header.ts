@@ -1,5 +1,10 @@
-import { magicCookie, type MsgClass, msgMethodRecord as stunMsgMethodRecord, msgClassRecord } from "@e5pe0n/stun-ts";
 import { assert, assertValueOf, getKey, numToBuf, pad0s } from "@e5pe0n/lib";
+import {
+  type MsgClass,
+  magicCookie,
+  msgClassRecord,
+  msgMethodRecord as stunMsgMethodRecord,
+} from "@e5pe0n/stun-ts";
 
 // https://datatracker.ietf.org/doc/html/rfc5766#autoid-43
 export const msgMethodRecord = {

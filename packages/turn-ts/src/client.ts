@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { assert } from "@e5pe0n/lib";
 import {
-  type AddrFamily,
   type Agent,
   type CreateAgentParams,
   createAgent,

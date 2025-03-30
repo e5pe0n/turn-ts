@@ -1,7 +1,7 @@
+import { magicCookie } from "@e5pe0n/stun-ts";
 import { describe, expect, it } from "vitest";
 import { TurnMsg } from "./msg.js";
 import { authReq } from "./server.js";
-import { magicCookie } from "@e5pe0n/stun-ts";
 
 const ctx: {
   trxId: Buffer;

@@ -1,6 +1,6 @@
+import { createSocket } from "node:dgram";
 import { genPromise } from "@e5pe0n/lib/src/index.js";
 import { magicCookie } from "@e5pe0n/stun-ts";
-import { createSocket } from "node:dgram";
 import { describe, expect, it } from "vitest";
 import { Client } from "./client.js";
 import { TurnMsg } from "./msg.js";

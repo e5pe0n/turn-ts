@@ -166,7 +166,7 @@ export function fBuf(buf: Buffer): string {
   return Array.from(buf.values()).toString();
 }
 
-export type Result<T, U = unknown> =
+export type Result<T, U = Error> =
   | {
       success: true;
       value: T;
