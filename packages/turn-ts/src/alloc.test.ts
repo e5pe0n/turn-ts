@@ -1,9 +1,9 @@
 import { type AddrFamily, magicCookie } from "@e5pe0n/stun-ts";
 import { describe, expect, it } from "vitest";
 import { AllocationManager, handleAllocReq } from "./alloc.js";
-import { defaultServerConfig } from "./server.js";
 import type { MsgType } from "./header.js";
 import { TurnMsg } from "./msg.js";
+import { defaultServerConfig } from "./server.js";
 
 const ctx: {
   trxId: Buffer;

@@ -1,10 +1,10 @@
+import { randomBytes } from "node:crypto";
 import { assert, type Override } from "@e5pe0n/lib";
 import {
   createAgent,
   type Agent,
   type CreateAgentParams,
 } from "@e5pe0n/stun-ts";
-import { randomBytes } from "node:crypto";
 import { TurnMsg } from "./msg.js";
 
 export type ClientConfig = CreateAgentParams & {
@@ -42,13 +42,14 @@ export class Client {
     this.#agent.close();
   }
 
-  async requestAllocate({
-    lifetime = this.#config.lifetime,
-    dontFragment = true,
-  }: {
+  async requestAllocate(arg?: {
     lifetime?: number;
     dontFragment?: boolean;
   }): Promise<TurnMsg> {
+    const { lifetime, dontFragment } = arg ?? {
+      lifetime: this.#config.lifetime,
+      dontFragment: true,
+    };
     const trxId = randomBytes(12);
     const reqMsg1 = TurnMsg.build({
       header: {
