@@ -51,7 +51,7 @@ const inputAttrsSchema = stunInputAttrsSchema
       xorRelayedAddress: addressSchema,
       evenPort: z.boolean(),
       requestedTransport: z.literal("udp"),
-      dontFragment: z.literal(true),
+      dontFragment: z.boolean(),
       reservationToken: z.instanceof(Buffer),
     }),
   )
@@ -131,7 +131,11 @@ export const TurnMsg = {
           vBuf = inputAttrs[k];
           break;
         case "dontFragment":
-          break;
+          if (inputAttrs[k]) {
+            break;
+          } else {
+            continue;
+          }
         case "messageIntegrity":
         case "fingerprint":
           continue;

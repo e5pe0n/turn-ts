@@ -7,11 +7,25 @@ import {
 } from "@e5pe0n/stun-ts";
 import { TurnMsg } from "./msg.js";
 
+// TODO: enable to set config from environment variables
+export const defaultServerConfig = {
+  protocol: "udp",
+  nonce: "nonce",
+  host: "127.0.0.1",
+  port: 3478,
+  software: "@e5pe0n/turn-ts@0.0.0 server",
+  maxLifetimeSec: 3600,
+} as const satisfies Omit<ServerConfig, "username" | "password" | "realm">;
+
 export type ServerConfig = {
   protocol: Protocol;
+  host: string;
+  port: number;
   username: string;
   password: string;
   realm: string;
+  // TODO: nonce should be generated randomly regularly
+  nonce: string;
   software?: string;
   maxLifetimeSec: number;
 };
@@ -21,8 +35,12 @@ export class Server {
   #config: ServerConfig;
 
   constructor(config: ServerConfig) {
-    this.#listener = createListener(config.protocol, (data, rinfo) => {});
+    this.#listener = createListener(config.protocol, (data, rinfo) => {
+      // TODO: impl message handler
+      return data;
+    });
     this.#config = {
+      ...defaultServerConfig,
       ...config,
     };
   }

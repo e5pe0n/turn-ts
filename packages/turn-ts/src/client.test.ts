@@ -69,7 +69,7 @@ describe("request", () => {
         password: "pass",
       });
       try {
-        const resp = await client.request("allocate");
+        const resp = await client.requestAllocate("allocate");
         const reqBuf1 = (await gen.next()).value!;
         const reqBuf2 = (await gen.next()).value!;
 

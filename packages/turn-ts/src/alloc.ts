@@ -8,7 +8,7 @@ import {
 import type { Protocol, RemoteInfo, TransportAddress } from "@e5pe0n/stun-ts";
 import { TurnMsg } from "./msg.js";
 
-type AllocationId = Brand<string, "AllocationId">;
+export type AllocationId = Brand<string, "AllocationId">;
 
 export type Allocation = {
   id: AllocationId;
@@ -28,7 +28,7 @@ export type Allocation = {
   sock: Socket;
 };
 
-function createAllocationId(arg: {
+export function createAllocationId(arg: {
   clientTransportAddress: TransportAddress;
   serverTransportAddress: TransportAddress;
   transportProtocol: Protocol;
