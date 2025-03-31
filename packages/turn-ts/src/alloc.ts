@@ -1,4 +1,3 @@
-import { type Socket, createSocket } from "node:dgram";
 import {
   type Brand,
   type Override,
@@ -6,6 +5,7 @@ import {
   withResolvers,
 } from "@e5pe0n/lib";
 import type { Protocol, RemoteInfo, TransportAddress } from "@e5pe0n/stun-ts";
+import { type Socket, createSocket } from "node:dgram";
 import { TurnMsg } from "./msg.js";
 
 export type AllocationId = Brand<string, "AllocationId">;
@@ -26,14 +26,17 @@ export type Allocation = {
   timeToExpirySec: number;
   createdAt: Date;
   sock: Socket;
+  permissions: TransportAddress[];
 };
 
-export function createAllocationId(arg: {
+type FiveTuple = {
   clientTransportAddress: TransportAddress;
   serverTransportAddress: TransportAddress;
   transportProtocol: Protocol;
-}): AllocationId {
-  return `${arg.clientTransportAddress.address}:${arg.clientTransportAddress.port}-${arg.serverTransportAddress.address}:${arg.serverTransportAddress.port}-${arg.transportProtocol}` as AllocationId;
+};
+
+function hashFiveTuple(fiveTuple: FiveTuple): AllocationId {
+  return `${fiveTuple.clientTransportAddress.address}:${fiveTuple.clientTransportAddress.port}-${fiveTuple.serverTransportAddress.address}:${fiveTuple.serverTransportAddress.port}-${fiveTuple.transportProtocol}` as AllocationId;
 }
 
 class AllocationRepo {
@@ -60,6 +63,7 @@ type InitAllocation = Override<
     | "relayedTransportAddress"
     | "createdAt"
     | "sock"
+    | "permissions"
   >,
   {
     timeToExpirySec?: number | undefined;
@@ -89,7 +93,7 @@ export class AllocationManager {
 
   // TODO: handle other errors
   async allocate(init: InitAllocation): Promise<Result<Allocation>> {
-    const allocId = createAllocationId({
+    const allocId = hashFiveTuple({
       ...init,
       serverTransportAddress: this.#serverTransportAddress,
     });
@@ -111,12 +115,26 @@ export class AllocationManager {
         this.#maxLifetimeSec,
       ),
       sock,
+      permissions: [],
     };
     this.#allocRepo.insert(alloc);
     return {
       success: true,
       value: alloc,
     };
+  }
+
+  get({
+    clientTransportAddress,
+    transportProtocol,
+  }: Omit<FiveTuple, "serverTransportAddress">): Allocation | undefined {
+    return this.#allocRepo.get(
+      hashFiveTuple({
+        clientTransportAddress,
+        serverTransportAddress: this.#serverTransportAddress,
+        transportProtocol,
+      }),
+    );
   }
 }
 

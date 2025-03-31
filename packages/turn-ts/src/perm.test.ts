@@ -1,6 +1,7 @@
 import { type AddrFamily, magicCookie, type Protocol } from "@e5pe0n/stun-ts";
 import { describe, expect, it } from "vitest";
-import { AllocationManager, handleAllocReq } from "./alloc.js";
+import { AllocationManager } from "./alloc.js";
+import { handleCreatePermissionReq } from "./perm.js";
 import type { MsgType } from "./header.js";
 import { TurnMsg } from "./msg.js";
 import { defaultServerConfig } from "./server.js";
@@ -55,14 +56,14 @@ describe("req handler", () => {
   it.each([
     {
       cls: "indication",
-      method: "allocate",
+      method: "createPermission",
     },
     {
       cls: "request",
       method: "binding",
     },
   ] as const)(
-    "returns 400 error response if it is not that message class is 'request' and method is 'allocate': cls=$cls, method=$method",
+    "returns 400 error response if it is not that message class is 'request' and method is 'createPermission': cls=$cls, method=$method",
     async ({ cls, method }: MsgType) => {
       const req = TurnMsg.build({
         header: {
@@ -76,11 +77,10 @@ describe("req handler", () => {
         host: ctx.serverInfo.host,
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
-      const resp = await handleAllocReq(req, {
+      const resp = await handleCreatePermissionReq(req, {
         allocManager: allocManager,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
-        serverInfo: ctx.serverInfo,
       });
       expect(resp).toEqual({
         header: {
@@ -99,111 +99,31 @@ describe("req handler", () => {
     },
   );
 
-  it("returns 400 error response if requestedTransport is in the request", async () => {
-    const req = TurnMsg.build({
-      header: {
-        cls: "request",
-        method: "allocate",
-        trxId: ctx.trxId,
-      },
-    });
+  it("returns 437 error response if the allocation does not exist", async () => {
     const allocManager = new AllocationManager({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const resp = await handleAllocReq(req, {
-      allocManager,
-      rinfo: ctx.rinfo,
-      transportProtocol: ctx.transportProtocol,
-      serverInfo: ctx.serverInfo,
-    });
-    expect(resp).toEqual({
-      header: {
-        cls: "errorResponse",
-        method: req.header.method,
-        trxId: req.header.trxId,
-        length: expect.any(Number),
-        magicCookie,
-      },
-      attrs: {
-        errorCode: { code: 400, reason: "Bad Request" },
-      },
-      raw: expect.any(Buffer),
-      msgIntegrityOffset: expect.any(Number),
-    } satisfies TurnMsg);
-  });
-
-  it.todo(
-    "returns 442 error response if requestedTransport is not 'udp'",
-    async () => {
-      const req = TurnMsg.build({
-        header: {
-          cls: "request",
-          method: "allocate",
-          trxId: ctx.trxId,
-        },
-        attrs: {
-          // @ts-expect-error
-          requestedTransport: "tcp",
-        },
-      });
-      const allocManager = new AllocationManager({
-        maxLifetimeSec: ctx.maxLifetimeSec,
-        host: ctx.serverInfo.host,
-        serverTransportAddress: ctx.serverInfo.transportAddress,
-      });
-      const resp = await handleAllocReq(req, {
-        allocManager,
-        rinfo: ctx.rinfo,
-        transportProtocol: ctx.transportProtocol,
-        serverInfo: ctx.serverInfo,
-      });
-      expect(resp).toEqual({
-        header: {
-          cls: "errorResponse",
-          method: req.header.method,
-          trxId: req.header.trxId,
-          length: expect.any(Number),
-          magicCookie,
-        },
-        attrs: {
-          errorCode: { code: 442, reason: "Unsupported Transport Protocol" },
-        },
-        raw: expect.any(Buffer),
-        msgIntegrityOffset: expect.any(Number),
-      } satisfies TurnMsg);
-    },
-  );
-
-  it("returns 437 error response if allocation is already used", async () => {
-    const allocManager = new AllocationManager({
-      maxLifetimeSec: ctx.maxLifetimeSec,
-      host: ctx.serverInfo.host,
-      serverTransportAddress: ctx.serverInfo.transportAddress,
-    });
-    const allocRes = await allocManager.allocate({
-      clientTransportAddress: ctx.rinfo,
-      transportProtocol: ctx.transportProtocol,
-      timeToExpirySec: ctx.maxLifetimeSec,
-    });
-    expect(allocRes.success).toBe(true);
 
     const req = TurnMsg.build({
       header: {
         cls: "request",
-        method: "allocate",
+        method: "createPermission",
         trxId: ctx.trxId,
       },
       attrs: {
-        requestedTransport: "udp",
+        xorPeerAddress: {
+          family: "IPv4",
+          address: "192.0.2.150",
+          port: 0,
+        },
       },
     });
-    const resp = await handleAllocReq(req, {
+    const resp = await handleCreatePermissionReq(req, {
       allocManager,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
-      serverInfo: ctx.serverInfo,
     });
     expect(resp).toEqual({
       header: {
@@ -221,29 +141,37 @@ describe("req handler", () => {
     } satisfies TurnMsg);
   });
 
-  it("returns success response if it created a new allocation", async () => {
+  it("returns success response if permission created to the allocation", async () => {
     const allocManager = new AllocationManager({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
+    const allocRes = await allocManager.allocate({
+      clientTransportAddress: ctx.rinfo,
+      transportProtocol: ctx.transportProtocol,
+      timeToExpirySec: ctx.maxLifetimeSec,
+    });
+    expect(allocRes.success).toBe(true);
 
     const req = TurnMsg.build({
       header: {
         cls: "request",
-        method: "allocate",
+        method: "createPermission",
         trxId: ctx.trxId,
       },
       attrs: {
-        requestedTransport: "udp",
-        lifetime: 1200,
+        xorPeerAddress: {
+          family: "IPv4",
+          address: "192.0.2.150",
+          port: 0,
+        },
       },
     });
-    const resp = await handleAllocReq(req, {
+    const resp = await handleCreatePermissionReq(req, {
       allocManager,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
-      serverInfo: ctx.serverInfo,
     });
     expect(resp).toEqual({
       header: {
@@ -253,10 +181,7 @@ describe("req handler", () => {
         length: expect.any(Number),
         magicCookie,
       },
-      attrs: {
-        lifetime: 1200,
-        software: ctx.serverInfo.software,
-      },
+      attrs: {},
       raw: expect.any(Buffer),
       msgIntegrityOffset: expect.any(Number),
     } satisfies TurnMsg);

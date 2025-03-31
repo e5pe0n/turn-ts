@@ -65,7 +65,6 @@ describe("request", () => {
           port: 3478,
         },
         username: "user",
-        realm: "example.com",
         password: "pass",
       });
       try {

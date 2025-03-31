@@ -11,7 +11,6 @@ export type ClientConfig = CreateAgentParams & {
   protocol: "udp";
   username: string;
   password: string;
-  realm: string;
   software: string;
   lifetime: number;
 };
@@ -50,12 +49,12 @@ export class Client {
       lifetime: this.#config.lifetime,
       dontFragment: true,
     };
-    const trxId = randomBytes(12);
+    const trxId1 = randomBytes(12);
     const reqMsg1 = TurnMsg.build({
       header: {
         cls: "request",
         method: "allocate",
-        trxId,
+        trxId: trxId1,
       },
       attrs: {
         software: this.#config.software,
@@ -66,6 +65,10 @@ export class Client {
     });
     const respBuf = await this.#agent.request(reqMsg1.raw);
     const respMsg = TurnMsg.from(respBuf);
+    assert(
+      respMsg.header.trxId.equals(trxId1),
+      new Error("invalid response; trxId is not matched."),
+    );
     assert(
       !!respMsg.attrs.errorCode,
       new Error("invalid response; ERROR-CODE attr not found."),
@@ -84,11 +87,12 @@ export class Client {
       !!respMsg.attrs.nonce,
       new Error("invalid response; NONCE attr not found."),
     );
+    const trxId2 = randomBytes(12);
     const reqMsg2 = TurnMsg.build({
       header: {
         cls: "request",
         method: "allocate",
-        trxId,
+        trxId: trxId2,
       },
       attrs: {
         software: this.#config.software,
@@ -103,6 +107,42 @@ export class Client {
     });
     const respBuf2 = await this.#agent.request(reqMsg2.raw);
     const respMsg2 = TurnMsg.from(respBuf2);
+    assert(
+      respMsg2.header.trxId.equals(trxId2),
+      new Error("invalid response; trxId is not matched."),
+    );
     return respMsg2;
   }
+
+  // async requestCreatePermission({
+  //   xorPeerAddress,
+  //   realm,
+  //   nonce,
+  // }: {
+  //   xorPeerAddress: TransportAddress;
+  //   realm: string;
+  //   nonce: string;
+  // }): Promise<TurnMsg> {
+  //   const trxId = randomBytes(12);
+  //   const reqMsg2 = TurnMsg.build({
+  //     header: {
+  //       cls: "request",
+  //       method: "allocate",
+  //       trxId,
+  //     },
+  //     attrs: {
+  //       xorPeerAddress,
+  //       username: this.#config.username,
+  //       realm,
+  //       nonce,
+  //     },
+  //     password: this.#config.password,
+  //   });
+  //   const respBuf2 = await this.#agent.request(reqMsg2.raw);
+  //   const respMsg2 = TurnMsg.from(respBuf2);
+  //   assert(
+  //     respMsg2.header.trxId.equals(trxId),
+  //     new Error("invalid response; trxId is not matched."),
+  //   );
+  // }
 }
