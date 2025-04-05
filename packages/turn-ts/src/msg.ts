@@ -57,9 +57,9 @@ const inputAttrsSchema = stunInputAttrsSchema
   )
   .partial();
 
-type InputAttrs = z.infer<typeof inputAttrsSchema>;
+export type InputAttrs = z.infer<typeof inputAttrsSchema>;
 
-type Attrs = Override<InputAttrs, Partial<{ fingerprint: Buffer }>>;
+export type Attrs = Override<InputAttrs, Partial<{ fingerprint: Buffer }>>;
 
 export type TurnMsg = {
   // TODO: hide magicCookie from users

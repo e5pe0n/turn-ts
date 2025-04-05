@@ -58,7 +58,7 @@ export async function handleCreatePermissionReq(
       },
     });
   }
-  alloc.permissions.push(req.attrs.xorPeerAddress);
+  allocManager.installPermission(alloc.id, req.attrs.xorPeerAddress);
 
   return TurnMsg.build({
     header: {

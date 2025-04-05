@@ -166,15 +166,15 @@ export function fBuf(buf: Buffer): string {
   return Array.from(buf.values()).toString();
 }
 
-export type Result<T, U = Error> =
-  | {
-      success: true;
-      value: T;
-    }
-  | {
-      success: false;
-      error: U;
-    };
+export type SuccessResult<T> = {
+  success: true;
+  value: T;
+};
+export type ErrorResult<T = Error> = {
+  success: false;
+  error: T;
+};
+export type Result<T, U = Error> = SuccessResult<T> | ErrorResult<U>;
 
 class RetryError extends Error {
   lastResult?: unknown;

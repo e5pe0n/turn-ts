@@ -26,7 +26,7 @@ export type Allocation = {
   timeToExpirySec: number;
   createdAt: Date;
   sock: Socket;
-  permissions: TransportAddress[];
+  permissions: string[];
 };
 
 type FiveTuple = {
@@ -135,6 +135,21 @@ export class AllocationManager {
         transportProtocol,
       }),
     );
+  }
+
+  installPermission(
+    allocId: AllocationId,
+    peerAddress: TransportAddress,
+  ): Result<Allocation> {
+    const alloc = this.#allocRepo.get(allocId);
+    if (!alloc) {
+      return {
+        success: false,
+        error: Error(`Allocation(id='${allocId}') does not exist.`),
+      };
+    }
+    alloc.permissions.push(peerAddress.address);
+    return { success: true, value: alloc };
   }
 }
 
