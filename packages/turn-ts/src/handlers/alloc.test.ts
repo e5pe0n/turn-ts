@@ -1,6 +1,6 @@
 import { type AddrFamily, type Protocol, magicCookie } from "@e5pe0n/stun-ts";
 import { describe, expect, it } from "vitest";
-import { AllocationManager } from "../alloc.js";
+import { Allocator } from "../alloc.js";
 import type { MsgType } from "../header.js";
 import { TurnMsg } from "../msg.js";
 import { defaultServerConfig } from "../server.js";
@@ -73,13 +73,13 @@ describe("req handler", () => {
           trxId: ctx.trxId,
         },
       });
-      const allocManager = new AllocationManager({
+      const allocator = new Allocator({
         maxLifetimeSec: ctx.maxLifetimeSec,
         host: ctx.serverInfo.host,
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
       const resp = await handleAllocate(req, {
-        allocManager: allocManager,
+        allocator,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
         serverInfo: ctx.serverInfo,
@@ -109,13 +109,13 @@ describe("req handler", () => {
         trxId: ctx.trxId,
       },
     });
-    const allocManager = new AllocationManager({
+    const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
     const resp = await handleAllocate(req, {
-      allocManager,
+      allocator,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
       serverInfo: ctx.serverInfo,
@@ -150,13 +150,13 @@ describe("req handler", () => {
           requestedTransport: "tcp",
         },
       });
-      const allocManager = new AllocationManager({
+      const allocator = new Allocator({
         maxLifetimeSec: ctx.maxLifetimeSec,
         host: ctx.serverInfo.host,
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
       const resp = await handleAllocate(req, {
-        allocManager,
+        allocator,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
         serverInfo: ctx.serverInfo,
@@ -179,12 +179,12 @@ describe("req handler", () => {
   );
 
   it("returns 437 error response if allocation is already used", async () => {
-    const allocManager = new AllocationManager({
+    const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocManager.allocate(
+    const allocRes = await allocator.allocate(
       {
         clientTransportAddress: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
@@ -205,7 +205,7 @@ describe("req handler", () => {
       },
     });
     const resp = await handleAllocate(req, {
-      allocManager,
+      allocator,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
       serverInfo: ctx.serverInfo,
@@ -227,7 +227,7 @@ describe("req handler", () => {
   });
 
   it("returns success response if it created a new allocation", async () => {
-    const allocManager = new AllocationManager({
+    const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
@@ -245,7 +245,7 @@ describe("req handler", () => {
       },
     });
     const resp = await handleAllocate(req, {
-      allocManager,
+      allocator,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
       serverInfo: ctx.serverInfo,

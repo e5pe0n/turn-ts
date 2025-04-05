@@ -1,7 +1,7 @@
 import type { SuccessResult } from "@e5pe0n/lib";
 import type { AddrFamily, Protocol } from "@e5pe0n/stun-ts";
 import { describe, expect, it, vi } from "vitest";
-import { type Allocation, AllocationManager } from "../alloc.js";
+import { type Allocation, Allocator } from "../alloc.js";
 import { TurnMsg } from "../msg.js";
 import { defaultServerConfig } from "../server.js";
 import { handleData } from "./data.js";
@@ -54,12 +54,12 @@ const ctx: {
 
 describe("handler", () => {
   it("discards data if permission does not exist on the allocation", async () => {
-    const allocManager = new AllocationManager({
+    const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocManager.allocate(
+    const allocRes = await allocator.allocate(
       {
         clientTransportAddress: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
@@ -70,7 +70,7 @@ describe("handler", () => {
     expect(allocRes.success).toBe(true);
 
     const alloc = (allocRes as SuccessResult<Allocation>).value;
-    allocManager.installPermission(alloc.id, {
+    allocator.installPermission(alloc.id, {
       family: "IPv4",
       address: "192.0.2.150",
       port: 32102,
@@ -90,12 +90,12 @@ describe("handler", () => {
   });
 
   it("sends data indication by sender", async () => {
-    const allocManager = new AllocationManager({
+    const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocManager.allocate(
+    const allocRes = await allocator.allocate(
       {
         clientTransportAddress: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
@@ -106,7 +106,7 @@ describe("handler", () => {
     expect(allocRes.success).toBe(true);
 
     const alloc = (allocRes as SuccessResult<Allocation>).value;
-    allocManager.installPermission(alloc.id, {
+    allocator.installPermission(alloc.id, {
       family: "IPv4",
       address: "192.0.2.150",
       port: 32102,

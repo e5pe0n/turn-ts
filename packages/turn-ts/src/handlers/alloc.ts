@@ -1,5 +1,5 @@
 import type { Protocol, RemoteInfo } from "@e5pe0n/stun-ts";
-import type { AllocationManager } from "../alloc.js";
+import type { Allocator } from "../alloc.js";
 import { TurnMsg } from "../msg.js";
 import { handleData } from "./data.js";
 
@@ -7,12 +7,12 @@ import { handleData } from "./data.js";
 export async function handleAllocate(
   msg: TurnMsg,
   {
-    allocManager,
+    allocator,
     rinfo,
     transportProtocol,
     serverInfo,
   }: {
-    allocManager: AllocationManager;
+    allocator: Allocator;
     rinfo: RemoteInfo;
     transportProtocol: Protocol;
     serverInfo: {
@@ -60,7 +60,7 @@ export async function handleAllocate(
     });
   }
 
-  const res = await allocManager.allocate(
+  const res = await allocator.allocate(
     {
       clientTransportAddress: rinfo,
       transportProtocol,

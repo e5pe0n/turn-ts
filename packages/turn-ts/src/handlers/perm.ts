@@ -1,15 +1,15 @@
 import type { Protocol, RemoteInfo } from "@e5pe0n/stun-ts";
-import type { AllocationManager } from "../alloc.js";
+import type { Allocator } from "../alloc.js";
 import { TurnMsg } from "../msg.js";
 
 export async function handleCreatePermission(
   msg: TurnMsg,
   {
-    allocManager,
+    allocator,
     rinfo,
     transportProtocol,
   }: {
-    allocManager: AllocationManager;
+    allocator: Allocator;
     rinfo: RemoteInfo;
     transportProtocol: Protocol;
   },
@@ -42,7 +42,7 @@ export async function handleCreatePermission(
     });
   }
 
-  const alloc = allocManager.get({
+  const alloc = allocator.get({
     clientTransportAddress: rinfo,
     transportProtocol,
   });
@@ -58,7 +58,7 @@ export async function handleCreatePermission(
       },
     });
   }
-  allocManager.installPermission(alloc.id, msg.attrs.xorPeerAddress);
+  allocator.installPermission(alloc.id, msg.attrs.xorPeerAddress);
 
   return TurnMsg.build({
     header: {

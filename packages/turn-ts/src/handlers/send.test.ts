@@ -1,7 +1,7 @@
 import type { SuccessResult } from "@e5pe0n/lib";
 import type { AddrFamily, Protocol } from "@e5pe0n/stun-ts";
 import { describe, expect, it, vi } from "vitest";
-import { type Allocation, AllocationManager } from "../alloc.js";
+import { type Allocation, Allocator } from "../alloc.js";
 import type { MsgType } from "../header.js";
 import { type InputAttrs, TurnMsg } from "../msg.js";
 import { defaultServerConfig } from "../server.js";
@@ -74,14 +74,14 @@ describe("handler", () => {
           trxId: ctx.trxId,
         },
       });
-      const allocManager = new AllocationManager({
+      const allocator = new Allocator({
         maxLifetimeSec: ctx.maxLifetimeSec,
         host: ctx.serverInfo.host,
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
       const sender = vi.fn();
       await handleSend(msg, {
-        allocManager: allocManager,
+        allocator,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
         sender,
@@ -110,7 +110,7 @@ describe("handler", () => {
   ] as const)(
     "discards indication if required attributes are missing or invalid: $testName",
     async ({ attrs }: { attrs: InputAttrs }) => {
-      const allocManager = new AllocationManager({
+      const allocator = new Allocator({
         maxLifetimeSec: ctx.maxLifetimeSec,
         host: ctx.serverInfo.host,
         serverTransportAddress: ctx.serverInfo.transportAddress,
@@ -126,7 +126,7 @@ describe("handler", () => {
       });
       const sender = vi.fn();
       await handleSend(msg, {
-        allocManager,
+        allocator,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
         sender,
@@ -136,7 +136,7 @@ describe("handler", () => {
   );
 
   it("discards indication if the allocation does not exist", async () => {
-    const allocManager = new AllocationManager({
+    const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
@@ -159,7 +159,7 @@ describe("handler", () => {
     });
     const sender = vi.fn();
     await handleSend(msg, {
-      allocManager,
+      allocator,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
       sender,
@@ -168,12 +168,12 @@ describe("handler", () => {
   });
 
   it("discards indication if no permission exists on the allocation", async () => {
-    const allocManager = new AllocationManager({
+    const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocManager.allocate(
+    const allocRes = await allocator.allocate(
       {
         clientTransportAddress: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
@@ -200,7 +200,7 @@ describe("handler", () => {
     });
     const sender = vi.fn();
     await handleSend(msg, {
-      allocManager,
+      allocator,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
       sender,
@@ -209,12 +209,12 @@ describe("handler", () => {
   });
 
   it("sends data by sender", async () => {
-    const allocManager = new AllocationManager({
+    const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocManager.allocate(
+    const allocRes = await allocator.allocate(
       {
         clientTransportAddress: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
@@ -224,7 +224,7 @@ describe("handler", () => {
     );
     expect(allocRes.success).toBe(true);
 
-    allocManager.installPermission(
+    allocator.installPermission(
       (allocRes as SuccessResult<Allocation>).value.id,
       {
         family: "IPv4",
@@ -249,7 +249,7 @@ describe("handler", () => {
     });
     const sender = vi.fn();
     await handleSend(msg, {
-      allocManager,
+      allocator,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
       sender,

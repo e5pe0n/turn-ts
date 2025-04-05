@@ -1,6 +1,6 @@
 import { type AddrFamily, type Protocol, magicCookie } from "@e5pe0n/stun-ts";
 import { describe, expect, it } from "vitest";
-import { AllocationManager } from "../alloc.js";
+import { Allocator } from "../alloc.js";
 import type { MsgType } from "../header.js";
 import { TurnMsg } from "../msg.js";
 import { defaultServerConfig } from "../server.js";
@@ -73,13 +73,13 @@ describe("handler", () => {
           trxId: ctx.trxId,
         },
       });
-      const allocManager = new AllocationManager({
+      const allocator = new Allocator({
         maxLifetimeSec: ctx.maxLifetimeSec,
         host: ctx.serverInfo.host,
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
       const resp = await handleCreatePermission(req, {
-        allocManager: allocManager,
+        allocator,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
       });
@@ -101,7 +101,7 @@ describe("handler", () => {
   );
 
   it("returns 437 error response if the allocation does not exist", async () => {
-    const allocManager = new AllocationManager({
+    const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
@@ -122,7 +122,7 @@ describe("handler", () => {
       },
     });
     const resp = await handleCreatePermission(req, {
-      allocManager,
+      allocator,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
     });
@@ -143,12 +143,12 @@ describe("handler", () => {
   });
 
   it("returns success response if permission created to the allocation", async () => {
-    const allocManager = new AllocationManager({
+    const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocManager.allocate(
+    const allocRes = await allocator.allocate(
       {
         clientTransportAddress: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
@@ -173,7 +173,7 @@ describe("handler", () => {
       },
     });
     const resp = await handleCreatePermission(req, {
-      allocManager,
+      allocator,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
     });

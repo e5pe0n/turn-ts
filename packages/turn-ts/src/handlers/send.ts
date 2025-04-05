@@ -1,16 +1,16 @@
 import type { Protocol, RemoteInfo } from "@e5pe0n/stun-ts";
-import type { AllocationManager } from "../alloc.js";
+import type { Allocator } from "../alloc.js";
 import type { TurnMsg } from "../msg.js";
 
 export async function handleSend(
   msg: TurnMsg,
   {
-    allocManager,
+    allocator,
     rinfo,
     transportProtocol,
     sender,
   }: {
-    allocManager: AllocationManager;
+    allocator: Allocator;
     rinfo: RemoteInfo;
     transportProtocol: Protocol;
     sender: (data: Buffer, to: RemoteInfo) => Promise<void>;
@@ -30,7 +30,7 @@ export async function handleSend(
     return;
   }
 
-  const alloc = allocManager.get({
+  const alloc = allocator.get({
     clientTransportAddress: rinfo,
     transportProtocol,
   });

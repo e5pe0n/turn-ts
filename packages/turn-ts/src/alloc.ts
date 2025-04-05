@@ -71,7 +71,7 @@ type InitAllocation = Override<
   }
 >;
 
-export class AllocationManager {
+export class Allocator {
   #allocRepo: AllocationRepo;
   #maxLifetimeSec: number;
   #host: string;
