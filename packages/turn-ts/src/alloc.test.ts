@@ -1,6 +1,6 @@
 import { type AddrFamily, magicCookie, type Protocol } from "@e5pe0n/stun-ts";
 import { describe, expect, it } from "vitest";
-import { AllocationManager, handleAllocReq } from "./alloc.js";
+import { AllocationManager, handleAllocate } from "./alloc.js";
 import type { MsgType } from "./header.js";
 import { TurnMsg } from "./msg.js";
 import { defaultServerConfig } from "./server.js";
@@ -76,7 +76,7 @@ describe("req handler", () => {
         host: ctx.serverInfo.host,
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
-      const resp = await handleAllocReq(req, {
+      const resp = await handleAllocate(req, {
         allocManager: allocManager,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
@@ -112,7 +112,7 @@ describe("req handler", () => {
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const resp = await handleAllocReq(req, {
+    const resp = await handleAllocate(req, {
       allocManager,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
@@ -153,7 +153,7 @@ describe("req handler", () => {
         host: ctx.serverInfo.host,
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
-      const resp = await handleAllocReq(req, {
+      const resp = await handleAllocate(req, {
         allocManager,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
@@ -199,7 +199,7 @@ describe("req handler", () => {
         requestedTransport: "udp",
       },
     });
-    const resp = await handleAllocReq(req, {
+    const resp = await handleAllocate(req, {
       allocManager,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
@@ -239,7 +239,7 @@ describe("req handler", () => {
         lifetime: 1200,
       },
     });
-    const resp = await handleAllocReq(req, {
+    const resp = await handleAllocate(req, {
       allocManager,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,

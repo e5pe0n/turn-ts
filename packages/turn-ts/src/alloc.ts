@@ -168,8 +168,8 @@ async function bindSocket(host: string) {
 }
 
 // https://datatracker.ietf.org/doc/html/rfc5766#section-6.2
-export async function handleAllocReq(
-  req: TurnMsg,
+export async function handleAllocate(
+  msg: TurnMsg,
   {
     allocManager,
     rinfo,
@@ -184,12 +184,12 @@ export async function handleAllocReq(
     };
   },
 ): Promise<TurnMsg> {
-  if (!(req.header.cls === "request" && req.header.method === "allocate")) {
+  if (!(msg.header.cls === "request" && msg.header.method === "allocate")) {
     return TurnMsg.build({
       header: {
         cls: "errorResponse",
-        method: req.header.method,
-        trxId: req.header.trxId,
+        method: msg.header.method,
+        trxId: msg.header.trxId,
       },
       attrs: {
         errorCode: { code: 400, reason: "Bad Request" },
@@ -197,12 +197,12 @@ export async function handleAllocReq(
     });
   }
 
-  if (!req.attrs.requestedTransport) {
+  if (!msg.attrs.requestedTransport) {
     return TurnMsg.build({
       header: {
         cls: "errorResponse",
-        method: req.header.method,
-        trxId: req.header.trxId,
+        method: msg.header.method,
+        trxId: msg.header.trxId,
       },
       attrs: {
         errorCode: { code: 400, reason: "Bad Request" },
@@ -211,12 +211,12 @@ export async function handleAllocReq(
   }
 
   // TODO: move this to where TurnMsg.from() is called
-  if (req.attrs.requestedTransport !== "udp") {
+  if (msg.attrs.requestedTransport !== "udp") {
     return TurnMsg.build({
       header: {
         cls: "errorResponse",
-        method: req.header.method,
-        trxId: req.header.trxId,
+        method: msg.header.method,
+        trxId: msg.header.trxId,
       },
       attrs: {
         errorCode: { code: 442, reason: "Unsupported Transport Protocol" },
@@ -227,15 +227,15 @@ export async function handleAllocReq(
   const res = await allocManager.allocate({
     clientTransportAddress: rinfo,
     transportProtocol,
-    timeToExpirySec: req.attrs.lifetime,
+    timeToExpirySec: msg.attrs.lifetime,
   });
   // TODO: handle other errors
   if (!res.success) {
     return TurnMsg.build({
       header: {
         cls: "errorResponse",
-        method: req.header.method,
-        trxId: req.header.trxId,
+        method: msg.header.method,
+        trxId: msg.header.trxId,
       },
       attrs: {
         errorCode: { code: 437, reason: "Allocation Mismatch" },
@@ -247,7 +247,7 @@ export async function handleAllocReq(
     header: {
       cls: "successResponse",
       method: "allocate",
-      trxId: req.header.trxId,
+      trxId: msg.header.trxId,
     },
     attrs: {
       lifetime: res.value.timeToExpirySec,

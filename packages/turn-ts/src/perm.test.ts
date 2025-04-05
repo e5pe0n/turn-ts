@@ -1,7 +1,7 @@
 import { type AddrFamily, magicCookie, type Protocol } from "@e5pe0n/stun-ts";
 import { describe, expect, it } from "vitest";
 import { AllocationManager } from "./alloc.js";
-import { handleCreatePermissionReq } from "./perm.js";
+import { handleCreatePermission } from "./perm.js";
 import type { MsgType } from "./header.js";
 import { TurnMsg } from "./msg.js";
 import { defaultServerConfig } from "./server.js";
@@ -52,7 +52,7 @@ const ctx: {
   maxLifetimeSec: defaultServerConfig.maxLifetimeSec,
 } as const;
 
-describe("req handler", () => {
+describe("handler", () => {
   it.each([
     {
       cls: "indication",
@@ -77,7 +77,7 @@ describe("req handler", () => {
         host: ctx.serverInfo.host,
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
-      const resp = await handleCreatePermissionReq(req, {
+      const resp = await handleCreatePermission(req, {
         allocManager: allocManager,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
@@ -120,7 +120,7 @@ describe("req handler", () => {
         },
       },
     });
-    const resp = await handleCreatePermissionReq(req, {
+    const resp = await handleCreatePermission(req, {
       allocManager,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
@@ -168,7 +168,7 @@ describe("req handler", () => {
         },
       },
     });
-    const resp = await handleCreatePermissionReq(req, {
+    const resp = await handleCreatePermission(req, {
       allocManager,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,

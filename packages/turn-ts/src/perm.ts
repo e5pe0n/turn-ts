@@ -2,8 +2,8 @@ import type { Protocol, RemoteInfo } from "@e5pe0n/stun-ts";
 import type { AllocationManager } from "./alloc.js";
 import { TurnMsg } from "./msg.js";
 
-export async function handleCreatePermissionReq(
-  req: TurnMsg,
+export async function handleCreatePermission(
+  msg: TurnMsg,
   {
     allocManager,
     rinfo,
@@ -15,13 +15,13 @@ export async function handleCreatePermissionReq(
   },
 ): Promise<TurnMsg> {
   if (
-    !(req.header.cls === "request" && req.header.method === "createPermission")
+    !(msg.header.cls === "request" && msg.header.method === "createPermission")
   ) {
     return TurnMsg.build({
       header: {
         cls: "errorResponse",
-        method: req.header.method,
-        trxId: req.header.trxId,
+        method: msg.header.method,
+        trxId: msg.header.trxId,
       },
       attrs: {
         errorCode: { code: 400, reason: "Bad Request" },
@@ -29,12 +29,12 @@ export async function handleCreatePermissionReq(
     });
   }
 
-  if (!req.attrs.xorPeerAddress) {
+  if (!msg.attrs.xorPeerAddress) {
     return TurnMsg.build({
       header: {
         cls: "errorResponse",
-        method: req.header.method,
-        trxId: req.header.trxId,
+        method: msg.header.method,
+        trxId: msg.header.trxId,
       },
       attrs: {
         errorCode: { code: 400, reason: "Bad Request" },
@@ -50,21 +50,21 @@ export async function handleCreatePermissionReq(
     return TurnMsg.build({
       header: {
         cls: "errorResponse",
-        method: req.header.method,
-        trxId: req.header.trxId,
+        method: msg.header.method,
+        trxId: msg.header.trxId,
       },
       attrs: {
         errorCode: { code: 437, reason: "Allocation Mismatch" },
       },
     });
   }
-  allocManager.installPermission(alloc.id, req.attrs.xorPeerAddress);
+  allocManager.installPermission(alloc.id, msg.attrs.xorPeerAddress);
 
   return TurnMsg.build({
     header: {
       cls: "successResponse",
-      method: req.header.method,
-      trxId: req.header.trxId,
+      method: msg.header.method,
+      trxId: msg.header.trxId,
     },
     attrs: {},
   });

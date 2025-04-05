@@ -53,7 +53,7 @@ const ctx: {
   maxLifetimeSec: defaultServerConfig.maxLifetimeSec,
 } as const;
 
-describe("ind handler", () => {
+describe("handler", () => {
   it.each([
     {
       cls: "indication",
@@ -66,7 +66,7 @@ describe("ind handler", () => {
   ] as const)(
     "discards indication if it is not that message class is 'indication' and method is 'send': cls=$cls, method=$method",
     async ({ cls, method }: MsgType) => {
-      const req = TurnMsg.build({
+      const msg = TurnMsg.build({
         header: {
           cls,
           method,
@@ -79,7 +79,7 @@ describe("ind handler", () => {
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
       const sender = vi.fn();
-      await handleSend(req, {
+      await handleSend(msg, {
         allocManager: allocManager,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
@@ -115,7 +115,7 @@ describe("ind handler", () => {
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
 
-      const req = TurnMsg.build({
+      const msg = TurnMsg.build({
         header: {
           cls: "request",
           method: "createPermission",
@@ -124,7 +124,7 @@ describe("ind handler", () => {
         attrs,
       });
       const sender = vi.fn();
-      await handleSend(req, {
+      await handleSend(msg, {
         allocManager,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
@@ -141,7 +141,7 @@ describe("ind handler", () => {
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
 
-    const req = TurnMsg.build({
+    const msg = TurnMsg.build({
       header: {
         cls: "indication",
         method: "send",
@@ -157,7 +157,7 @@ describe("ind handler", () => {
       },
     });
     const sender = vi.fn();
-    await handleSend(req, {
+    await handleSend(msg, {
       allocManager,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
@@ -179,7 +179,7 @@ describe("ind handler", () => {
     });
     expect(allocRes.success).toBe(true);
 
-    const req = TurnMsg.build({
+    const msg = TurnMsg.build({
       header: {
         cls: "indication",
         method: "send",
@@ -195,7 +195,7 @@ describe("ind handler", () => {
       },
     });
     const sender = vi.fn();
-    await handleSend(req, {
+    await handleSend(msg, {
       allocManager,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
@@ -225,7 +225,7 @@ describe("ind handler", () => {
         port: 0,
       },
     );
-    const req = TurnMsg.build({
+    const msg = TurnMsg.build({
       header: {
         cls: "indication",
         method: "send",
@@ -241,7 +241,7 @@ describe("ind handler", () => {
       },
     });
     const sender = vi.fn();
-    await handleSend(req, {
+    await handleSend(msg, {
       allocManager,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
