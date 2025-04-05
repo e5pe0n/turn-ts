@@ -30,7 +30,12 @@ export {
   Client,
   type ClientConfig,
 } from "./client.js";
-export { addrFamilySchema, magicCookie, logPrefix } from "./common.js";
+export {
+  addrFamilySchema,
+  magicCookie,
+  TrxId,
+  logPrefix,
+} from "./common.js";
 export { encodeFingerprintValue } from "./fingerprint.js";
 export {
   Header,

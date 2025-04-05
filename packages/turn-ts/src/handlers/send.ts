@@ -1,6 +1,6 @@
 import type { Protocol, RemoteInfo } from "@e5pe0n/stun-ts";
-import type { AllocationManager } from "./alloc.js";
-import type { TurnMsg } from "./msg.js";
+import type { AllocationManager } from "../alloc.js";
+import type { TurnMsg } from "../msg.js";
 
 export async function handleSend(
   msg: TurnMsg,
@@ -44,7 +44,7 @@ export async function handleSend(
   if (!alloc.permissions.includes(msg.attrs.xorPeerAddress.address)) {
     // TODO: output log depending on env var or config.
     // biome-ignore lint/suspicious/noConsole: tmp
-    console.log(`permission does not exist on Allocation(id=). ${alloc.id}`);
+    console.log(`permission does not exist on Allocation(id=${alloc.id}).`);
     return;
   }
 

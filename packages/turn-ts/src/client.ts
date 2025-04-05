@@ -1,9 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { assert, type Override } from "@e5pe0n/lib";
 import {
-  createAgent,
   type Agent,
   type CreateAgentParams,
+  createAgent,
 } from "@e5pe0n/stun-ts";
 import { TurnMsg } from "./msg.js";
 

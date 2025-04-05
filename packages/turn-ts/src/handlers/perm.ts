@@ -1,6 +1,6 @@
 import type { Protocol, RemoteInfo } from "@e5pe0n/stun-ts";
-import type { AllocationManager } from "./alloc.js";
-import { TurnMsg } from "./msg.js";
+import type { AllocationManager } from "../alloc.js";
+import { TurnMsg } from "../msg.js";
 
 export async function handleCreatePermission(
   msg: TurnMsg,

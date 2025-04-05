@@ -1,11 +1,12 @@
-import { type AddrFamily, magicCookie, type Protocol } from "@e5pe0n/stun-ts";
-import { describe, expect, it, vi } from "vitest";
-import { AllocationManager, type Allocation } from "./alloc.js";
-import { handleSend } from "./send.js";
-import type { MsgType } from "./header.js";
-import { TurnMsg, type InputAttrs } from "./msg.js";
-import { defaultServerConfig } from "./server.js";
 import type { SuccessResult } from "@e5pe0n/lib";
+import type { AddrFamily, Protocol } from "@e5pe0n/stun-ts";
+import { describe, expect, it, vi } from "vitest";
+import { type Allocation, AllocationManager } from "../alloc.js";
+import type { MsgType } from "../header.js";
+import { type InputAttrs, TurnMsg } from "../msg.js";
+import { defaultServerConfig } from "../server.js";
+import { handleData } from "./data.js";
+import { handleSend } from "./send.js";
 
 const ctx: {
   trxId: Buffer;
@@ -102,7 +103,7 @@ describe("handler", () => {
         xorPeerAddress: {
           family: "IPv4",
           address: "192.0.2.150",
-          port: 0,
+          port: 32102,
         },
       },
     },
@@ -151,7 +152,7 @@ describe("handler", () => {
         xorPeerAddress: {
           family: "IPv4",
           address: "192.0.2.150",
-          port: 0,
+          port: 32102,
         },
         data: Buffer.alloc(0),
       },
@@ -172,11 +173,14 @@ describe("handler", () => {
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocManager.allocate({
-      clientTransportAddress: ctx.rinfo,
-      transportProtocol: ctx.transportProtocol,
-      timeToExpirySec: ctx.maxLifetimeSec,
-    });
+    const allocRes = await allocManager.allocate(
+      {
+        clientTransportAddress: ctx.rinfo,
+        transportProtocol: ctx.transportProtocol,
+        timeToExpirySec: ctx.maxLifetimeSec,
+      },
+      handleData,
+    );
     expect(allocRes.success).toBe(true);
 
     const msg = TurnMsg.build({
@@ -189,7 +193,7 @@ describe("handler", () => {
         xorPeerAddress: {
           family: "IPv4",
           address: "192.0.2.150",
-          port: 0,
+          port: 32102,
         },
         data: Buffer.alloc(0),
       },
@@ -210,11 +214,14 @@ describe("handler", () => {
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocManager.allocate({
-      clientTransportAddress: ctx.rinfo,
-      transportProtocol: ctx.transportProtocol,
-      timeToExpirySec: ctx.maxLifetimeSec,
-    });
+    const allocRes = await allocManager.allocate(
+      {
+        clientTransportAddress: ctx.rinfo,
+        transportProtocol: ctx.transportProtocol,
+        timeToExpirySec: ctx.maxLifetimeSec,
+      },
+      handleData,
+    );
     expect(allocRes.success).toBe(true);
 
     allocManager.installPermission(
@@ -235,7 +242,7 @@ describe("handler", () => {
         xorPeerAddress: {
           family: "IPv4",
           address: "192.0.2.150",
-          port: 0,
+          port: 32102,
         },
         data: Buffer.alloc(0),
       },

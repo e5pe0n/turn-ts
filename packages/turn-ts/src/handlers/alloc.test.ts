@@ -1,9 +1,11 @@
-import { type AddrFamily, magicCookie, type Protocol } from "@e5pe0n/stun-ts";
+import { type AddrFamily, type Protocol, magicCookie } from "@e5pe0n/stun-ts";
 import { describe, expect, it } from "vitest";
-import { AllocationManager, handleAllocate } from "./alloc.js";
-import type { MsgType } from "./header.js";
-import { TurnMsg } from "./msg.js";
-import { defaultServerConfig } from "./server.js";
+import { AllocationManager } from "../alloc.js";
+import type { MsgType } from "../header.js";
+import { TurnMsg } from "../msg.js";
+import { defaultServerConfig } from "../server.js";
+import { handleAllocate } from "./alloc.js";
+import { handleData } from "./data.js";
 
 const ctx: {
   trxId: Buffer;
@@ -182,11 +184,14 @@ describe("req handler", () => {
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocManager.allocate({
-      clientTransportAddress: ctx.rinfo,
-      transportProtocol: ctx.transportProtocol,
-      timeToExpirySec: ctx.maxLifetimeSec,
-    });
+    const allocRes = await allocManager.allocate(
+      {
+        clientTransportAddress: ctx.rinfo,
+        transportProtocol: ctx.transportProtocol,
+        timeToExpirySec: ctx.maxLifetimeSec,
+      },
+      handleData,
+    );
     expect(allocRes.success).toBe(true);
 
     const req = TurnMsg.build({

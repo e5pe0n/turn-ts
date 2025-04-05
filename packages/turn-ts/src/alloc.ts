@@ -1,3 +1,4 @@
+import { type Socket, createSocket } from "node:dgram";
 import {
   type Brand,
   type Override,
@@ -5,8 +6,7 @@ import {
   withResolvers,
 } from "@e5pe0n/lib";
 import type { Protocol, RemoteInfo, TransportAddress } from "@e5pe0n/stun-ts";
-import { type Socket, createSocket } from "node:dgram";
-import { TurnMsg } from "./msg.js";
+import type { TurnMsg } from "./msg.js";
 
 export type AllocationId = Brand<string, "AllocationId">;
 
@@ -35,9 +35,10 @@ type FiveTuple = {
   transportProtocol: Protocol;
 };
 
-function hashFiveTuple(fiveTuple: FiveTuple): AllocationId {
-  return `${fiveTuple.clientTransportAddress.address}:${fiveTuple.clientTransportAddress.port}-${fiveTuple.serverTransportAddress.address}:${fiveTuple.serverTransportAddress.port}-${fiveTuple.transportProtocol}` as AllocationId;
-}
+export const AllocationId = {
+  from: (fiveTuple: FiveTuple): AllocationId =>
+    `${fiveTuple.clientTransportAddress.address}:${fiveTuple.clientTransportAddress.port}-${fiveTuple.serverTransportAddress.address}:${fiveTuple.serverTransportAddress.port}-${fiveTuple.transportProtocol}` as AllocationId,
+};
 
 class AllocationRepo {
   #allocations: Map<AllocationId, Allocation> = new Map();
@@ -92,8 +93,22 @@ export class AllocationManager {
   }
 
   // TODO: handle other errors
-  async allocate(init: InitAllocation): Promise<Result<Allocation>> {
-    const allocId = hashFiveTuple({
+  async allocate(
+    init: InitAllocation,
+    dataHandler: (
+      data: Buffer,
+      {
+        alloc,
+        rinfo,
+        sender,
+      }: {
+        alloc: Allocation;
+        rinfo: RemoteInfo;
+        sender: (msg: TurnMsg) => void;
+      },
+    ) => Promise<void>,
+  ): Promise<Result<Allocation>> {
+    const allocId = AllocationId.from({
       ...init,
       serverTransportAddress: this.#serverTransportAddress,
     });
@@ -118,6 +133,24 @@ export class AllocationManager {
       permissions: [],
     };
     this.#allocRepo.insert(alloc);
+    sock.on("message", (msg, rinfo) => {
+      const _alloc = this.#allocRepo.get(allocId);
+      if (!_alloc) {
+        sock.close();
+        return;
+      }
+      dataHandler(msg, {
+        alloc: _alloc,
+        rinfo,
+        sender: (msg) => {
+          sock.send(
+            msg.raw,
+            _alloc.clientTransportAddress.port,
+            _alloc.clientTransportAddress.address,
+          );
+        },
+      });
+    });
     return {
       success: true,
       value: alloc,
@@ -129,7 +162,7 @@ export class AllocationManager {
     transportProtocol,
   }: Omit<FiveTuple, "serverTransportAddress">): Allocation | undefined {
     return this.#allocRepo.get(
-      hashFiveTuple({
+      AllocationId.from({
         clientTransportAddress,
         serverTransportAddress: this.#serverTransportAddress,
         transportProtocol,
@@ -165,93 +198,4 @@ async function bindSocket(host: string) {
     },
   );
   return await promise;
-}
-
-// https://datatracker.ietf.org/doc/html/rfc5766#section-6.2
-export async function handleAllocate(
-  msg: TurnMsg,
-  {
-    allocManager,
-    rinfo,
-    transportProtocol,
-    serverInfo,
-  }: {
-    allocManager: AllocationManager;
-    rinfo: RemoteInfo;
-    transportProtocol: Protocol;
-    serverInfo: {
-      software: string;
-    };
-  },
-): Promise<TurnMsg> {
-  if (!(msg.header.cls === "request" && msg.header.method === "allocate")) {
-    return TurnMsg.build({
-      header: {
-        cls: "errorResponse",
-        method: msg.header.method,
-        trxId: msg.header.trxId,
-      },
-      attrs: {
-        errorCode: { code: 400, reason: "Bad Request" },
-      },
-    });
-  }
-
-  if (!msg.attrs.requestedTransport) {
-    return TurnMsg.build({
-      header: {
-        cls: "errorResponse",
-        method: msg.header.method,
-        trxId: msg.header.trxId,
-      },
-      attrs: {
-        errorCode: { code: 400, reason: "Bad Request" },
-      },
-    });
-  }
-
-  // TODO: move this to where TurnMsg.from() is called
-  if (msg.attrs.requestedTransport !== "udp") {
-    return TurnMsg.build({
-      header: {
-        cls: "errorResponse",
-        method: msg.header.method,
-        trxId: msg.header.trxId,
-      },
-      attrs: {
-        errorCode: { code: 442, reason: "Unsupported Transport Protocol" },
-      },
-    });
-  }
-
-  const res = await allocManager.allocate({
-    clientTransportAddress: rinfo,
-    transportProtocol,
-    timeToExpirySec: msg.attrs.lifetime,
-  });
-  // TODO: handle other errors
-  if (!res.success) {
-    return TurnMsg.build({
-      header: {
-        cls: "errorResponse",
-        method: msg.header.method,
-        trxId: msg.header.trxId,
-      },
-      attrs: {
-        errorCode: { code: 437, reason: "Allocation Mismatch" },
-      },
-    });
-  }
-
-  return TurnMsg.build({
-    header: {
-      cls: "successResponse",
-      method: "allocate",
-      trxId: msg.header.trxId,
-    },
-    attrs: {
-      lifetime: res.value.timeToExpirySec,
-      software: serverInfo.software,
-    },
-  });
 }
