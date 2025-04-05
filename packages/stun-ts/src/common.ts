@@ -1,6 +1,6 @@
-import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import type { Brand } from "@e5pe0n/lib";
+import { z } from "zod";
 
 export const magicCookie = 0x2112a442 as const;
 

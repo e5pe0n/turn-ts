@@ -1,4 +1,4 @@
-import { assert, assertValueOf, getKey, type Override } from "@e5pe0n/lib";
+import { assert, type Override, assertValueOf, getKey } from "@e5pe0n/lib";
 import { z } from "zod";
 import {
   attrTypeRecord,
@@ -19,11 +19,8 @@ import {
 import { addrFamilySchema, magicCookie } from "./common.js";
 import { encodeFingerprintValue } from "./fingerprint.js";
 import { Header } from "./header.js";
-import { RawStunMsgBuilder, type InitHeader } from "./msg-builder.js";
-import {
-  credentialsSchema,
-  encodeMessageIntegrityValue,
-} from "./msg-integrity.js";
+import { type InitHeader, RawStunMsgBuilder } from "./msg-builder.js";
+import { encodeMessageIntegrityValue } from "./msg-integrity.js";
 import type { RawStunMsg } from "./types.js";
 
 const addressSchema = z.object({

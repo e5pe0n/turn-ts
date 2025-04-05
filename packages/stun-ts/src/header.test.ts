@@ -1,8 +1,8 @@
 import { describe, expect, it, test } from "vitest";
 import {
+  Header,
   type MsgType,
   decodeMsgType,
-  Header,
   encodeMsgType,
 } from "./header.js";
 

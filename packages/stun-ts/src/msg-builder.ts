@@ -1,5 +1,5 @@
 import { type AttrType, attrTypeRecord } from "./attr.js";
-import { Header, HEADER_LENGTH } from "./header.js";
+import { HEADER_LENGTH, Header } from "./header.js";
 import type { RawStunMsg } from "./types.js";
 
 export type InitHeader = Omit<Header, "length" | "magicCookie">;
