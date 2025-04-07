@@ -3,6 +3,7 @@ services:
     container_name: router
     build:
       context: .
+      file: Dockerfile.stun
       target: base
     privileged: true
     cap_add:
@@ -21,6 +22,7 @@ services:
     container_name: server
     build:
       context: .
+      file: Dockerfile.stun
       target: e2e
     networks:
       public_net:
@@ -34,6 +36,7 @@ services:
     container_name: client
     build:
       context: .
+      file: Dockerfile.stun
       target: e2e
     privileged: true
     cap_add:
@@ -43,13 +46,16 @@ services:
         ipv4_address: 192.168.100.100
     volumes:
       - ./e2e/stun-ts:/app
-      - /app/node_modules
+      - node_modules:/app/node_modules
       - ./scripts/client.sh:/app/client.sh
     # TODO: wait for server and router to be ready stably
     command: bash -c "/app/client.sh && sleep 3 && pnpm test:docker"
     depends_on:
       - server
       - router
+
+volumes:
+  node_modules:
 
 networks:
   private_net:

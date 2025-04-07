@@ -9,7 +9,9 @@ export type RemoteInfo = {
   port: number;
 };
 
-export type MsgHandler = (data: Buffer, rinfo: RemoteInfo) => Buffer;
+export type MsgHandler =
+  | ((data: Buffer, rinfo: RemoteInfo) => Buffer | undefined)
+  | ((data: Buffer, rinfo: RemoteInfo) => Promise<Buffer | undefined>);
 
 export interface Listener {
   listen(port: number, host?: string): void;
@@ -21,20 +23,28 @@ class UdpListener implements Listener {
 
   constructor(handler: MsgHandler) {
     this.#sock = createSocket("udp4");
-    this.#sock.on("message", (msg, rinfo) => {
+    this.#sock.on("message", async (msg, rinfo) => {
       try {
         // TODO: output log depending on env var or config.
         // biome-ignore lint/suspicious/noConsole: tmp
         console.log(
           `${logPrefix} received udp message; rinfo=${JSON.stringify(rinfo)}`,
         );
-        const buf = handler(msg, rinfo);
-        this.#sock.send(buf, rinfo.port, rinfo.address);
-        // TODO: output log depending on env var or config.
-        // biome-ignore lint/suspicious/noConsole: tmp
-        console.log(
-          `${logPrefix} returns udp message; rinfo=${JSON.stringify(rinfo)}`,
-        );
+        const buf = await handler(msg, rinfo);
+        if (buf) {
+          this.#sock.send(buf, rinfo.port, rinfo.address);
+          // TODO: output log depending on env var or config.
+          // biome-ignore lint/suspicious/noConsole: tmp
+          console.log(
+            `${logPrefix} returned udp message; rinfo=${JSON.stringify(rinfo)}`,
+          );
+        } else {
+          // TODO: output log depending on env var or config.
+          // biome-ignore lint/suspicious/noConsole: tmp
+          console.log(
+            `${logPrefix} discarded udp message; rinfo=${JSON.stringify(rinfo)}`,
+          );
+        }
       } catch (err) {
         // biome-ignore lint/suspicious/noConsole: ignore error
         console.error(err);
@@ -56,7 +66,7 @@ class TcpListener implements Listener {
 
   constructor(handler: MsgHandler) {
     this.#server = createServer((sock) => {
-      sock.on("data", (msg) => {
+      sock.on("data", async (msg) => {
         if (!(sock.remoteFamily && sock.remoteAddress && sock.remotePort)) {
           return;
         }
@@ -72,13 +82,21 @@ class TcpListener implements Listener {
           `${logPrefix} received tcp message; rinfo=${JSON.stringify(rinfo)}`,
         );
         try {
-          const buf = handler(msg, rinfo);
-          sock.write(buf);
-          // TODO: output log depending on env var or config.
-          // biome-ignore lint/suspicious/noConsole: tmp
-          console.log(
-            `${logPrefix} returns tcp message; rinfo=${JSON.stringify(rinfo)}`,
-          );
+          const buf = await handler(msg, rinfo);
+          if (buf) {
+            sock.write(buf);
+            // TODO: output log depending on env var or config.
+            // biome-ignore lint/suspicious/noConsole: tmp
+            console.log(
+              `${logPrefix} returned tcp message; rinfo=${JSON.stringify(rinfo)}`,
+            );
+          } else {
+            // TODO: output log depending on env var or config.
+            // biome-ignore lint/suspicious/noConsole: tmp
+            console.log(
+              `${logPrefix} discarded tcp message; rinfo=${JSON.stringify(rinfo)}`,
+            );
+          }
         } catch (err) {
           // biome-ignore lint/suspicious/noConsole: ignore error
           console.error(err);

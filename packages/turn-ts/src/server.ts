@@ -1,3 +1,4 @@
+import type { Override, Result } from "@e5pe0n/lib";
 import {
   type Listener,
   type Protocol,
@@ -5,6 +6,10 @@ import {
   createListener,
   encodeMessageIntegrityValue,
 } from "@e5pe0n/stun-ts";
+import { createSocket } from "node:dgram";
+import { Allocator } from "./alloc.js";
+import { handleAllocate } from "./handlers/alloc.js";
+import { handleSend } from "./handlers/send.js";
 import { TurnMsg } from "./msg.js";
 
 // TODO: enable to set config from environment variables
@@ -15,11 +20,19 @@ export const defaultServerConfig = {
   port: 3478,
   software: "@e5pe0n/turn-ts@0.0.0 server",
   maxLifetimeSec: 3600,
-} as const satisfies Omit<ServerConfig, "username" | "password" | "realm">;
+} as const;
+
+export type InitServerConfig = Override<
+  ServerConfig,
+  {
+    [K in keyof typeof defaultServerConfig]?: ServerConfig[K];
+  }
+>;
 
 export type ServerConfig = {
   protocol: Protocol;
   host: string;
+  serverAddress: string;
   port: number;
   username: string;
   password: string;
@@ -33,27 +46,106 @@ export type ServerConfig = {
 export class Server {
   #listener: Listener;
   #config: ServerConfig;
+  #allocator: Allocator;
 
-  constructor(config: ServerConfig) {
-    this.#listener = createListener(config.protocol, (data, rinfo) => {
-      // TODO: impl message handler
-      return data;
-    });
+  constructor(config: InitServerConfig) {
     this.#config = {
       ...defaultServerConfig,
       ...config,
     };
+    this.#allocator = new Allocator({
+      ...this.#config,
+      serverTransportAddress: {
+        // TODO: support IPv6
+        family: "IPv4",
+        address: this.#config.serverAddress,
+        port: this.#config.port,
+      },
+    });
+    this.#listener = createListener(
+      this.#config.protocol,
+      async (data, rinfo) => {
+        // TODO: impl message handler
+        const msg = TurnMsg.from(data);
+        switch (msg.header.cls) {
+          case "indication":
+            switch (msg.header.method) {
+              case "send":
+                handleSend(msg, {
+                  ...this.#config,
+                  rinfo,
+                  allocator: this.#allocator,
+                  transportProtocol: this.#config.protocol,
+                  sender: async (data, to) => {
+                    // TODO: better to use sock in alloc to reduce socket creation overhead?
+                    const sock = createSocket("udp4");
+                    sock.send(data, to.port, to.address, (err) => {
+                      if (err) {
+                        // biome-ignore lint/suspicious/noConsole: tmp
+                        console.error("send error:", err);
+                      }
+                      sock.close();
+                    });
+                  },
+                });
+                break;
+              default: {
+                // TODO: output log depending on env var or config.
+                // biome-ignore lint/suspicious/noConsole: tmp
+                console.log("unknown method:", msg.header.method);
+              }
+            }
+            break;
+          case "request": {
+            const authRes = authReq(msg, this.#config);
+            if (!authRes.success) {
+              return authRes.error.raw;
+            }
+            switch (msg.header.method) {
+              case "allocate": {
+                const resp = await handleAllocate(msg, {
+                  ...this.#config,
+                  rinfo,
+                  allocator: this.#allocator,
+                  transportProtocol: this.#config.protocol,
+                  serverInfo: {
+                    software: this.#config.software,
+                  },
+                });
+                return resp.raw;
+              }
+              case "createPermission": {
+                const resp = await handleAllocate(msg, {
+                  ...this.#config,
+                  rinfo,
+                  allocator: this.#allocator,
+                  transportProtocol: this.#config.protocol,
+                  serverInfo: {
+                    software: this.#config.software,
+                  },
+                });
+                return resp.raw;
+              }
+              default: {
+                // TODO: output log depending on env var or config.
+                // biome-ignore lint/suspicious/noConsole: tmp
+                console.log("unknown method:", msg.header.method);
+              }
+            }
+          }
+        }
+      },
+    );
+  }
+
+  listen() {
+    this.#listener.listen(this.#config.port, this.#config.host);
+  }
+
+  close() {
+    this.#listener.close();
   }
 }
-
-type AuthReqReturn =
-  | {
-      success: true;
-    }
-  | {
-      success: false;
-      errorResp: TurnMsg;
-    };
 
 export function authReq(
   req: TurnMsg,
@@ -70,11 +162,11 @@ export function authReq(
     nonce: string;
     software?: string;
   },
-): AuthReqReturn {
+): Result<undefined, TurnMsg> {
   if (!req.attrs.messageIntegrity) {
     return {
       success: false,
-      errorResp: TurnMsg.build({
+      error: TurnMsg.build({
         header: {
           cls: "errorResponse",
           method: req.header.method,
@@ -92,7 +184,7 @@ export function authReq(
   if (!(req.attrs.username && req.attrs.realm && req.attrs.nonce)) {
     return {
       success: false,
-      errorResp: TurnMsg.build({
+      error: TurnMsg.build({
         header: {
           cls: "errorResponse",
           method: req.header.method,
@@ -111,7 +203,7 @@ export function authReq(
   if (req.attrs.username !== username) {
     return {
       success: false,
-      errorResp: TurnMsg.build({
+      error: TurnMsg.build({
         header: {
           cls: "errorResponse",
           method: req.header.method,
@@ -139,7 +231,7 @@ export function authReq(
   if (!req.attrs.messageIntegrity.equals(msgIntegrity)) {
     return {
       success: false,
-      errorResp: TurnMsg.build({
+      error: TurnMsg.build({
         header: {
           cls: "errorResponse",
           method: req.header.method,
@@ -157,5 +249,6 @@ export function authReq(
 
   return {
     success: true,
+    value: undefined,
   };
 }

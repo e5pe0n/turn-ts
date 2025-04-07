@@ -28,6 +28,18 @@ importers:
         specifier: 2.1.1
         version: 2.1.1(@types/node@22.9.0)
 
+  e2e/turn-ts:
+    devDependencies:
+      '@e5pe0n/turn-ts':
+        specifier: workspace:*
+        version: link:../../packages/turn-ts
+      tsx:
+        specifier: 4.19.3
+        version: 4.19.3
+      vitest:
+        specifier: 2.1.1
+        version: 2.1.1(@types/node@22.9.0)
+
   packages/lib:
     dependencies:
       zod:

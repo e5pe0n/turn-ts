@@ -1,0 +1,22 @@
+{
+  "name": "@e5pe0n/turn-ts-e2e",
+  "version": "0.0.0",
+  "description": "",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch server.ts",
+    "start": "tsx server.ts",
+    "test:docker": "vitest run --project docker",
+    "test:comp": "vitest run --project compatibility"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@e5pe0n/turn-ts": "workspace:*",
+    "tsx": "4.19.3",
+    "vitest": "2.1.1"
+  }
+}

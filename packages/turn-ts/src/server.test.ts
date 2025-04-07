@@ -37,7 +37,7 @@ describe("auth req", () => {
     });
     expect(authReq(req, { ...ctx, software: ctx.serverSideSoftware })).toEqual({
       success: false,
-      errorResp: {
+      error: {
         header: {
           cls: "errorResponse",
           method: "allocate",
@@ -73,7 +73,7 @@ describe("auth req", () => {
     });
     expect(authReq(req, { ...ctx, software: ctx.serverSideSoftware })).toEqual({
       success: false,
-      errorResp: {
+      error: {
         header: {
           cls: "errorResponse",
           method: "allocate",
@@ -110,7 +110,7 @@ describe("auth req", () => {
     });
     expect(authReq(req, { ...ctx, software: ctx.serverSideSoftware })).toEqual({
       success: false,
-      errorResp: {
+      error: {
         header: {
           cls: "errorResponse",
           method: "allocate",
@@ -152,6 +152,7 @@ describe("auth req", () => {
     });
     expect(authReq(req, { ...ctx, software: ctx.serverSideSoftware })).toEqual({
       success: true,
+      value: undefined,
     } satisfies ReturnType<typeof authReq>);
   });
 });

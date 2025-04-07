@@ -16,7 +16,7 @@ export async function handleAllocate(
     rinfo: RemoteInfo;
     transportProtocol: Protocol;
     serverInfo: {
-      software: string;
+      software?: string;
     };
   },
 ): Promise<TurnMsg> {

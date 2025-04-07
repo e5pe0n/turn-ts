@@ -8,7 +8,7 @@ RUN npm i -g pnpm@10
 
 FROM app-base AS build
 COPY . /app
-WORKDIR app
+WORKDIR /app
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN pnpm deploy --filter=stun-ts-e2e /prod/e2e/stun-ts
 
