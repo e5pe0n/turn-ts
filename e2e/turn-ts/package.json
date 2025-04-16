@@ -17,6 +17,6 @@
   "devDependencies": {
     "@e5pe0n/turn-ts": "workspace:*",
     "tsx": "4.19.3",
-    "vitest": "2.1.1"
+    "vitest": "3.0.8"
   }
 }
