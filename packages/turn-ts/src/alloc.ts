@@ -1,12 +1,12 @@
-import { type Socket, createSocket } from "node:dgram";
 import {
   type Brand,
   type Override,
   type Result,
   withResolvers,
 } from "@e5pe0n/lib";
-import type { Protocol, RemoteInfo, TransportAddress } from "@e5pe0n/stun-ts";
-import type { TurnMsg } from "./msg.js";
+import type { Protocol, TransportAddress } from "@e5pe0n/stun-ts";
+import { type Socket, createSocket } from "node:dgram";
+import { handleData } from "./handlers/data.js";
 
 export type AllocationId = Brand<string, "AllocationId">;
 
@@ -93,21 +93,7 @@ export class Allocator {
   }
 
   // TODO: handle other errors
-  async allocate(
-    init: InitAllocation,
-    dataHandler: (
-      data: Buffer,
-      {
-        alloc,
-        rinfo,
-        sender,
-      }: {
-        alloc: Allocation;
-        rinfo: RemoteInfo;
-        sender: (msg: TurnMsg) => void;
-      },
-    ) => Promise<void>,
-  ): Promise<Result<Allocation>> {
+  async allocate(init: InitAllocation): Promise<Result<Allocation>> {
     const allocId = AllocationId.from({
       ...init,
       serverTransportAddress: this.#serverTransportAddress,
@@ -139,17 +125,16 @@ export class Allocator {
         sock.close();
         return;
       }
-      dataHandler(msg, {
-        alloc: _alloc,
-        rinfo,
-        sender: (msg) => {
-          sock.send(
-            msg.raw,
-            _alloc.clientTransportAddress.port,
-            _alloc.clientTransportAddress.address,
-          );
-        },
-      });
+      const res = handleData(msg, { alloc: _alloc, rinfo });
+      if (res.success) {
+        // TODO: output log depending on env var or config.
+        // biome-ignore lint/suspicious/noConsole: tmp
+        console.log("handle data success");
+      } else {
+        // TODO: output log depending on env var or config.
+        // biome-ignore lint/suspicious/noConsole: tmp
+        console.log("handle data error:", res.error);
+      }
     });
     return {
       success: true,

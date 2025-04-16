@@ -1,11 +1,11 @@
-import type { SuccessResult } from "@e5pe0n/lib";
+import { type ErrorResult, genPromise, type SuccessResult } from "@e5pe0n/lib";
 import type { AddrFamily, Protocol } from "@e5pe0n/stun-ts";
-import { describe, expect, it, vi } from "vitest";
+import { createSocket } from "node:dgram";
+import { describe, expect, it } from "vitest";
 import { type Allocation, Allocator } from "../alloc.js";
 import type { MsgType } from "../header.js";
 import { type InputAttrs, TurnMsg } from "../msg.js";
 import { defaultServerConfig } from "../server.js";
-import { handleData } from "./data.js";
 import { handleSend } from "./send.js";
 
 const ctx: {
@@ -37,7 +37,7 @@ const ctx: {
   nonce: "nonce",
   rinfo: {
     family: "IPv4",
-    port: 50000,
+    port: 51000,
     address: "192.168.200.200",
   },
   serverInfo: {
@@ -66,7 +66,7 @@ describe("handler", () => {
     },
   ] as const)(
     "discards indication if it is not that message class is 'indication' and method is 'send': cls=$cls, method=$method",
-    async ({ cls, method }: MsgType) => {
+    ({ cls, method }: MsgType) => {
       const msg = TurnMsg.build({
         header: {
           cls,
@@ -79,14 +79,14 @@ describe("handler", () => {
         host: ctx.serverInfo.host,
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
-      const sender = vi.fn();
-      await handleSend(msg, {
+      const res = handleSend(msg, {
         allocator,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
-        sender,
-      });
-      expect(sender).not.toHaveBeenCalled();
+      }) as ErrorResult;
+      expect(res.success).toBe(false);
+      expect(res.error).toBeInstanceOf(Error);
+      expect(res.error.message).toMatch(/Bad Request/);
     },
   );
 
@@ -102,46 +102,39 @@ describe("handler", () => {
       attrs: {
         xorPeerAddress: {
           family: "IPv4",
-          address: "192.0.2.150",
-          port: 32102,
+          address: "127.0.0.1",
+          port: 52000,
         },
       },
     },
   ] as const)(
     "discards indication if required attributes are missing or invalid: $testName",
-    async ({ attrs }: { attrs: InputAttrs }) => {
+    ({ attrs }: { attrs: InputAttrs }) => {
+      const msg = TurnMsg.build({
+        header: {
+          cls: "indication",
+          method: "send",
+          trxId: ctx.trxId,
+        },
+        attrs,
+      });
       const allocator = new Allocator({
         maxLifetimeSec: ctx.maxLifetimeSec,
         host: ctx.serverInfo.host,
         serverTransportAddress: ctx.serverInfo.transportAddress,
       });
-
-      const msg = TurnMsg.build({
-        header: {
-          cls: "request",
-          method: "createPermission",
-          trxId: ctx.trxId,
-        },
-        attrs,
-      });
-      const sender = vi.fn();
-      await handleSend(msg, {
+      const res = handleSend(msg, {
         allocator,
         rinfo: ctx.rinfo,
         transportProtocol: ctx.transportProtocol,
-        sender,
-      });
-      expect(sender).not.toHaveBeenCalled();
+      }) as ErrorResult;
+      expect(res.success).toBe(false);
+      expect(res.error).toBeInstanceOf(Error);
+      expect(res.error.message).toMatch(/Bad Request/);
     },
   );
 
-  it("discards indication if the allocation does not exist", async () => {
-    const allocator = new Allocator({
-      maxLifetimeSec: ctx.maxLifetimeSec,
-      host: ctx.serverInfo.host,
-      serverTransportAddress: ctx.serverInfo.transportAddress,
-    });
-
+  it("discards indication if the allocation does not exist", () => {
     const msg = TurnMsg.build({
       header: {
         cls: "indication",
@@ -151,36 +144,38 @@ describe("handler", () => {
       attrs: {
         xorPeerAddress: {
           family: "IPv4",
-          address: "192.0.2.150",
-          port: 32102,
+          address: "127.0.0.1",
+          port: 52000,
         },
         data: Buffer.alloc(0),
       },
     });
-    const sender = vi.fn();
-    await handleSend(msg, {
-      allocator,
-      rinfo: ctx.rinfo,
-      transportProtocol: ctx.transportProtocol,
-      sender,
-    });
-    expect(sender).not.toHaveBeenCalled();
-  });
-
-  it("discards indication if no permission exists on the allocation", async () => {
     const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocator.allocate(
-      {
-        clientTransportAddress: ctx.rinfo,
-        transportProtocol: ctx.transportProtocol,
-        timeToExpirySec: ctx.maxLifetimeSec,
-      },
-      handleData,
-    );
+    const res = handleSend(msg, {
+      allocator,
+      rinfo: ctx.rinfo,
+      transportProtocol: ctx.transportProtocol,
+    }) as ErrorResult;
+    expect(res.success).toBe(false);
+    expect(res.error).toBeInstanceOf(Error);
+    expect(res.error.message).toMatch(/Allocation Mismatch/);
+  });
+
+  it("discards indication if permission does not exists on the allocation", async () => {
+    const allocator = new Allocator({
+      maxLifetimeSec: ctx.maxLifetimeSec,
+      host: ctx.serverInfo.host,
+      serverTransportAddress: ctx.serverInfo.transportAddress,
+    });
+    const allocRes = await allocator.allocate({
+      clientTransportAddress: ctx.rinfo,
+      transportProtocol: ctx.transportProtocol,
+      timeToExpirySec: ctx.maxLifetimeSec,
+    });
     expect(allocRes.success).toBe(true);
 
     const msg = TurnMsg.build({
@@ -192,43 +187,40 @@ describe("handler", () => {
       attrs: {
         xorPeerAddress: {
           family: "IPv4",
-          address: "192.0.2.150",
-          port: 32102,
+          address: "127.0.0.1",
+          port: 52000,
         },
         data: Buffer.alloc(0),
       },
     });
-    const sender = vi.fn();
-    await handleSend(msg, {
+    const res = handleSend(msg, {
       allocator,
       rinfo: ctx.rinfo,
       transportProtocol: ctx.transportProtocol,
-      sender,
-    });
-    expect(sender).not.toHaveBeenCalled();
+    }) as ErrorResult;
+    expect(res.success).toBe(false);
+    expect(res.error).toBeInstanceOf(Error);
+    expect(res.error.message).toMatch(/Forbidden/);
   });
 
-  it("sends data by sender", async () => {
+  it("sends data to peer", async () => {
     const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocator.allocate(
-      {
-        clientTransportAddress: ctx.rinfo,
-        transportProtocol: ctx.transportProtocol,
-        timeToExpirySec: ctx.maxLifetimeSec,
-      },
-      handleData,
-    );
+    const allocRes = await allocator.allocate({
+      clientTransportAddress: ctx.rinfo,
+      transportProtocol: ctx.transportProtocol,
+      timeToExpirySec: ctx.maxLifetimeSec,
+    });
     expect(allocRes.success).toBe(true);
 
     allocator.installPermission(
       (allocRes as SuccessResult<Allocation>).value.id,
       {
         family: "IPv4",
-        address: "192.0.2.150",
+        address: "127.0.0.1",
         port: 0,
       },
     );
@@ -241,19 +233,33 @@ describe("handler", () => {
       attrs: {
         xorPeerAddress: {
           family: "IPv4",
-          address: "192.0.2.150",
-          port: 32102,
+          address: "127.0.0.1",
+          port: 52000,
         },
-        data: Buffer.alloc(0),
+        data: Buffer.from([1]),
       },
     });
-    const sender = vi.fn();
-    await handleSend(msg, {
-      allocator,
-      rinfo: ctx.rinfo,
-      transportProtocol: ctx.transportProtocol,
-      sender,
+    const server = createSocket("udp4");
+    const gen = genPromise<Buffer>((genResolvers) => {
+      server.on("message", (msg, rinfo) => {
+        const { resolve } = genResolvers.next().value!;
+        resolve(msg);
+      });
     });
-    expect(sender).toHaveBeenCalled();
+    server.bind(52000, "127.0.0.1");
+
+    try {
+      const res = handleSend(msg, {
+        allocator,
+        rinfo: ctx.rinfo,
+        transportProtocol: ctx.transportProtocol,
+      }) as SuccessResult;
+      expect(res.success).toBe(true);
+
+      const data = (await gen.next()).value;
+      expect(data).toEqual(Buffer.from([1]));
+    } finally {
+      server.close();
+    }
   });
 });

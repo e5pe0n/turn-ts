@@ -209,7 +209,17 @@ export function encodeUsernameValue(username: string): Buffer {
 }
 
 export function decodeStrValue(buf: Buffer): string {
-  return buf.toString("utf8");
+  let lastIdx = buf.length - 1;
+  for (const [i, v] of buf.subarray(-4).entries()) {
+    if (v === 0) {
+      // biome-ignore format: to leave brackets
+      lastIdx = (buf.length - 4 + i) - 1;
+      break;
+    }
+  }
+  const resBuf = buf.subarray(0, lastIdx + 1); // exclude \x00 null bytes
+  const s = resBuf.toString("utf8");
+  return s;
 }
 
 export function encodeRealmValue(realm: string): Buffer {

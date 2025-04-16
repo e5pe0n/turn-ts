@@ -1,10 +1,11 @@
-import type { SuccessResult } from "@e5pe0n/lib";
-import type { AddrFamily, Protocol } from "@e5pe0n/stun-ts";
-import { describe, expect, it, vi } from "vitest";
-import { type Allocation, Allocator } from "../alloc.js";
-import { TurnMsg } from "../msg.js";
+import { genPromise, type ErrorResult, type SuccessResult } from "@e5pe0n/lib";
+import { magicCookie, type AddrFamily, type Protocol } from "@e5pe0n/stun-ts";
+import { createSocket } from "node:dgram";
+import { describe, expect, it } from "vitest";
+import { Allocator, type Allocation } from "../alloc.js";
 import { defaultServerConfig } from "../server.js";
 import { handleData } from "./data.js";
+import { TurnMsg } from "../msg.js";
 
 const ctx: {
   trxId: Buffer;
@@ -36,7 +37,7 @@ const ctx: {
   rinfo: {
     family: "IPv4",
     port: 50000,
-    address: "192.168.200.200",
+    address: "127.0.0.1",
   },
   serverInfo: {
     transportAddress: {
@@ -59,85 +60,93 @@ describe("handler", () => {
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocator.allocate(
-      {
-        clientTransportAddress: ctx.rinfo,
-        transportProtocol: ctx.transportProtocol,
-        timeToExpirySec: ctx.maxLifetimeSec,
-      },
-      handleData,
-    );
+    const allocRes = await allocator.allocate({
+      clientTransportAddress: ctx.rinfo,
+      transportProtocol: ctx.transportProtocol,
+      timeToExpirySec: ctx.maxLifetimeSec,
+    });
     expect(allocRes.success).toBe(true);
 
     const alloc = (allocRes as SuccessResult<Allocation>).value;
     allocator.installPermission(alloc.id, {
-      family: "IPv4",
-      address: "192.0.2.150",
-      port: 32102,
+      ...ctx.rinfo,
+      port: 0,
     });
 
-    const sender = vi.fn();
-    await handleData(Buffer.from([1]), {
+    const res = handleData(Buffer.from([1]), {
       alloc,
       rinfo: {
         family: "IPv4",
-        address: "192.0.2.151", // different address than installed permission
-        port: 32102,
+        address: "192.0.2.150", // different address than installed permission
+        port: 0,
       },
-      sender,
-    });
-    expect(sender).not.toHaveBeenCalled();
+    }) as ErrorResult;
+    expect(res.success).toBe(false);
+    expect(res.error).toBeInstanceOf(Error);
+    expect(res.error.message).toMatch(/Forbidden/);
   });
 
-  it("sends data indication by sender", async () => {
+  it("sends data indication", async () => {
     const allocator = new Allocator({
       maxLifetimeSec: ctx.maxLifetimeSec,
       host: ctx.serverInfo.host,
       serverTransportAddress: ctx.serverInfo.transportAddress,
     });
-    const allocRes = await allocator.allocate(
-      {
-        clientTransportAddress: ctx.rinfo,
-        transportProtocol: ctx.transportProtocol,
-        timeToExpirySec: ctx.maxLifetimeSec,
-      },
-      handleData,
-    );
+    const allocRes = await allocator.allocate({
+      clientTransportAddress: ctx.rinfo,
+      transportProtocol: ctx.transportProtocol,
+      timeToExpirySec: ctx.maxLifetimeSec,
+    });
     expect(allocRes.success).toBe(true);
 
     const alloc = (allocRes as SuccessResult<Allocation>).value;
     allocator.installPermission(alloc.id, {
-      family: "IPv4",
-      address: "192.0.2.150",
-      port: 32102,
+      ...ctx.rinfo,
+      port: 0,
     });
+    const turnClient = createSocket("udp4");
+    const gen = genPromise<Buffer>((genResolvers) => {
+      turnClient.on("message", (msg, rinfo) => {
+        const { resolve } = genResolvers.next().value!;
+        resolve(msg);
+      });
+    });
+    turnClient.bind(ctx.rinfo.port, ctx.rinfo.address);
 
-    const sender = vi.fn();
-    await handleData(Buffer.from([1]), {
-      alloc,
-      rinfo: {
-        family: "IPv4",
-        address: "192.0.2.150",
-        port: 32102,
-      },
-      sender,
-    });
-    expect(sender).not.toHaveBeenCalledWith(
-      TurnMsg.build({
+    try {
+      const res = handleData(Buffer.from([1]), {
+        alloc,
+        rinfo: {
+          family: "IPv4",
+          address: "127.0.0.1",
+          port: 52000,
+        },
+      }) as SuccessResult<undefined>;
+      expect(res.success).toBe(true);
+
+      const data = (await gen.next()).value!;
+      const msg = TurnMsg.from(data);
+      expect(msg).toEqual({
         header: {
           cls: "indication",
           method: "data",
           trxId: expect.any(Buffer),
+          length: expect.any(Number),
+          magicCookie,
         },
         attrs: {
           xorPeerAddress: {
             family: "IPv4",
-            address: "192.0.2.150",
-            port: 0,
+            address: "127.0.0.1",
+            port: 52000,
           },
-          data: Buffer.alloc(1),
+          data: Buffer.from([1, 0, 0, 0]),
         },
-      }),
-    );
+        raw: expect.any(Buffer),
+        msgIntegrityOffset: expect.any(Number),
+      } satisfies TurnMsg);
+    } finally {
+      turnClient.close();
+    }
   });
 });

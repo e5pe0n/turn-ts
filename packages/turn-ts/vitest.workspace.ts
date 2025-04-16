@@ -1,16 +1,22 @@
 import { configDefaults, defineWorkspace } from "vitest/config";
 
+const sequentials: string[] = [
+  "./src/client.test.ts",
+  "./src/handlers/send.test.ts",
+  "./src/handlers/data.test.ts",
+];
+
 export default defineWorkspace([
   {
     test: {
       name: "parallel",
-      exclude: [...configDefaults.exclude, "./src/client.test.ts"],
+      exclude: [...configDefaults.exclude, ...sequentials],
     },
   },
   {
     test: {
       name: "sequential",
-      include: ["./src/client.test.ts"],
+      include: sequentials,
       pool: "forks",
       poolOptions: {
         forks: {

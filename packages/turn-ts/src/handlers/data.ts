@@ -1,24 +1,25 @@
 import { type RemoteInfo, TrxId } from "@e5pe0n/stun-ts";
 import type { Allocation } from "../alloc.js";
 import { TurnMsg } from "../msg.js";
+import type { Result } from "@e5pe0n/lib";
 
-export async function handleData(
+export function handleData(
   data: Buffer,
   {
     alloc,
     rinfo,
-    sender,
   }: {
     alloc: Allocation;
     rinfo: RemoteInfo;
-    sender: (msg: TurnMsg) => void;
   },
-): Promise<void> {
+): Result {
   if (!alloc.permissions.includes(rinfo.address)) {
-    // TODO: output log depending on env var or config.
-    // biome-ignore lint/suspicious/noConsole: tmp
-    console.log(`permission does not exist on Allocation(id=${alloc.id}).`);
-    return;
+    return {
+      success: false,
+      error: new Error(
+        `Forbidden: Permission does not exist on Allocation(id=${alloc.id}).`,
+      ),
+    };
   }
 
   const msg = TurnMsg.build({
@@ -32,5 +33,10 @@ export async function handleData(
       data,
     },
   });
-  sender(msg);
+  alloc.sock.send(
+    msg.raw,
+    alloc.clientTransportAddress.port,
+    alloc.clientTransportAddress.address,
+  );
+  return { success: true, value: undefined };
 }

@@ -71,23 +71,23 @@ export class Server {
           case "indication":
             switch (msg.header.method) {
               case "send":
-                handleSend(msg, {
-                  ...this.#config,
-                  rinfo,
-                  allocator: this.#allocator,
-                  transportProtocol: this.#config.protocol,
-                  sender: async (data, to) => {
-                    // TODO: better to use sock in alloc to reduce socket creation overhead?
-                    const sock = createSocket("udp4");
-                    sock.send(data, to.port, to.address, (err) => {
-                      if (err) {
-                        // biome-ignore lint/suspicious/noConsole: tmp
-                        console.error("send error:", err);
-                      }
-                      sock.close();
-                    });
-                  },
-                });
+                {
+                  const res = handleSend(msg, {
+                    ...this.#config,
+                    rinfo,
+                    allocator: this.#allocator,
+                    transportProtocol: this.#config.protocol,
+                  });
+                  if (res.success) {
+                    // TODO: output log depending on env var or config.
+                    // biome-ignore lint/suspicious/noConsole: tmp
+                    console.log("send success");
+                  } else {
+                    // TODO: output log depending on env var or config.
+                    // biome-ignore lint/suspicious/noConsole: tmp
+                    console.log("send error:", res.error);
+                  }
+                }
                 break;
               default: {
                 // TODO: output log depending on env var or config.

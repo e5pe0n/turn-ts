@@ -22,9 +22,13 @@ export class RawStunMsgBuilder {
 
   addAttr(type: AttrType, value: Buffer): void {
     const tlBuf = Buffer.alloc(4);
+    const paddedBuf = Buffer.concat([
+      value,
+      Buffer.alloc((4 - (value.length % 4)) % 4),
+    ]);
     tlBuf.writeUInt16BE(attrTypeRecord[type]);
-    tlBuf.writeUInt16BE(value.length, 2);
-    this.#raw = Buffer.concat([this.#raw, tlBuf, value]) as RawStunMsg;
+    tlBuf.writeUInt16BE(paddedBuf.length, 2);
+    this.#raw = Buffer.concat([this.#raw, tlBuf, paddedBuf]) as RawStunMsg;
     this.#writeMsgLength();
   }
 
