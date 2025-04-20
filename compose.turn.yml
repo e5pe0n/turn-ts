@@ -1,0 +1,93 @@
+services:
+  peer:
+    container_name: peer
+    build:
+      context: .
+      file: Dockerfile.turn
+      target: e2e
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    networks:
+      public_net:
+        ipv4_address: 192.168.200.30
+    volumes:
+      - ./e2e/turn-ts:/app
+      - node_modules:/app/node_modules
+      - ./scripts/peer.sh:/app/peer.sh
+    # TODO: wait for server and router to be ready stably
+    command: bash -c "/app/client.sh && sleep 3 && pnpm test:docker"
+    depends_on:
+      - server
+      - router
+
+  server:
+    container_name: server
+    build:
+      context: .
+      file: Dockerfile.turn
+      target: e2e
+    networks:
+      public_net:
+        ipv4_address: 192.168.200.20
+    volumes:
+      - ./e2e/turn-ts:/app
+      - /app/node_modules
+    command: pnpm dev
+
+  router:
+    container_name: router
+    build:
+      context: .
+      file: Dockerfile.turn
+      target: base
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      private_net:
+        ipv4_address: 192.168.100.20
+      public_net:
+        ipv4_address: 192.168.200.10
+    volumes:
+      - ./scripts/router.sh:/router.sh
+    command: bash -c "./router.sh && tail -f /dev/null"
+
+  client:
+    container_name: client
+    build:
+      context: .
+      file: Dockerfile.turn
+      target: e2e
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    networks:
+      private_net:
+        ipv4_address: 192.168.100.10
+    volumes:
+      - ./e2e/turn-ts:/app
+      - node_modules:/app/node_modules
+      - ./scripts/client.sh:/app/client.sh
+    # TODO: wait for server and router to be ready stably
+    command: bash -c "/app/client.sh && sleep 3 && pnpm test:docker"
+    depends_on:
+      - server
+      - router
+
+volumes:
+  node_modules:
+
+networks:
+  private_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24
+  public_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.200.0/24
+

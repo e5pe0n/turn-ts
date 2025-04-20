@@ -3,6 +3,7 @@ import { assert, type Override } from "@e5pe0n/lib";
 import {
   type Agent,
   type CreateAgentParams,
+  type TransportAddress,
   createAgent,
 } from "@e5pe0n/stun-ts";
 import { TurnMsg } from "./msg.js";
@@ -28,6 +29,8 @@ const defaultClientConfig = {
 export class Client {
   #agent: Agent;
   #config: ClientConfig;
+  #realm?: string;
+  #nonce?: string;
 
   constructor(config: InitClientConfig) {
     this.#agent = createAgent(config);
@@ -87,6 +90,8 @@ export class Client {
       !!respMsg.attrs.nonce,
       new Error("invalid response; NONCE attr not found."),
     );
+    this.#realm = respMsg.attrs.realm;
+    this.#nonce = respMsg.attrs.nonce;
     const trxId2 = randomBytes(12);
     const reqMsg2 = TurnMsg.build({
       header: {
@@ -114,35 +119,51 @@ export class Client {
     return respMsg2;
   }
 
-  // async requestCreatePermission({
-  //   xorPeerAddress,
-  //   realm,
-  //   nonce,
-  // }: {
-  //   xorPeerAddress: TransportAddress;
-  //   realm: string;
-  //   nonce: string;
-  // }): Promise<TurnMsg> {
-  //   const trxId = randomBytes(12);
-  //   const reqMsg2 = TurnMsg.build({
-  //     header: {
-  //       cls: "request",
-  //       method: "allocate",
-  //       trxId,
-  //     },
-  //     attrs: {
-  //       xorPeerAddress,
-  //       username: this.#config.username,
-  //       realm,
-  //       nonce,
-  //     },
-  //     password: this.#config.password,
-  //   });
-  //   const respBuf2 = await this.#agent.request(reqMsg2.raw);
-  //   const respMsg2 = TurnMsg.from(respBuf2);
-  //   assert(
-  //     respMsg2.header.trxId.equals(trxId),
-  //     new Error("invalid response; trxId is not matched."),
-  //   );
-  // }
+  async requestCreatePermission({
+    xorPeerAddress,
+  }: {
+    xorPeerAddress: TransportAddress;
+  }): Promise<TurnMsg> {
+    const trxId = randomBytes(12);
+    const reqMsg = TurnMsg.build({
+      header: {
+        cls: "request",
+        method: "createPermission",
+        trxId,
+      },
+      attrs: {
+        xorPeerAddress,
+        username: this.#config.username,
+        realm: this.#realm,
+        nonce: this.#nonce,
+      },
+      password: this.#config.password,
+    });
+    const respBuf = await this.#agent.request(reqMsg.raw);
+    const respMsg = TurnMsg.from(respBuf);
+    assert(
+      respMsg.header.trxId.equals(trxId),
+      new Error("invalid response; trxId is not matched."),
+    );
+    return respMsg;
+  }
+
+  async sendIndication({
+    xorPeerAddress,
+    data,
+  }: { xorPeerAddress: TransportAddress; data: Buffer }): Promise<void> {
+    const trxId = randomBytes(12);
+    const reqMsg = TurnMsg.build({
+      header: {
+        cls: "indication",
+        method: "send",
+        trxId,
+      },
+      attrs: {
+        xorPeerAddress,
+        data,
+      },
+    });
+    await this.#agent.indicate(reqMsg.raw);
+  }
 }
