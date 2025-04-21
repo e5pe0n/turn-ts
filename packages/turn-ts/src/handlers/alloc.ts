@@ -1,7 +1,6 @@
 import type { Protocol, RemoteInfo } from "@e5pe0n/stun-ts";
 import type { Allocator } from "../alloc.js";
 import { TurnMsg } from "../msg.js";
-import { handleData } from "./data.js";
 
 // https://datatracker.ietf.org/doc/html/rfc5766#section-6.2
 export async function handleAllocate(
@@ -60,14 +59,11 @@ export async function handleAllocate(
     });
   }
 
-  const res = await allocator.allocate(
-    {
-      clientTransportAddress: rinfo,
-      transportProtocol,
-      timeToExpirySec: msg.attrs.lifetime,
-    },
-    handleData,
-  );
+  const res = await allocator.allocate({
+    clientTransportAddress: rinfo,
+    transportProtocol,
+    timeToExpirySec: msg.attrs.lifetime,
+  });
   // TODO: handle other errors
   if (!res.success) {
     return TurnMsg.build({
@@ -91,6 +87,16 @@ export async function handleAllocate(
     attrs: {
       lifetime: res.value.timeToExpirySec,
       software: serverInfo.software,
+      xorMappedAddress: {
+        family: "IPv4",
+        address: res.value.clientTransportAddress.address,
+        port: res.value.clientTransportAddress.port,
+      },
+      xorRelayedAddress: {
+        family: "IPv4",
+        address: res.value.relayedTransportAddress.address,
+        port: res.value.relayedTransportAddress.port,
+      },
     },
   });
 }

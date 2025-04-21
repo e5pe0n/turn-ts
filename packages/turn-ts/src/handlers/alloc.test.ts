@@ -261,6 +261,16 @@ describe("req handler", () => {
       attrs: {
         lifetime: 1200,
         software: ctx.serverInfo.software,
+        xorMappedAddress: {
+          family: "IPv4",
+          address: ctx.rinfo.address,
+          port: ctx.rinfo.port,
+        },
+        xorRelayedAddress: {
+          family: "IPv4",
+          address: ctx.serverInfo.transportAddress.address,
+          port: expect.any(Number),
+        },
       },
       raw: expect.any(Buffer),
       msgIntegrityOffset: expect.any(Number),

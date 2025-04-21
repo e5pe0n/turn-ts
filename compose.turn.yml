@@ -3,43 +3,38 @@ services:
     container_name: peer
     build:
       context: .
-      file: Dockerfile.turn
+      dockerfile: Dockerfile.turn
       target: e2e
-    privileged: true
-    cap_add:
-      - NET_ADMIN
     networks:
       public_net:
-        ipv4_address: 192.168.200.30
+        ipv4_address: 192.168.20.30
     volumes:
       - ./e2e/turn-ts:/app
       - node_modules:/app/node_modules
-      - ./scripts/peer.sh:/app/peer.sh
     # TODO: wait for server and router to be ready stably
-    command: bash -c "/app/client.sh && sleep 3 && pnpm test:docker"
-    depends_on:
-      - server
-      - router
+    # command: bash -c "/app/client.sh && sleep 3 && pnpm test:docker"
+    command: pnpm dev:peer
 
   server:
     container_name: server
     build:
       context: .
-      file: Dockerfile.turn
+      dockerfile: Dockerfile.turn
       target: e2e
     networks:
       public_net:
-        ipv4_address: 192.168.200.20
+        ipv4_address: 192.168.20.20
     volumes:
       - ./e2e/turn-ts:/app
-      - /app/node_modules
-    command: pnpm dev
+      - node_modules:/app/node_modules
+    # command: pnpm dev:server
+    command: tail -f /dev/null
 
   router:
     container_name: router
     build:
       context: .
-      file: Dockerfile.turn
+      dockerfile: Dockerfile.turn
       target: base
     privileged: true
     cap_add:
@@ -47,9 +42,9 @@ services:
       - NET_RAW
     networks:
       private_net:
-        ipv4_address: 192.168.100.20
+        ipv4_address: 192.168.10.20
       public_net:
-        ipv4_address: 192.168.200.10
+        ipv4_address: 192.168.20.10
     volumes:
       - ./scripts/router.sh:/router.sh
     command: bash -c "./router.sh && tail -f /dev/null"
@@ -58,20 +53,20 @@ services:
     container_name: client
     build:
       context: .
-      file: Dockerfile.turn
+      dockerfile: Dockerfile.turn
       target: e2e
     privileged: true
     cap_add:
       - NET_ADMIN
     networks:
       private_net:
-        ipv4_address: 192.168.100.10
+        ipv4_address: 192.168.10.10
     volumes:
       - ./e2e/turn-ts:/app
       - node_modules:/app/node_modules
-      - ./scripts/client.sh:/app/client.sh
     # TODO: wait for server and router to be ready stably
-    command: bash -c "/app/client.sh && sleep 3 && pnpm test:docker"
+    # command: bash -c "/app/client.sh && sleep 3 && pnpm test:docker"
+    command: bash -c "tail -f /dev/null"
     depends_on:
       - server
       - router
@@ -84,10 +79,10 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 192.168.100.0/24
+        - subnet: 192.168.10.0/24
   public_net:
     driver: bridge
     ipam:
       config:
-        - subnet: 192.168.200.0/24
+        - subnet: 192.168.20.0/24
 

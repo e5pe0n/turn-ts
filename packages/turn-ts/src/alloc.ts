@@ -43,6 +43,10 @@ export const AllocationId = {
 class AllocationRepo {
   #allocations: Map<AllocationId, Allocation> = new Map();
 
+  list(): Map<AllocationId, Allocation> {
+    return this.#allocations;
+  }
+
   insert(alloc: Allocation) {
     this.#allocations.set(alloc.id, alloc);
   }
@@ -109,7 +113,10 @@ export class Allocator {
       ...init,
       id: allocId,
       serverTransportAddress: this.#serverTransportAddress,
-      relayedTransportAddress: sock.address() as TransportAddress,
+      relayedTransportAddress: {
+        ...sock.address(),
+        address: this.#serverTransportAddress.address,
+      } as TransportAddress,
       createdAt: new Date(),
       timeToExpirySec: Math.min(
         init.timeToExpirySec ?? this.#maxLifetimeSec,
@@ -146,6 +153,7 @@ export class Allocator {
     clientTransportAddress,
     transportProtocol,
   }: Omit<FiveTuple, "serverTransportAddress">): Allocation | undefined {
+    console.log(this.#allocRepo.list());
     return this.#allocRepo.get(
       AllocationId.from({
         clientTransportAddress,
@@ -159,6 +167,7 @@ export class Allocator {
     allocId: AllocationId,
     peerAddress: TransportAddress,
   ): Result<Allocation> {
+    console.log(this.#allocRepo.list());
     const alloc = this.#allocRepo.get(allocId);
     if (!alloc) {
       return {

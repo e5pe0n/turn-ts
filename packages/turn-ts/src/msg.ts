@@ -1,5 +1,6 @@
 import { assert, type Override, assertValueOf, getKey } from "@e5pe0n/lib";
 import {
+  HEADER_LENGTH,
   type RawStunMsg,
   addrFamilySchema,
   decodeErrorCodeValue,
@@ -275,7 +276,7 @@ export const TurnMsg = {
           attrs[kAttrType] = vBuf;
           break;
         case "messageIntegrity":
-          msgIntegrityOffset = offset;
+          msgIntegrityOffset = offset + HEADER_LENGTH;
           attrs[kAttrType] = vBuf;
           break;
         default:

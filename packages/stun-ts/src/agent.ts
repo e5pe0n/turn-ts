@@ -7,10 +7,7 @@ export interface Agent {
   close(): void;
   indicate(msg: Buffer): Promise<undefined>;
   request(msg: Buffer): Promise<Buffer>;
-  on(
-    eventName: "indication",
-    cb: (msg: Buffer, rinfo: RemoteInfo) => void,
-  ): void;
+  on(eventName: "message", cb: (msg: Buffer, rinfo: RemoteInfo) => void): void;
 }
 
 export type UdpAgentInitConfig = {
@@ -37,7 +34,6 @@ export type UdpAgentConfig = Override<
 export class UdpAgent implements Agent {
   #config: UdpAgentConfig;
   #sock: Socket;
-  #waitingResp = false;
 
   constructor(config: UdpAgentInitConfig) {
     this.#config = {
@@ -54,12 +50,8 @@ export class UdpAgent implements Agent {
     this.#sock.close();
   }
 
-  on(_: "indication", cb: (msg: Buffer, rinfo: RemoteInfo) => void): void {
-    this.#sock.on("message", (msg, info) => {
-      if (!this.#waitingResp) {
-        cb(msg, info);
-      }
-    });
+  on(_: "message", cb: (msg: Buffer, rinfo: RemoteInfo) => void): void {
+    this.#sock.on("message", cb);
   }
 
   async indicate(msg: Buffer): Promise<undefined> {
@@ -79,7 +71,6 @@ export class UdpAgent implements Agent {
   }
 
   async request(msg: Buffer): Promise<Buffer> {
-    this.#waitingResp = true;
     const _res = new Promise<Buffer>((resolve, reject) => {
       this.#sock.once("message", (msg) => {
         resolve(msg);
@@ -105,7 +96,6 @@ export class UdpAgent implements Agent {
       }),
       _res,
     ])) as Buffer;
-    this.#waitingResp = false;
     return resp;
   }
 }
@@ -132,7 +122,6 @@ export type TcpAgentConfig = Override<
 export class TcpAgent implements Agent {
   #config: TcpAgentConfig;
   #sock: TcpSocket;
-  #waitingResp = false;
   #errHandler?: (err: Error) => void;
 
   constructor(config: TcpAgentInitConfig) {
@@ -155,12 +144,8 @@ export class TcpAgent implements Agent {
     this.#sock?.destroy();
   }
 
-  on(_: "indication", cb: (msg: Buffer, rinfo: RemoteInfo) => void): void {
-    this.#sock.on("message", (msg, info) => {
-      if (!this.#waitingResp) {
-        cb(msg, info);
-      }
-    });
+  on(_: "message", cb: (msg: Buffer, rinfo: RemoteInfo) => void): void {
+    this.#sock.on("data", cb);
   }
 
   async indicate(msg: Buffer): Promise<undefined> {
@@ -178,7 +163,6 @@ export class TcpAgent implements Agent {
   }
 
   async request(msg: Buffer): Promise<Buffer> {
-    this.#waitingResp = true;
     const respBuf = await new Promise<Buffer>((resolve, reject) => {
       this.#sock.write(msg);
       this.#errHandler = (err) => {
@@ -195,7 +179,6 @@ export class TcpAgent implements Agent {
         reject(new Error("reached timeout"));
       });
     });
-    this.#waitingResp = false;
     return respBuf;
   }
 }

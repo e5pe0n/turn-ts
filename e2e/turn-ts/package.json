@@ -6,16 +6,19 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch server.ts",
-    "start": "tsx server.ts",
-    "test:docker": "vitest run --project docker",
-    "test:comp": "vitest run --project compatibility"
+    "dev:server": "tsx watch server.ts",
+    "dev:peer": "tsx watch peer.ts",
+    "dev:client": "tsx client.ts",
+    "start:server": "tsx server.ts",
+    "start:peer": "tsx peer.ts",
+    "test:docker": "vitest run --project docker"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@e5pe0n/turn-ts": "workspace:*",
+    "@types/node": "22",
     "tsx": "4.19.3",
     "vitest": "3.0.8"
   }

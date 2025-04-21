@@ -11,6 +11,7 @@ import { Allocator } from "./alloc.js";
 import { handleAllocate } from "./handlers/alloc.js";
 import { handleSend } from "./handlers/send.js";
 import { TurnMsg } from "./msg.js";
+import { handleCreatePermission } from "./handlers/perm.js";
 
 // TODO: enable to set config from environment variables
 export const defaultServerConfig = {
@@ -67,6 +68,7 @@ export class Server {
       async (data, rinfo) => {
         // TODO: impl message handler
         const msg = TurnMsg.from(data);
+        console.log("msg:", msg);
         switch (msg.header.cls) {
           case "indication":
             switch (msg.header.method) {
@@ -99,6 +101,7 @@ export class Server {
           case "request": {
             const authRes = authReq(msg, this.#config);
             if (!authRes.success) {
+              console.log("auth error:", authRes.error);
               return authRes.error.raw;
             }
             switch (msg.header.method) {
@@ -115,14 +118,11 @@ export class Server {
                 return resp.raw;
               }
               case "createPermission": {
-                const resp = await handleAllocate(msg, {
+                const resp = await handleCreatePermission(msg, {
                   ...this.#config,
                   rinfo,
                   allocator: this.#allocator,
                   transportProtocol: this.#config.protocol,
-                  serverInfo: {
-                    software: this.#config.software,
-                  },
                 });
                 return resp.raw;
               }

@@ -44,6 +44,21 @@ export class Client {
     this.#agent.close();
   }
 
+  onDataIndication(cb: (data: Buffer, rinfo: TransportAddress) => void): void {
+    this.#agent.on("message", (rawMsg, rinfo) => {
+      console.log("[onDataIndication] rinfo", rinfo);
+      const msg = TurnMsg.from(rawMsg);
+      console.log("[onDataIndication] msg", msg);
+      if (msg.header.cls === "indication" && msg.header.method === "data") {
+        assert(
+          !!msg.attrs.data,
+          new Error("invalid response; DATA attr not found."),
+        );
+        cb(msg.attrs.data, rinfo);
+      }
+    });
+  }
+
   async requestAllocate(arg?: {
     lifetime?: number;
     dontFragment?: boolean;
@@ -110,6 +125,7 @@ export class Client {
       },
       password: this.#config.password,
     });
+    console.log("reqMsg2", reqMsg2);
     const respBuf2 = await this.#agent.request(reqMsg2.raw);
     const respMsg2 = TurnMsg.from(respBuf2);
     assert(
