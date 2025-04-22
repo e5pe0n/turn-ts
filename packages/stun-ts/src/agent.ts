@@ -71,8 +71,10 @@ export class UdpAgent implements Agent {
   }
 
   async request(msg: Buffer): Promise<Buffer> {
+    const abortController = new AbortController();
     const _res = new Promise<Buffer>((resolve, reject) => {
       this.#sock.once("message", (msg) => {
+        abortController.abort(); // Cancel retry
         resolve(msg);
       });
     });
@@ -93,6 +95,7 @@ export class UdpAgent implements Agent {
         maxAttempts: this.#config.rc,
         intervalMs: (numAttempts: number) => this.#config.rtoMs * numAttempts,
         attemptTimeoutMs: this.#config.rtoMs * this.#config.rm,
+        signal: abortController.signal,
       }),
       _res,
     ])) as Buffer;

@@ -1,4 +1,3 @@
-import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
 
 /**
@@ -196,22 +195,61 @@ export async function retry<T>(
     intervalMs,
     attemptTimeoutMs,
     timeoutMs,
+    signal,
   }: {
     retryIf: (res: T) => boolean;
     maxAttempts: number;
     intervalMs: number | ((numAttempts: number) => number);
     attemptTimeoutMs: number | ((numAttempts: number) => number);
     timeoutMs?: number;
+    signal?: AbortSignal;
   },
 ): Promise<T> {
   assert(
     maxAttempts > 0,
     new RangeError("invalid argument: maxAttempts must be > 0."),
   );
+
+  // Check if already aborted before starting
+  if (signal?.aborted) {
+    throw new RetryError("Operation was cancelled", { cause: signal.reason });
+  }
+
   let numAttempts = 0;
   let lastResult: T | undefined = undefined;
+
+  // Helper function to create abortable timeouts
+  const abortableTimeout = <U>(ms: number, value: U): Promise<U> => {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => resolve(value), ms);
+
+      // If signal is provided, set up abort listener
+      if (signal) {
+        const abortHandler = () => {
+          clearTimeout(timeoutId);
+          reject(
+            new RetryError("Operation was cancelled", { cause: signal.reason }),
+          );
+        };
+
+        if (signal.aborted) {
+          abortHandler();
+        } else {
+          signal.addEventListener("abort", abortHandler, { once: true });
+        }
+      }
+    });
+  };
+
   const _retry = async (): Promise<T> => {
     while (true) {
+      // Check for abort before each attempt
+      if (signal?.aborted) {
+        throw new RetryError("Operation was cancelled", {
+          cause: signal.reason,
+        });
+      }
+
       ++numAttempts;
       lastResult = await fn();
       if (!retryIf(lastResult)) {
@@ -231,11 +269,12 @@ export async function retry<T>(
           ? attemptTimeoutMs
           : attemptTimeoutMs(numAttempts);
 
-      // wait for the next attempt
+      // Use abortable timeouts
       const state = await Promise.race([
-        setTimeout(_intervalMs, "ready" as const),
-        setTimeout(_attemptTimeoutMs, "timeout" as const),
+        abortableTimeout(_intervalMs, "ready" as const),
+        abortableTimeout(_attemptTimeoutMs, "timeout" as const),
       ]);
+
       if (state === "timeout") {
         throw new RetryError(`reached timeout: tried ${numAttempts} times.`, {
           lastResult,
@@ -247,7 +286,7 @@ export async function retry<T>(
   if (typeof timeoutMs === "number") {
     const res = await Promise.race([
       _retry(),
-      setTimeout(
+      abortableTimeout(
         timeoutMs,
         new RetryError(`reached timeout: retried ${numAttempts}.`, {
           lastResult,
