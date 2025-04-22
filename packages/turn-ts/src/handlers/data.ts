@@ -1,4 +1,4 @@
-import { type RemoteInfo, TrxId } from "@e5pe0n/stun-ts";
+import { type RawStunMsg, type RemoteInfo, TrxId } from "@e5pe0n/stun-ts";
 import type { Allocation } from "../alloc.js";
 import { TurnMsg } from "../msg.js";
 import type { Result } from "@e5pe0n/lib";
@@ -8,9 +8,11 @@ export function handleData(
   {
     alloc,
     rinfo,
+    sender,
   }: {
     alloc: Allocation;
     rinfo: RemoteInfo;
+    sender: (msg: RawStunMsg, rinfo: RemoteInfo) => void;
   },
 ): Result {
   if (!alloc.permissions.includes(rinfo.address)) {
@@ -33,10 +35,6 @@ export function handleData(
       data,
     },
   });
-  alloc.sock.send(
-    msg.raw,
-    alloc.clientTransportAddress.port,
-    alloc.clientTransportAddress.address,
-  );
+  sender(msg.raw, alloc.clientTransportAddress);
   return { success: true, value: undefined };
 }

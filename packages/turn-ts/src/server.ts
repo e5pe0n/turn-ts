@@ -1,17 +1,16 @@
 import type { Override, Result } from "@e5pe0n/lib";
 import {
-  type Listener,
   type Protocol,
   type RawStunMsg,
-  createListener,
+  type RemoteInfo,
   encodeMessageIntegrityValue,
 } from "@e5pe0n/stun-ts";
-import { createSocket } from "node:dgram";
+import { createSocket, type Socket } from "node:dgram";
 import { Allocator } from "./alloc.js";
 import { handleAllocate } from "./handlers/alloc.js";
+import { handleCreatePermission } from "./handlers/perm.js";
 import { handleSend } from "./handlers/send.js";
 import { TurnMsg } from "./msg.js";
-import { handleCreatePermission } from "./handlers/perm.js";
 
 // TODO: enable to set config from environment variables
 export const defaultServerConfig = {
@@ -45,15 +44,33 @@ export type ServerConfig = {
 };
 
 export class Server {
-  #listener: Listener;
   #config: ServerConfig;
   #allocator: Allocator;
+  #sock: Socket;
 
   constructor(config: InitServerConfig) {
     this.#config = {
       ...defaultServerConfig,
       ...config,
     };
+    this.#sock = createSocket("udp4");
+    this.#sock.on("message", async (msg, rinfo) => {
+      try {
+        // TODO: output log depending on env var or config.
+        // biome-ignore lint/suspicious/noConsole: tmp
+        console.log(`received udp message; rinfo=${JSON.stringify(rinfo)}`);
+        const buf = await this.#handleMsg(msg, rinfo);
+        if (buf) {
+          this.#sock.send(buf, rinfo.port, rinfo.address);
+          // TODO: output log depending on env var or config.
+          // biome-ignore lint/suspicious/noConsole: tmp
+          console.log(`returned udp message; rinfo=${JSON.stringify(rinfo)}`);
+        }
+      } catch (err) {
+        // biome-ignore lint/suspicious/noConsole: ignore error
+        console.error(err);
+      }
+    });
     this.#allocator = new Allocator({
       ...this.#config,
       serverTransportAddress: {
@@ -62,88 +79,87 @@ export class Server {
         address: this.#config.serverAddress,
         port: this.#config.port,
       },
+      serverSock: this.#sock,
     });
-    this.#listener = createListener(
-      this.#config.protocol,
-      async (data, rinfo) => {
-        // TODO: impl message handler
-        const msg = TurnMsg.from(data);
-        console.log("msg:", msg);
-        switch (msg.header.cls) {
-          case "indication":
-            switch (msg.header.method) {
-              case "send":
-                {
-                  const res = handleSend(msg, {
-                    ...this.#config,
-                    rinfo,
-                    allocator: this.#allocator,
-                    transportProtocol: this.#config.protocol,
-                  });
-                  if (res.success) {
-                    // TODO: output log depending on env var or config.
-                    // biome-ignore lint/suspicious/noConsole: tmp
-                    console.log("send success");
-                  } else {
-                    // TODO: output log depending on env var or config.
-                    // biome-ignore lint/suspicious/noConsole: tmp
-                    console.log("send error:", res.error);
-                  }
-                }
-                break;
-              default: {
+  }
+
+  async #handleMsg(data: Buffer, rinfo: RemoteInfo) {
+    // TODO: impl message handler
+    const msg = TurnMsg.from(data);
+    console.log("msg:", msg);
+    switch (msg.header.cls) {
+      case "indication":
+        switch (msg.header.method) {
+          case "send":
+            {
+              const res = handleSend(msg, {
+                ...this.#config,
+                rinfo,
+                allocator: this.#allocator,
+                transportProtocol: this.#config.protocol,
+              });
+              if (res.success) {
                 // TODO: output log depending on env var or config.
                 // biome-ignore lint/suspicious/noConsole: tmp
-                console.log("unknown method:", msg.header.method);
+                console.log("send success");
+              } else {
+                // TODO: output log depending on env var or config.
+                // biome-ignore lint/suspicious/noConsole: tmp
+                console.log("send error:", res.error);
               }
             }
             break;
-          case "request": {
-            const authRes = authReq(msg, this.#config);
-            if (!authRes.success) {
-              console.log("auth error:", authRes.error);
-              return authRes.error.raw;
-            }
-            switch (msg.header.method) {
-              case "allocate": {
-                const resp = await handleAllocate(msg, {
-                  ...this.#config,
-                  rinfo,
-                  allocator: this.#allocator,
-                  transportProtocol: this.#config.protocol,
-                  serverInfo: {
-                    software: this.#config.software,
-                  },
-                });
-                return resp.raw;
-              }
-              case "createPermission": {
-                const resp = await handleCreatePermission(msg, {
-                  ...this.#config,
-                  rinfo,
-                  allocator: this.#allocator,
-                  transportProtocol: this.#config.protocol,
-                });
-                return resp.raw;
-              }
-              default: {
-                // TODO: output log depending on env var or config.
-                // biome-ignore lint/suspicious/noConsole: tmp
-                console.log("unknown method:", msg.header.method);
-              }
-            }
+          default: {
+            // TODO: output log depending on env var or config.
+            // biome-ignore lint/suspicious/noConsole: tmp
+            console.log("unknown method:", msg.header.method);
           }
         }
-      },
-    );
+        break;
+      case "request": {
+        const authRes = authReq(msg, this.#config);
+        if (!authRes.success) {
+          console.log("auth error:", authRes.error);
+          return authRes.error.raw;
+        }
+        switch (msg.header.method) {
+          case "allocate": {
+            const resp = await handleAllocate(msg, {
+              ...this.#config,
+              rinfo,
+              allocator: this.#allocator,
+              transportProtocol: this.#config.protocol,
+              serverInfo: {
+                software: this.#config.software,
+              },
+            });
+            return resp.raw;
+          }
+          case "createPermission": {
+            const resp = await handleCreatePermission(msg, {
+              ...this.#config,
+              rinfo,
+              allocator: this.#allocator,
+              transportProtocol: this.#config.protocol,
+            });
+            return resp.raw;
+          }
+          default: {
+            // TODO: output log depending on env var or config.
+            // biome-ignore lint/suspicious/noConsole: tmp
+            console.log("unknown method:", msg.header.method);
+          }
+        }
+      }
+    }
   }
 
   listen() {
-    this.#listener.listen(this.#config.port, this.#config.host);
+    this.#sock.bind(this.#config.port, this.#config.host);
   }
 
   close() {
-    this.#listener.close();
+    this.#sock.close();
   }
 }
 

@@ -80,20 +80,24 @@ export class Allocator {
   #maxLifetimeSec: number;
   #host: string;
   #serverTransportAddress: TransportAddress;
+  #serverSock: Socket;
 
   constructor({
     maxLifetimeSec,
     host,
     serverTransportAddress,
+    serverSock,
   }: {
     maxLifetimeSec: number;
     host: string;
     serverTransportAddress: TransportAddress;
+    serverSock: Socket;
   }) {
     this.#allocRepo = new AllocationRepo();
     this.#maxLifetimeSec = maxLifetimeSec;
     this.#host = host;
     this.#serverTransportAddress = serverTransportAddress;
+    this.#serverSock = serverSock;
   }
 
   // TODO: handle other errors
@@ -132,7 +136,13 @@ export class Allocator {
         sock.close();
         return;
       }
-      const res = handleData(msg, { alloc: _alloc, rinfo });
+      const res = handleData(msg, {
+        alloc: _alloc,
+        rinfo,
+        sender: (msg, rinfo) => {
+          this.#serverSock.send(msg, rinfo.port, rinfo.address);
+        },
+      });
       if (res.success) {
         // TODO: output log depending on env var or config.
         // biome-ignore lint/suspicious/noConsole: tmp

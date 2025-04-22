@@ -9,7 +9,7 @@ const client = new Client({
   },
   username: "user",
   password: "pass",
-  rc: 3,
+  rc: 2,
 });
 
 const allocResp = await client.requestAllocate();

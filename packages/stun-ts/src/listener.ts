@@ -38,12 +38,6 @@ class UdpListener implements Listener {
           console.log(
             `${logPrefix} returned udp message; rinfo=${JSON.stringify(rinfo)}`,
           );
-        } else {
-          // TODO: output log depending on env var or config.
-          // biome-ignore lint/suspicious/noConsole: tmp
-          console.log(
-            `${logPrefix} discarded udp message; rinfo=${JSON.stringify(rinfo)}`,
-          );
         }
       } catch (err) {
         // biome-ignore lint/suspicious/noConsole: ignore error
